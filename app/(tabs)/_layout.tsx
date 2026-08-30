@@ -49,10 +49,9 @@ export default function TabLayout() {
             <View style={styles.headerBrandRow}>
               <Image
                 source={require('../../assets/logo.png')}
-                style={{ width: 28, height: 28 }}
+                style={{ width: 44, height: 36 }}
                 resizeMode="contain"
               />
-              <Text style={styles.brandHeaderTitle}>Data<Text style={{ color: Colors.primary }}>Daddy</Text></Text>
               <View style={styles.onlineBadge}>
                 <View style={styles.onlineDot} />
                 <Text style={styles.onlineText}>LIVE</Text>

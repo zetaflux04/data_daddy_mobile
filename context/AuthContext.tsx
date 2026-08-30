@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile, ShopProfile } from '../types';
-import { api } from '../services/api';
+import { api, setUnauthorizedHandler } from '../services/api';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -11,6 +11,8 @@ interface AuthContextType {
   requestOtp: (phone: string) => Promise<{ success: boolean; message: string; devOtp?: string }>;
   verifyOtp: (phone: string, otp: string) => Promise<{ success: boolean; needsRegistration?: boolean; message?: string }>;
   registerShop: (data: { phone: string; shopName: string; ownerName: string; address?: any }) => Promise<{ success: boolean }>;
+  updateShopProfile: (data: { name?: string; ownerName?: string; phone?: string; address?: any; settings?: any }) => Promise<ShopProfile | null>;
+  refreshShopProfile: () => Promise<ShopProfile | null>;
   completeOnboarding: () => Promise<void>;
   resetOnboarding: () => Promise<void>;
   logout: () => Promise<void>;
@@ -25,22 +27,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      setShop(null);
+    });
     loadStoredSession();
+
+    return () => {
+      setUnauthorizedHandler(null);
+    };
   }, []);
 
   const loadStoredSession = async () => {
     try {
-      const [storedUser, storedShop, onboardingStatus] = await Promise.all([
+      const [storedToken, storedUser, storedShop, onboardingStatus] = await Promise.all([
+        AsyncStorage.getItem('@repairshop_token'),
         AsyncStorage.getItem('@repairshop_user'),
         AsyncStorage.getItem('@repairshop_shop'),
         AsyncStorage.getItem('@datadaddy_onboarding_completed'),
       ]);
-      if (storedUser && storedShop) {
-        setUser(JSON.parse(storedUser));
-        setShop(JSON.parse(storedShop));
-      }
+
       setHasCompletedOnboarding(onboardingStatus === 'true');
+
+      if (!storedToken || !storedUser || !storedShop) {
+        await AsyncStorage.multiRemove([
+          '@repairshop_token',
+          '@repairshop_user',
+          '@repairshop_shop',
+        ]);
+        setUser(null);
+        setShop(null);
+        return;
+      }
+
+      setUser(JSON.parse(storedUser));
+      setShop(JSON.parse(storedShop));
+
+      // Refresh and validate shop profile from DB in background
+      const freshShop = await api.getShopProfile();
+      if (freshShop) {
+        setShop(freshShop);
+        await AsyncStorage.setItem('@repairshop_shop', JSON.stringify(freshShop));
+      } else {
+        // If getting profile returned null (e.g. invalid/expired token), clean session
+        await logout();
+      }
     } catch {
+      await logout();
       setHasCompletedOnboarding(false);
     }
   };
@@ -105,6 +138,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateShopProfile = async (data: {
+    name?: string;
+    ownerName?: string;
+    phone?: string;
+    address?: any;
+    settings?: any;
+  }) => {
+    setIsLoading(true);
+    try {
+      const updatedShop = await api.updateShopProfile(data);
+      if (updatedShop) {
+        setShop(updatedShop);
+        await AsyncStorage.setItem('@repairshop_shop', JSON.stringify(updatedShop));
+        if (data.ownerName || data.phone) {
+          setUser((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  ...(data.ownerName && { name: data.ownerName }),
+                  ...(data.phone && { phone: data.phone }),
+                }
+              : null
+          );
+        }
+      }
+      return updatedShop;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refreshShopProfile = async () => {
+    try {
+      const fresh = await api.getShopProfile();
+      if (fresh) {
+        setShop(fresh);
+        await AsyncStorage.setItem('@repairshop_shop', JSON.stringify(fresh));
+      }
+      return fresh;
+    } catch {
+      return null;
+    }
+  };
+
   const logout = async () => {
     await AsyncStorage.removeItem('@repairshop_token');
     await AsyncStorage.removeItem('@repairshop_user');
@@ -123,6 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         requestOtp,
         verifyOtp,
         registerShop,
+        updateShopProfile,
+        refreshShopProfile,
         completeOnboarding,
         resetOnboarding,
         logout,

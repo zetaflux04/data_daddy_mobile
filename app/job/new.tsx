@@ -76,16 +76,27 @@ export default function NewJobScreen() {
         paymentMode,
       });
 
-      Alert.alert(
-        'Job Created!',
-        `Job Card ${newJob.jobId} created successfully. Automated "Order Received" SMS sent to +91 ${customerPhone}.`,
-        [
-          {
-            text: 'View Job Card',
-            onPress: () => router.replace(`/job/${newJob._id}`),
-          },
-        ]
-      );
+      if (newJob) {
+        Alert.alert(
+          'Job Created!',
+          `Job Card ${newJob.jobId} created successfully. Automated "Order Received" SMS sent to +91 ${customerPhone}.`,
+          [
+            {
+              text: 'View Job Card',
+              onPress: () => router.replace(`/job/${newJob._id}`),
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'Unable to create job card. Please try again.');
+      }
+    } catch (error: any) {
+      const msg =
+        error.response?.data?.message ||
+        (error.response?.status === 401
+          ? 'Session expired. Please sign in again.'
+          : error.message || 'Failed to create job card. Please try again.');
+      Alert.alert('Unable to Create Job', msg);
     } finally {
       setIsSubmitting(false);
     }

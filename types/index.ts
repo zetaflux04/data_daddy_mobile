@@ -37,6 +37,12 @@ export interface JobCard {
     advancePaid: number;
     due: number;
   };
+  warranty?: {
+    hasWarranty: boolean;
+    period?: number;
+    unit?: 'days' | 'months' | 'years';
+    expiresAt?: string;
+  };
   payments: PaymentItem[];
   smsLogs: SmsLogItem[];
   dates: {
@@ -114,11 +120,31 @@ export interface UserProfile {
   role: 'owner' | 'technician' | 'staff';
 }
 
+export interface ShopAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+}
+
+export interface ShopSettings {
+  currency?: string;
+  smsNotificationsEnabled?: boolean;
+  nextJobNumber?: number;
+}
+
 export interface ShopProfile {
-  id: string;
+  _id?: string;
+  id?: string;
   name: string;
   ownerName: string;
   phone: string;
-  plan: 'free' | 'pro';
-  subscriptionStatus: 'active' | 'expired' | 'canceled';
+  address?: ShopAddress | string;
+  plan?: 'free' | 'pro';
+  subscriptionStatus?: 'active' | 'expired' | 'canceled';
+  subscription?: {
+    plan: 'free' | 'pro';
+    status: 'active' | 'expired' | 'canceled';
+  };
+  settings?: ShopSettings;
 }

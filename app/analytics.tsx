@@ -58,18 +58,23 @@ export default function AnalyticsScreen() {
       return;
     }
 
-    await api.addExpense({
-      title: expTitle.trim(),
-      amount: Number(expAmount),
-      category: expCategory,
-      note: expNote.trim(),
-    });
+    try {
+      await api.addExpense({
+        title: expTitle.trim(),
+        amount: Number(expAmount),
+        category: expCategory,
+        note: expNote.trim(),
+      });
 
-    setIsAddExpenseOpen(false);
-    setExpTitle('');
-    setExpAmount('');
-    setExpNote('');
-    loadData();
+      setIsAddExpenseOpen(false);
+      setExpTitle('');
+      setExpAmount('');
+      setExpNote('');
+      loadData();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || error.message || 'Failed to save expense.';
+      Alert.alert('Expense Error', msg);
+    }
   };
 
   const revenue = summary?.financials.totalRevenue ?? 0;

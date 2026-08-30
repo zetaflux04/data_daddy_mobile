@@ -74,8 +74,7 @@ export default function RegisterShopScreen() {
             style={styles.logoImage}
             resizeMode="contain"
           />
-          <Text style={styles.brandTitle}>DataDaddy</Text>
-          <Text style={styles.brandSubtitle}>Complete your shop profile to get started.</Text>
+          <Text style={styles.brandSubtitle}>Complete your shop profile to get started</Text>
         </View>
 
         {/* Card */}
@@ -196,19 +195,12 @@ const styles = StyleSheet.create({
   },
   brandHero: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   logoImage: {
-    width: 140,
-    height: 70,
-    marginBottom: 12,
-  },
-  brandTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#0F2942',
-    letterSpacing: -0.5,
-    marginBottom: 6,
+    width: 190,
+    height: 90,
+    marginBottom: 8,
   },
   brandSubtitle: {
     fontSize: 14,

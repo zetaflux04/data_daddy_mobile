@@ -9,6 +9,9 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +40,14 @@ export default function JobDetailScreen() {
   // Invoice Modal
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
+  // Delivered Confirmation Modal State
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const [deliveryImei, setDeliveryImei] = useState('');
+  const [hasWarranty, setHasWarranty] = useState(false);
+  const [warrantyUnit, setWarrantyUnit] = useState<'days' | 'months' | 'years'>('months');
+  const [warrantyPeriod, setWarrantyPeriod] = useState('3');
+  const [isDelivering, setIsDelivering] = useState(false);
+
   const loadJob = async () => {
     if (!id) return;
     setIsLoading(true);
@@ -52,23 +63,82 @@ export default function JobDetailScreen() {
     loadJob();
   }, [id]);
 
+  const handleStatusClick = (newStatus: JobStatus) => {
+    if (!job) return;
+    if (newStatus === 'delivered') {
+      setDeliveryImei(job.serialOrImei || '');
+      setHasWarranty(job.warranty?.hasWarranty ?? false);
+      setWarrantyUnit(job.warranty?.unit ?? 'months');
+      setWarrantyPeriod(job.warranty?.period ? String(job.warranty.period) : '3');
+      setIsDeliveryModalOpen(true);
+    } else {
+      handleUpdateStatus(newStatus);
+    }
+  };
+
   const handleUpdateStatus = async (newStatus: JobStatus) => {
     if (!job) return;
-    const updated = await api.updateJobStatus(job._id, newStatus);
-    if (updated) {
-      setJob({ ...updated });
-      if (newStatus === 'repaired') {
-        Alert.alert(
-          'Status Updated: Repaired',
-          `SMS sent to customer ${job.customerSnapshot.phone}: "Device for ${job.jobId} is ready for pickup."`
-        );
-      } else if (newStatus === 'delivered') {
-        Alert.alert(
-          'Status Updated: Delivered',
-          `Device marked as delivered. Invoice sent to ${job.customerSnapshot.phone}.`
-        );
+    try {
+      const updated = await api.updateJobStatus(job._id, newStatus);
+      if (updated) {
+        setJob({ ...updated });
+        if (newStatus === 'repaired') {
+          Alert.alert(
+            'Status Updated: Repaired',
+            `SMS sent to customer ${job.customerSnapshot.phone}: "Device for ${job.jobId} is ready for pickup."`
+          );
+        }
+      }
+    } catch (e: any) {
+      Alert.alert('Update Failed', e.response?.data?.message || 'Failed to update job status.');
+    }
+  };
+
+  const handleConfirmDelivery = async () => {
+    if (!job) return;
+
+    if (hasWarranty) {
+      const periodNum = parseInt(warrantyPeriod, 10);
+      if (isNaN(periodNum) || periodNum <= 0) {
+        Alert.alert('Invalid Warranty Period', 'Please enter a valid positive number for the warranty duration.');
+        return;
       }
     }
+
+    setIsDelivering(true);
+    try {
+      const updated = await api.updateJobStatus(job._id, 'delivered', {
+        serialOrImei: deliveryImei.trim(),
+        warranty: {
+          hasWarranty,
+          period: hasWarranty ? Number(warrantyPeriod) : undefined,
+          unit: hasWarranty ? warrantyUnit : undefined,
+        },
+      });
+
+      if (updated) {
+        setJob({ ...updated });
+        setIsDeliveryModalOpen(false);
+        Alert.alert(
+          'Status Updated: Delivered',
+          `Device marked as delivered.${hasWarranty ? ` Warranty active for ${warrantyPeriod} ${warrantyUnit}.` : ''} Invoice sent to ${job.customerSnapshot.phone}.`
+        );
+      }
+    } catch {
+      Alert.alert('Delivery Error', 'Failed to update job status to delivered.');
+    } finally {
+      setIsDelivering(false);
+    }
+  };
+
+  const getWarrantyExpiryPreview = () => {
+    const period = parseInt(warrantyPeriod, 10);
+    if (isNaN(period) || period <= 0) return '';
+    const d = new Date();
+    if (warrantyUnit === 'days') d.setDate(d.getDate() + period);
+    else if (warrantyUnit === 'months') d.setMonth(d.getMonth() + period);
+    else if (warrantyUnit === 'years') d.setFullYear(d.getFullYear() + period);
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   const handleRecordPayment = async () => {
@@ -77,11 +147,15 @@ export default function JobDetailScreen() {
       return;
     }
 
-    const updated = await api.addPayment(job._id, Number(payAmount), payMode);
-    if (updated) {
-      setJob({ ...updated });
-      setIsPayModalOpen(false);
-      setPayAmount('');
+    try {
+      const updated = await api.addPayment(job._id, Number(payAmount), payMode);
+      if (updated) {
+        setJob({ ...updated });
+        setIsPayModalOpen(false);
+        setPayAmount('');
+      }
+    } catch (e: any) {
+      Alert.alert('Payment Failed', e.response?.data?.message || 'Failed to record payment.');
     }
   };
 
@@ -141,284 +215,482 @@ export default function JobDetailScreen() {
             <StatusBadge status={job.status} size="md" />
           </View>
 
-        {job.serialOrImei || job.passcodePattern ? (
-          <View style={styles.deviceMetaRow}>
-            {job.serialOrImei && (
-              <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>IMEI/Serial:</Text>
-                <Text style={styles.metaVal}>{job.serialOrImei}</Text>
-              </View>
-            )}
-            {job.passcodePattern && (
-              <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>Passcode:</Text>
-                <Text style={styles.metaVal}>{job.passcodePattern}</Text>
-              </View>
-            )}
-          </View>
-        ) : null}
-      </View>
-
-      {/* Customer Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Customer Details</Text>
-        </View>
-        <View style={styles.custRow}>
-          <View style={styles.custInfo}>
-            <Text style={styles.custName}>{job.customerSnapshot.name}</Text>
-            <Text style={styles.custPhone}>+91 {job.customerSnapshot.phone}</Text>
-          </View>
-          <View style={styles.custActions}>
-            <Pressable style={styles.iconCircle} onPress={() => openCall(job.customerSnapshot.phone)}>
-              <Ionicons name="call" size={18} color="#0284C7" />
-            </Pressable>
-            <Pressable
-              style={[styles.iconCircle, { backgroundColor: '#F0FDF4' }]}
-              onPress={() => openWhatsApp(job.customerSnapshot.phone)}>
-              <Ionicons name="logo-whatsapp" size={18} color="#16A34A" />
-            </Pressable>
-          </View>
-        </View>
-      </View>
-
-      {/* Problem Description */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Reported Problem</Text>
-        <Text style={styles.problemDesc}>{job.problemDescription}</Text>
-      </View>
-
-      {/* Pipeline Status Controller */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Update Job Status</Text>
-        <Text style={styles.pipelineHelp}>
-          Tap any status to update. Customer SMS is sent automatically on Repaired and Delivered.
-        </Text>
-
-        <View style={styles.statusButtonsGrid}>
-          {statusFlow.map((st) => {
-            const isCurrent = job.status === st;
-            return (
-              <Pressable
-                key={st}
-                style={[
-                  styles.statusSelectBtn,
-                  isCurrent && styles.statusSelectBtnCurrent,
-                ]}
-                onPress={() => handleUpdateStatus(st)}>
-                <Text
-                  style={[
-                    styles.statusSelectText,
-                    isCurrent && styles.statusSelectTextCurrent,
-                  ]}>
-                  {st.replace('_', ' ').toUpperCase()}
-                </Text>
-                {isCurrent && <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />}
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Financials & Payments */}
-      <View style={styles.card}>
-        <View style={styles.cardHeaderBetween}>
-          <Text style={styles.cardTitle}>Billing & Payments</Text>
-          <Pressable style={styles.invoiceBtn} onPress={() => setIsInvoiceOpen(true)}>
-            <Ionicons name="document-text" size={14} color={Colors.primary} />
-            <Text style={styles.invoiceBtnText}>View Invoice</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.costSummaryRow}>
-          <View style={styles.costBox}>
-            <Text style={styles.costBoxLabel}>Estimate</Text>
-            <Text style={styles.costBoxVal}>₹{job.cost.final.toLocaleString('en-IN')}</Text>
-          </View>
-          <View style={styles.costBox}>
-            <Text style={styles.costBoxLabel}>Paid</Text>
-            <Text style={[styles.costBoxVal, { color: Colors.emerald }]}>
-              ₹{job.cost.advancePaid.toLocaleString('en-IN')}
-            </Text>
-          </View>
-          <View style={styles.costBox}>
-            <Text style={styles.costBoxLabel}>Balance Due</Text>
-            <Text style={[styles.costBoxVal, { color: hasDue ? Colors.rose : Colors.emerald }]}>
-              ₹{job.cost.due.toLocaleString('en-IN')}
-            </Text>
-          </View>
-        </View>
-
-        {hasDue && (
-          <Pressable
-            style={({ pressed }) => [styles.recordPayBtn, { opacity: pressed ? 0.9 : 1 }]}
-            onPress={() => setIsPayModalOpen(true)}>
-            <Ionicons name="cash-outline" size={18} color="#FFFFFF" />
-            <Text style={styles.recordPayText}>Record Payment</Text>
-          </Pressable>
-        )}
-
-        {/* Payments list */}
-        {job.payments && job.payments.length > 0 && (
-          <View style={styles.paymentHistory}>
-            <Text style={styles.subHeading}>Payment History</Text>
-            {job.payments.map((p, idx) => (
-              <View key={idx} style={styles.payRow}>
-                <View style={styles.payModeBadge}>
-                  <Text style={styles.payModeText}>{p.mode.toUpperCase()}</Text>
+          {job.serialOrImei || job.passcodePattern ? (
+            <View style={styles.deviceMetaRow}>
+              {job.serialOrImei && (
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaLabel}>IMEI/Serial:</Text>
+                  <Text style={styles.metaVal}>{job.serialOrImei}</Text>
                 </View>
-                <Text style={styles.payDate}>
-                  {new Date(p.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                </Text>
-                <Text style={styles.payAmount}>+₹{p.amount.toLocaleString('en-IN')}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-
-      {/* SMS Logs */}
-      <View style={styles.card}>
-        <View style={styles.smsLogHeader}>
-          <Ionicons name="chatbubble-ellipses" size={18} color="#0284C7" />
-          <Text style={[styles.cardTitle, { marginLeft: 8 }]}>Customer SMS Updates Delivered</Text>
+              )}
+              {job.passcodePattern && (
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaLabel}>Passcode:</Text>
+                  <Text style={styles.metaVal}>{job.passcodePattern}</Text>
+                </View>
+              )}
+            </View>
+          ) : null}
         </View>
 
-        {job.smsLogs && job.smsLogs.length > 0 ? (
-          job.smsLogs.map((log, index) => (
-            <View key={index} style={styles.smsLogRow}>
-              <Ionicons name="checkmark-circle" size={16} color={Colors.emerald} />
-              <View style={styles.smsLogContent}>
-                <Text style={styles.smsLogType}>
-                  {log.type === 'order_received'
-                    ? 'Order Intake Confirmation'
-                    : log.type === 'repaired'
-                    ? 'Ready for Pickup Alert'
-                    : 'Delivery Thank You'}
-                </Text>
-                <Text style={styles.smsLogTime}>
-                  {new Date(log.sentAt).toLocaleString('en-IN')} • {log.providerRef || 'Delivered'}
+        {/* Warranty Active Card (if applicable) */}
+        {job.warranty?.hasWarranty && (
+          <View style={styles.warrantyCard}>
+            <View style={styles.warrantyHeader}>
+              <View style={styles.warrantyIconCircle}>
+                <Ionicons name="shield-checkmark" size={18} color={Colors.emerald} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.warrantyTitle}>Service Warranty Active</Text>
+                <Text style={styles.warrantySub}>
+                  Coverage: {job.warranty.period} {job.warranty.unit}
+                  {job.warranty.expiresAt
+                    ? ` • Expires ${new Date(job.warranty.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                    : ''}
                 </Text>
               </View>
+              <View style={styles.warrantyPill}>
+                <Text style={styles.warrantyPillText}>PROTECTED</Text>
+              </View>
             </View>
-          ))
-        ) : (
-          <Text style={styles.noSmsText}>No SMS sent yet for this order.</Text>
+          </View>
         )}
-      </View>
 
-      {/* Payment Modal */}
-      <Modal
-        visible={isPayModalOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsPayModalOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Record Payment</Text>
-              <Pressable onPress={() => setIsPayModalOpen(false)}>
-                <Ionicons name="close" size={24} color="#64748B" />
+        {/* Customer Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Customer Details</Text>
+          </View>
+          <View style={styles.custRow}>
+            <View style={styles.custInfo}>
+              <Text style={styles.custName}>{job.customerSnapshot.name}</Text>
+              <Text style={styles.custPhone}>+91 {job.customerSnapshot.phone}</Text>
+            </View>
+            <View style={styles.custActions}>
+              <Pressable style={styles.iconCircle} onPress={() => openCall(job.customerSnapshot.phone)}>
+                <Ionicons name="call" size={18} color="#0284C7" />
+              </Pressable>
+              <Pressable
+                style={[styles.iconCircle, { backgroundColor: '#F0FDF4' }]}
+                onPress={() => openWhatsApp(job.customerSnapshot.phone)}>
+                <Ionicons name="logo-whatsapp" size={18} color="#16A34A" />
               </Pressable>
             </View>
+          </View>
+        </View>
 
-            <Text style={styles.modalSub}>
-              Remaining balance due: <Text style={{ color: Colors.rose, fontWeight: '800' }}>₹{job.cost.due}</Text>
-            </Text>
+        {/* Problem Description */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Reported Problem</Text>
+          <Text style={styles.problemDesc}>{job.problemDescription}</Text>
+        </View>
 
-            <Text style={styles.inputLabel}>Amount Received (₹)</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder={String(job.cost.due)}
-              keyboardType="numeric"
-              value={payAmount}
-              onChangeText={setPayAmount}
-            />
+        {/* Pipeline Status Controller */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Update Job Status</Text>
+          <Text style={styles.pipelineHelp}>
+            Tap any status to update. Customer SMS is sent automatically on Repaired and Delivered.
+          </Text>
 
-            <Text style={styles.inputLabel}>Payment Mode</Text>
-            <View style={styles.modeRow}>
-              {(['upi', 'cash', 'card'] as const).map((m) => (
+          <View style={styles.statusButtonsGrid}>
+            {statusFlow.map((st) => {
+              const isCurrent = job.status === st;
+              return (
                 <Pressable
-                  key={m}
-                  style={[styles.modeChip, payMode === m && styles.modeChipActive]}
-                  onPress={() => setPayMode(m)}>
-                  <Text style={[styles.modeText, payMode === m && styles.modeTextActive]}>
-                    {m.toUpperCase()}
+                  key={st}
+                  style={[
+                    styles.statusSelectBtn,
+                    isCurrent && styles.statusSelectBtnCurrent,
+                  ]}
+                  onPress={() => handleStatusClick(st)}>
+                  <Text
+                    style={[
+                      styles.statusSelectText,
+                      isCurrent && styles.statusSelectTextCurrent,
+                    ]}>
+                    {st.replace('_', ' ').toUpperCase()}
                   </Text>
+                  {isCurrent && <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />}
                 </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Financials & Payments */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderBetween}>
+            <Text style={styles.cardTitle}>Billing & Payments</Text>
+            <Pressable style={styles.invoiceBtn} onPress={() => setIsInvoiceOpen(true)}>
+              <Ionicons name="document-text" size={14} color={Colors.primary} />
+              <Text style={styles.invoiceBtnText}>View Invoice</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.costSummaryRow}>
+            <View style={styles.costBox}>
+              <Text style={styles.costBoxLabel}>Estimate</Text>
+              <Text style={styles.costBoxVal}>₹{job.cost.final.toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={styles.costBox}>
+              <Text style={styles.costBoxLabel}>Paid</Text>
+              <Text style={[styles.costBoxVal, { color: Colors.emerald }]}>
+                ₹{job.cost.advancePaid.toLocaleString('en-IN')}
+              </Text>
+            </View>
+            <View style={styles.costBox}>
+              <Text style={styles.costBoxLabel}>Balance Due</Text>
+              <Text style={[styles.costBoxVal, { color: hasDue ? Colors.rose : Colors.emerald }]}>
+                ₹{job.cost.due.toLocaleString('en-IN')}
+              </Text>
+            </View>
+          </View>
+
+          {hasDue && (
+            <Pressable
+              style={({ pressed }) => [styles.recordPayBtn, { opacity: pressed ? 0.9 : 1 }]}
+              onPress={() => setIsPayModalOpen(true)}>
+              <Ionicons name="cash-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.recordPayText}>Record Payment</Text>
+            </Pressable>
+          )}
+
+          {/* Payments list */}
+          {job.payments && job.payments.length > 0 && (
+            <View style={styles.paymentHistory}>
+              <Text style={styles.subHeading}>Payment History</Text>
+              {job.payments.map((p, idx) => (
+                <View key={idx} style={styles.payRow}>
+                  <View style={styles.payModeBadge}>
+                    <Text style={styles.payModeText}>{p.mode.toUpperCase()}</Text>
+                  </View>
+                  <Text style={styles.payDate}>
+                    {new Date(p.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </Text>
+                  <Text style={styles.payAmount}>+₹{p.amount.toLocaleString('en-IN')}</Text>
+                </View>
               ))}
             </View>
-
-            <Pressable style={styles.submitPayBtn} onPress={handleRecordPayment}>
-              <Text style={styles.submitPayBtnText}>Confirm Payment</Text>
-            </Pressable>
-          </View>
+          )}
         </View>
-      </Modal>
 
-      {/* Digital Invoice Preview Modal */}
-      <Modal
-        visible={isInvoiceOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsInvoiceOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.invoiceSheet}>
-            <View style={styles.invoiceSheetHeader}>
-              <Text style={styles.invoiceSheetTitle}>Digital Invoice Receipt</Text>
-              <Pressable onPress={() => setIsInvoiceOpen(false)}>
-                <Ionicons name="close" size={24} color="#64748B" />
-              </Pressable>
-            </View>
+        {/* SMS Logs */}
+        <View style={styles.card}>
+          <View style={styles.smsLogHeader}>
+            <Ionicons name="chatbubble-ellipses" size={18} color="#0284C7" />
+            <Text style={[styles.cardTitle, { marginLeft: 8 }]}>Customer SMS Updates Delivered</Text>
+          </View>
 
-            <ScrollView contentContainerStyle={{ padding: 20 }}>
-              <View style={styles.invoiceBox}>
-                <Text style={styles.invShopName}>OK-Repair Solutions</Text>
-                <Text style={styles.invSub}>Invoice #: {job.invoice?.invoiceNumber || `INV-${job.jobId}`}</Text>
-                <Text style={styles.invSub}>Date: {new Date().toLocaleDateString('en-IN')}</Text>
-
-                <View style={styles.invDivider} />
-
-                <Text style={styles.invSection}>Billed To:</Text>
-                <Text style={styles.invCust}>{job.customerSnapshot.name} ({job.customerSnapshot.phone})</Text>
-
-                <View style={styles.invDivider} />
-
-                <Text style={styles.invSection}>Device & Service:</Text>
-                <Text style={styles.invDevice}>{job.brand} {job.model} ({job.deviceType})</Text>
-                <Text style={styles.invProblem}>Issue: {job.problemDescription}</Text>
-
-                <View style={styles.invDivider} />
-
-                <View style={styles.invRow}>
-                  <Text style={styles.invLabel}>Repair Charges</Text>
-                  <Text style={styles.invValue}>₹{job.cost.final}</Text>
-                </View>
-                <View style={styles.invRow}>
-                  <Text style={styles.invLabel}>Total Paid</Text>
-                  <Text style={[styles.invValue, { color: Colors.emerald }]}>₹{job.cost.advancePaid}</Text>
-                </View>
-                <View style={styles.invRow}>
-                  <Text style={styles.invLabel}>Balance Due</Text>
-                  <Text style={[styles.invValue, { color: hasDue ? Colors.rose : Colors.emerald }]}>
-                    ₹{job.cost.due}
+          {job.smsLogs && job.smsLogs.length > 0 ? (
+            job.smsLogs.map((log, index) => (
+              <View key={index} style={styles.smsLogRow}>
+                <Ionicons name="checkmark-circle" size={16} color={Colors.emerald} />
+                <View style={styles.smsLogContent}>
+                  <Text style={styles.smsLogType}>
+                    {log.type === 'order_received'
+                      ? 'Order Intake Confirmation'
+                      : log.type === 'repaired'
+                      ? 'Ready for Pickup Alert'
+                      : 'Delivery Thank You'}
+                  </Text>
+                  <Text style={styles.smsLogTime}>
+                    {new Date(log.sentAt).toLocaleString('en-IN')} • {log.providerRef || 'Delivered'}
                   </Text>
                 </View>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.noSmsText}>No SMS sent yet for this order.</Text>
+          )}
+        </View>
 
-                <View style={styles.invDivider} />
-                <Text style={styles.invFooter}>Thank you for choosing our repair service!</Text>
+        {/* Delivered Confirmation Modal */}
+        <Modal
+          visible={isDeliveryModalOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsDeliveryModalOpen(false)}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderTitleRow}>
+                  <View style={[styles.modalIconBox, { backgroundColor: '#ECFDF5' }]}>
+                    <Ionicons name="checkmark-done-circle" size={22} color={Colors.emerald} />
+                  </View>
+                  <View>
+                    <Text style={styles.modalTitle}>Device Delivery & Warranty</Text>
+                    <Text style={styles.modalHeaderSub}>Confirm IMEI and repair guarantee</Text>
+                  </View>
+                </View>
+                <Pressable onPress={() => setIsDeliveryModalOpen(false)}>
+                  <Ionicons name="close" size={24} color="#64748B" />
+                </Pressable>
               </View>
 
-              <Pressable
-                style={styles.shareInvoiceBtn}
-                onPress={() => Alert.alert('Share Invoice', `Sharing invoice for ${job.jobId} via WhatsApp / PDF.`)}>
-                <Ionicons name="share-social" size={18} color="#FFFFFF" />
-                <Text style={styles.shareInvoiceText}>Share Invoice with Customer</Text>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* IMEI / Serial Number Input */}
+                <Text style={styles.inputLabel}>1. IMEI / Serial Number</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="e.g. 356984110293847 or SN-98234"
+                  placeholderTextColor="#94A3B8"
+                  value={deliveryImei}
+                  onChangeText={setDeliveryImei}
+                />
+
+                {/* Warranty Yes/No Selection */}
+                <Text style={[styles.inputLabel, { marginTop: 14 }]}>2. Warranty Guarantee</Text>
+                <View style={styles.warrantyChoiceRow}>
+                  <Pressable
+                    style={[styles.warrantyChoiceBtn, !hasWarranty && styles.warrantyChoiceBtnActive]}
+                    onPress={() => setHasWarranty(false)}>
+                    <Ionicons
+                      name={!hasWarranty ? 'radio-button-on' : 'radio-button-off'}
+                      size={18}
+                      color={!hasWarranty ? Colors.primary : '#94A3B8'}
+                    />
+                    <Text style={[styles.warrantyChoiceText, !hasWarranty && styles.warrantyChoiceTextActive]}>
+                      No Warranty
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.warrantyChoiceBtn, hasWarranty && styles.warrantyChoiceBtnActiveEmerald]}
+                    onPress={() => setHasWarranty(true)}>
+                    <Ionicons
+                      name={hasWarranty ? 'radio-button-on' : 'radio-button-off'}
+                      size={18}
+                      color={hasWarranty ? Colors.emerald : '#94A3B8'}
+                    />
+                    <Text style={[styles.warrantyChoiceText, hasWarranty && styles.warrantyChoiceTextActiveEmerald]}>
+                      Provide Warranty (Yes)
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* If Warranty is Yes: Time Span Unit Dropdown/Chips + Number Input */}
+                {hasWarranty && (
+                  <View style={styles.warrantyFormBox}>
+                    <Text style={styles.warrantyFormLabel}>Choose Time Span & Duration:</Text>
+
+                    {/* Dropdown / Chips for Unit (Days, Months, Years) */}
+                    <View style={styles.unitChipsRow}>
+                      {(['days', 'months', 'years'] as const).map((unit) => {
+                        const isSelected = warrantyUnit === unit;
+                        return (
+                          <Pressable
+                            key={unit}
+                            style={[styles.unitChip, isSelected && styles.unitChipSelected]}
+                            onPress={() => setWarrantyUnit(unit)}>
+                            <Text style={[styles.unitChipText, isSelected && styles.unitChipTextSelected]}>
+                              {unit === 'days' ? 'Days' : unit === 'months' ? 'Months' : 'Years'}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    {/* Number Input Box */}
+                    <Text style={[styles.warrantyFormLabel, { marginTop: 10 }]}>
+                      Enter Number of {warrantyUnit.charAt(0).toUpperCase() + warrantyUnit.slice(1)}:
+                    </Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="e.g. 1, 3, 6, 12, 30"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      value={warrantyPeriod}
+                      onChangeText={setWarrantyPeriod}
+                    />
+
+                    {/* Calculated Live Expiry Preview */}
+                    {getWarrantyExpiryPreview() ? (
+                      <View style={styles.expiryPreviewPill}>
+                        <Ionicons name="shield-checkmark" size={15} color={Colors.emerald} />
+                        <Text style={styles.expiryPreviewText}>
+                          Warranty valid until:{' '}
+                          <Text style={{ fontWeight: '800' }}>
+                            {getWarrantyExpiryPreview()} ({warrantyPeriod} {warrantyUnit})
+                          </Text>
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                )}
+
+                {/* Outstanding balance warning if applicable */}
+                {hasDue && (
+                  <View style={styles.dueWarningBox}>
+                    <Ionicons name="alert-circle-outline" size={18} color={Colors.rose} />
+                    <Text style={styles.dueWarningText}>
+                      Customer has an unpaid balance of ₹{job.cost.due}. Payment can also be collected later.
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.deliveryModalActions}>
+                  <Pressable
+                    disabled={isDelivering}
+                    style={styles.modalCancelBtn}
+                    onPress={() => setIsDeliveryModalOpen(false)}>
+                    <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                  </Pressable>
+
+                  <Pressable
+                    disabled={isDelivering}
+                    style={({ pressed }) => [
+                      styles.confirmDeliveryBtn,
+                      { opacity: pressed || isDelivering ? 0.88 : 1 },
+                    ]}
+                    onPress={handleConfirmDelivery}>
+                    {isDelivering ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                        <Text style={styles.confirmDeliveryBtnText}>Confirm & Deliver</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </View>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Payment Modal */}
+        <Modal
+          visible={isPayModalOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsPayModalOpen(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Record Payment</Text>
+                <Pressable onPress={() => setIsPayModalOpen(false)}>
+                  <Ionicons name="close" size={24} color="#64748B" />
+                </Pressable>
+              </View>
+
+              <Text style={styles.modalSub}>
+                Remaining balance due: <Text style={{ color: Colors.rose, fontWeight: '800' }}>₹{job.cost.due}</Text>
+              </Text>
+
+              <Text style={styles.inputLabel}>Amount Received (₹)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder={String(job.cost.due)}
+                keyboardType="numeric"
+                value={payAmount}
+                onChangeText={setPayAmount}
+              />
+
+              <Text style={styles.inputLabel}>Payment Mode</Text>
+              <View style={styles.modeRow}>
+                {(['upi', 'cash', 'card'] as const).map((m) => (
+                  <Pressable
+                    key={m}
+                    style={[styles.modeChip, payMode === m && styles.modeChipActive]}
+                    onPress={() => setPayMode(m)}>
+                    <Text style={[styles.modeText, payMode === m && styles.modeTextActive]}>
+                      {m.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Pressable style={styles.submitPayBtn} onPress={handleRecordPayment}>
+                <Text style={styles.submitPayBtnText}>Confirm Payment</Text>
               </Pressable>
-            </ScrollView>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+
+        {/* Digital Invoice Preview Modal */}
+        <Modal
+          visible={isInvoiceOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsInvoiceOpen(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.invoiceSheet}>
+              <View style={styles.invoiceSheetHeader}>
+                <Text style={styles.invoiceSheetTitle}>Digital Invoice Receipt</Text>
+                <Pressable onPress={() => setIsInvoiceOpen(false)}>
+                  <Ionicons name="close" size={24} color="#64748B" />
+                </Pressable>
+              </View>
+
+              <ScrollView contentContainerStyle={{ padding: 20 }}>
+                <View style={styles.invoiceBox}>
+                  <Text style={styles.invShopName}>DataDaddy Repair Solutions</Text>
+                  <Text style={styles.invSub}>Invoice #: {job.invoice?.invoiceNumber || `INV-${job.jobId}`}</Text>
+                  <Text style={styles.invSub}>Date: {new Date().toLocaleDateString('en-IN')}</Text>
+
+                  <View style={styles.invDivider} />
+
+                  <Text style={styles.invSection}>Billed To:</Text>
+                  <Text style={styles.invCust}>
+                    {job.customerSnapshot.name} ({job.customerSnapshot.phone})
+                  </Text>
+
+                  <View style={styles.invDivider} />
+
+                  <Text style={styles.invSection}>Device & Service:</Text>
+                  <Text style={styles.invDevice}>
+                    {job.brand} {job.model} ({job.deviceType})
+                  </Text>
+                  {job.serialOrImei && (
+                    <Text style={styles.invProblem}>IMEI / Serial: {job.serialOrImei}</Text>
+                  )}
+                  <Text style={styles.invProblem}>Issue: {job.problemDescription}</Text>
+
+                  {job.warranty?.hasWarranty && (
+                    <View style={styles.invWarrantyBox}>
+                      <Ionicons name="shield-checkmark" size={15} color={Colors.emerald} />
+                      <Text style={styles.invWarrantyText}>
+                        Warranty: {job.warranty.period} {job.warranty.unit}
+                        {job.warranty.expiresAt
+                          ? ` (Until ${new Date(job.warranty.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })})`
+                          : ''}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.invDivider} />
+
+                  <View style={styles.invRow}>
+                    <Text style={styles.invLabel}>Repair Charges</Text>
+                    <Text style={styles.invValue}>₹{job.cost.final}</Text>
+                  </View>
+                  <View style={styles.invRow}>
+                    <Text style={styles.invLabel}>Total Paid</Text>
+                    <Text style={[styles.invValue, { color: Colors.emerald }]}>₹{job.cost.advancePaid}</Text>
+                  </View>
+                  <View style={styles.invRow}>
+                    <Text style={styles.invLabel}>Balance Due</Text>
+                    <Text style={[styles.invValue, { color: hasDue ? Colors.rose : Colors.emerald }]}>
+                      ₹{job.cost.due}
+                    </Text>
+                  </View>
+
+                  <View style={styles.invDivider} />
+                  <Text style={styles.invFooter}>Thank you for choosing our repair service!</Text>
+                </View>
+
+                <Pressable
+                  style={styles.shareInvoiceBtn}
+                  onPress={() => Alert.alert('Share Invoice', `Sharing invoice for ${job.jobId} via WhatsApp / PDF.`)}>
+                  <Ionicons name="share-social" size={18} color="#FFFFFF" />
+                  <Text style={styles.shareInvoiceText}>Share Invoice with Customer</Text>
+                </Pressable>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -448,7 +720,12 @@ const styles = StyleSheet.create({
     padding: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 14,
+    marginBottom: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   headerRow: {
     flexDirection: 'row',
@@ -457,7 +734,6 @@ const styles = StyleSheet.create({
   titleInfo: {
     flex: 1,
     marginLeft: 12,
-    marginRight: 8,
   },
   jobIdRow: {
     flexDirection: 'row',
@@ -466,7 +742,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   jobIdBadge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.primaryGlow,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -474,75 +750,107 @@ const styles = StyleSheet.create({
   jobIdText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0F172A',
-    fontFamily: 'SpaceMono',
+    color: Colors.primary,
   },
   dateText: {
     fontSize: 11,
     color: '#94A3B8',
   },
   deviceName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#0F172A',
   },
   deviceMetaRow: {
     flexDirection: 'row',
-    marginTop: 14,
-    paddingTop: 12,
+    gap: 16,
+    marginTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    gap: 16,
   },
   metaItem: {
     flexDirection: 'row',
-    gap: 4,
+    alignItems: 'center',
+    gap: 6,
   },
   metaLabel: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#64748B',
     fontWeight: '600',
   },
   metaVal: {
     fontSize: 12,
-    color: '#334155',
+    color: '#0F172A',
     fontWeight: '700',
+  },
+  warrantyCard: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    marginBottom: 16,
+  },
+  warrantyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  warrantyIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#D1FAE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warrantyTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#065F46',
+  },
+  warrantySub: {
+    fontSize: 12,
+    color: '#047857',
+    marginTop: 1,
+  },
+  warrantyPill: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  warrantyPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 14,
   },
   cardHeader: {
-    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   cardHeaderBetween: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
   cardTitle: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0F172A',
-  },
-  invoiceBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    gap: 4,
-  },
-  invoiceBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
   },
   custRow: {
     flexDirection: 'row',
@@ -553,7 +861,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   custName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 2,
@@ -578,12 +886,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#334155',
     lineHeight: 20,
-    marginTop: 4,
   },
   pipelineHelp: {
     fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 4,
+    color: '#64748B',
+    marginTop: 2,
     marginBottom: 12,
   },
   statusButtonsGrid: {
@@ -594,11 +901,11 @@ const styles = StyleSheet.create({
   statusSelectBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    gap: 6,
+    backgroundColor: '#F1F5F9',
   },
   statusSelectBtnCurrent: {
     backgroundColor: Colors.primary,
@@ -606,10 +913,24 @@ const styles = StyleSheet.create({
   statusSelectText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#475569',
+    color: '#64748B',
   },
   statusSelectTextCurrent: {
     color: '#FFFFFF',
+  },
+  invoiceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primaryGlow,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  invoiceBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
   },
   costSummaryRow: {
     flexDirection: 'row',
@@ -625,8 +946,7 @@ const styles = StyleSheet.create({
   costBoxLabel: {
     fontSize: 11,
     color: '#64748B',
-    fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   costBoxVal: {
     fontSize: 16,
@@ -649,12 +969,12 @@ const styles = StyleSheet.create({
   },
   paymentHistory: {
     marginTop: 14,
-    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
+    paddingTop: 10,
   },
   subHeading: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#64748B',
     marginBottom: 8,
@@ -672,8 +992,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   payModeText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
     color: '#475569',
   },
   payDate: {
@@ -688,13 +1008,13 @@ const styles = StyleSheet.create({
   smsLogHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   smsLogRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 10,
     gap: 8,
+    marginBottom: 8,
   },
   smsLogContent: {
     flex: 1,
@@ -707,62 +1027,221 @@ const styles = StyleSheet.create({
   smsLogTime: {
     fontSize: 11,
     color: '#94A3B8',
-    marginTop: 2,
   },
   noSmsText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#94A3B8',
   },
-  // Modal
+  // Modal Common
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
+    padding: 22,
+    maxHeight: '92%',
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 16,
+  },
+  modalHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modalIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#0F172A',
+  },
+  modalHeaderSub: {
+    fontSize: 12,
+    color: '#64748B',
   },
   modalSub: {
     fontSize: 13,
     color: '#64748B',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: '700',
+    color: '#334155',
     marginBottom: 6,
-    marginTop: 10,
   },
   modalInput: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    fontWeight: '700',
+    paddingVertical: 11,
+    fontSize: 14,
     color: '#0F172A',
   },
+  // Delivered Modal Styles
+  warrantyChoiceRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  warrantyChoiceBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  warrantyChoiceBtnActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryGlow,
+  },
+  warrantyChoiceBtnActiveEmerald: {
+    borderColor: Colors.emerald,
+    backgroundColor: '#ECFDF5',
+  },
+  warrantyChoiceText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  warrantyChoiceTextActive: {
+    color: Colors.primary,
+  },
+  warrantyChoiceTextActiveEmerald: {
+    color: Colors.emerald,
+  },
+  warrantyFormBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    marginTop: 12,
+  },
+  warrantyFormLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 8,
+  },
+  unitChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 4,
+  },
+  unitChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  unitChipSelected: {
+    backgroundColor: Colors.emerald,
+    borderColor: Colors.emerald,
+  },
+  unitChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  unitChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  expiryPreviewPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  expiryPreviewText: {
+    fontSize: 12,
+    color: '#065F46',
+  },
+  dueWarningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF1F2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+  },
+  dueWarningText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.rose,
+    fontWeight: '600',
+  },
+  deliveryModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+  },
+  modalCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  confirmDeliveryBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.emerald,
+    gap: 6,
+  },
+  confirmDeliveryBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  // Mode chips in pay modal
   modeRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 24,
+    marginTop: 6,
+    marginBottom: 16,
   },
   modeChip: {
     flex: 1,
@@ -775,15 +1254,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   modeText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: '#64748B',
   },
   modeTextActive: {
     color: '#FFFFFF',
   },
   submitPayBtn: {
-    backgroundColor: Colors.emerald,
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -857,6 +1336,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     marginTop: 2,
+  },
+  invWarrantyBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 6,
+  },
+  invWarrantyText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#065F46',
   },
   invRow: {
     flexDirection: 'row',

@@ -63,7 +63,7 @@ export default function DashboardScreen() {
           <Text style={styles.shopTopGreeting}>Welcome back 👋</Text>
           <View style={styles.shopNameRow}>
             <Text style={styles.shopTopName} numberOfLines={1}>
-              {shop?.name || 'OK-Repair Solutions'}
+              {shop?.name || 'DataDaddy Shop'}
             </Text>
             <View style={styles.proPlanPill}>
               <Ionicons name="shield-checkmark" size={11} color={Colors.emerald} />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,20 +20,83 @@ import { AppHeader } from '../components/AppHeader';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { shop } = useAuth();
+  const { shop, updateShopProfile, refreshShopProfile } = useAuth();
 
-  const [shopName, setShopName] = useState(shop?.name || 'OK-Repair Solutions');
-  const [ownerName, setOwnerName] = useState(shop?.ownerName || 'Sunil Verma');
-  const [phone, setPhone] = useState(shop?.phone || '9876543210');
-  const [address, setAddress] = useState('Shop #14, Main Market, Jaipur');
+  const getInitialAddress = (addr: any): string => {
+    if (!addr) return '';
+    if (typeof addr === 'string') return addr;
+    const parts = [addr.street, addr.city, addr.state, addr.pincode].filter(Boolean);
+    return parts.join(', ');
+  };
+
+  const [shopName, setShopName] = useState(shop?.name || '');
+  const [ownerName, setOwnerName] = useState(shop?.ownerName || '');
+  const [phone, setPhone] = useState(shop?.phone || '');
+  const [address, setAddress] = useState(getInitialAddress(shop?.address));
+  const [isSaving, setIsSaving] = useState(false);
 
   // SMS Notification Toggles
-  const [smsOrderReceived, setSmsOrderReceived] = useState(true);
-  const [smsRepaired, setSmsRepaired] = useState(true);
-  const [smsDelivered, setSmsDelivered] = useState(true);
+  const [smsOrderReceived, setSmsOrderReceived] = useState(
+    shop?.settings?.smsNotificationsEnabled ?? true
+  );
+  const [smsRepaired, setSmsRepaired] = useState(
+    shop?.settings?.smsNotificationsEnabled ?? true
+  );
+  const [smsDelivered, setSmsDelivered] = useState(
+    shop?.settings?.smsNotificationsEnabled ?? true
+  );
 
-  const handleSave = () => {
-    Alert.alert('Settings Saved', 'Shop details and SMS notification rules updated successfully.');
+  useEffect(() => {
+    if (shop) {
+      if (shop.name) setShopName(shop.name);
+      if (shop.ownerName) setOwnerName(shop.ownerName);
+      if (shop.phone) setPhone(shop.phone);
+      if (shop.address) setAddress(getInitialAddress(shop.address));
+      if (shop.settings?.smsNotificationsEnabled !== undefined) {
+        setSmsOrderReceived(shop.settings.smsNotificationsEnabled);
+        setSmsRepaired(shop.settings.smsNotificationsEnabled);
+        setSmsDelivered(shop.settings.smsNotificationsEnabled);
+      }
+    }
+  }, [shop]);
+
+  const handleSave = async () => {
+    if (!shopName.trim()) {
+      Alert.alert('Validation Error', 'Shop Business Name cannot be empty.');
+      return;
+    }
+    if (!ownerName.trim()) {
+      Alert.alert('Validation Error', 'Owner Name cannot be empty.');
+      return;
+    }
+    if (!phone.trim()) {
+      Alert.alert('Validation Error', 'Phone number cannot be empty.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const smsEnabled = smsOrderReceived || smsRepaired || smsDelivered;
+      const updated = await updateShopProfile({
+        name: shopName.trim(),
+        ownerName: ownerName.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        settings: {
+          smsNotificationsEnabled: smsEnabled,
+        },
+      });
+
+      if (updated) {
+        Alert.alert('Settings Saved', 'Shop details and SMS preferences updated in database successfully.');
+      } else {
+        Alert.alert('Save Failed', 'Could not save shop details. Please verify your connection.');
+      }
+    } catch (e) {
+      Alert.alert('Save Error', 'An error occurred while saving settings to the database.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -140,10 +204,17 @@ export default function SettingsScreen() {
 
           {/* Save Button */}
           <Pressable
-            style={({ pressed }) => [styles.saveBtn, { opacity: pressed ? 0.88 : 1 }]}
+            disabled={isSaving}
+            style={({ pressed }) => [styles.saveBtn, { opacity: pressed || isSaving ? 0.88 : 1 }]}
             onPress={handleSave}>
-            <Ionicons name="save-outline" size={18} color="#FFFFFF" />
-            <Text style={styles.saveBtnText}>Save Preferences</Text>
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="save-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.saveBtnText}>Save Preferences</Text>
+              </>
+            )}
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

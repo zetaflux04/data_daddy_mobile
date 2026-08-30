@@ -171,7 +171,7 @@ export const SplashScreenView: React.FC<SplashScreenViewProps> = ({ onFinish }) 
           />
         </Animated.View>
 
-        {/* Brand Text Content */}
+        {/* Brand Content */}
         <Animated.View
           style={[
             styles.textContainer,
@@ -180,11 +180,6 @@ export const SplashScreenView: React.FC<SplashScreenViewProps> = ({ onFinish }) 
               transform: [{ translateY: textTranslateY }],
             },
           ]}>
-          <View style={styles.titleRow}>
-            <Text style={styles.brandTitleText}>Data</Text>
-            <Text style={styles.brandTitleAccent}>Daddy</Text>
-          </View>
-
           <Text style={styles.brandTagline}>
             SMART DIGITAL REGISTER FOR REPAIR SHOPS
           </Text>
@@ -254,28 +249,12 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   splashLogoImage: {
-    width: 130,
-    height: 130,
+    width: 160,
+    height: 160,
   },
   textContainer: {
     alignItems: 'center',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  brandTitleText: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  brandTitleAccent: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#60A5FA',
-    letterSpacing: -0.5,
+    marginTop: 8,
   },
   brandTagline: {
     fontSize: 11,

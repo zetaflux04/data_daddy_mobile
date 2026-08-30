@@ -48,17 +48,24 @@ export default function CustomersScreen() {
       return;
     }
 
-    const created = await api.addCustomer({
-      name: newName.trim(),
-      phone: newPhone.trim(),
-      address: newAddress.trim(),
-    });
+    try {
+      const created = await api.addCustomer({
+        name: newName.trim(),
+        phone: newPhone.trim(),
+        address: newAddress.trim(),
+      });
 
-    setIsAddModalVisible(false);
-    setNewName('');
-    setNewPhone('');
-    setNewAddress('');
-    fetchCustomers();
+      if (created) {
+        setIsAddModalVisible(false);
+        setNewName('');
+        setNewPhone('');
+        setNewAddress('');
+        fetchCustomers();
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.message || error.message || 'Failed to add customer.';
+      Alert.alert('Customer Error', msg);
+    }
   };
 
   const openCall = (phone: string) => {

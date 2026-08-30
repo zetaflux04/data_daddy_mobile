@@ -94,15 +94,14 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         
-        {/* Top Brand Showcase matching Image 2 */}
+        {/* Top Brand Showcase */}
         <View style={styles.brandHero}>
           <Image
             source={require('../../assets/logo.png')}
             style={styles.logoImage}
             resizeMode="contain"
           />
-          <Text style={styles.brandTitle}>DataDaddy</Text>
-          <Text style={styles.brandSubtitle}>Sign in to manage your workshop.</Text>
+          <Text style={styles.brandSubtitle}>Sign in to manage your workshop</Text>
         </View>
 
         {/* Main Card with Top Orange Accent Bar */}
@@ -245,24 +244,18 @@ const styles = StyleSheet.create({
   },
   brandHero: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   logoImage: {
-    width: 140,
-    height: 70,
-    marginBottom: 12,
-  },
-  brandTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#0F2942',
-    letterSpacing: -0.5,
-    marginBottom: 6,
+    width: 220,
+    height: 100,
+    marginBottom: 8,
   },
   brandSubtitle: {
     fontSize: 14,
     color: '#64748B',
     fontWeight: '500',
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#FFFFFF',

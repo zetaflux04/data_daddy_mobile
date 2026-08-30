@@ -111,7 +111,12 @@ export default function ProfileScreen() {
 
         <Text style={styles.shopName}>{shop?.name || 'DataDaddy Shop'}</Text>
         <Text style={styles.ownerName}>Owned by {shop?.ownerName || user?.name || 'Shop Owner'}</Text>
-        <Text style={styles.phoneText}>+91 {shop?.phone || user?.phone || '9876543210'}</Text>
+        <Text style={styles.phoneText}>+91 {shop?.phone || user?.phone || ''}</Text>
+        {shop?.address ? (
+          <Text style={styles.addressText} numberOfLines={2}>
+            📍 {typeof shop.address === 'string' ? shop.address : [shop.address.street, shop.address.city, shop.address.state].filter(Boolean).join(', ')}
+          </Text>
+        ) : null}
 
         <View style={styles.planStatusRow}>
           <View style={styles.proPill}>
@@ -175,17 +180,6 @@ export default function ProfileScreen() {
             badge="ALERTS"
             badgeColor={Colors.amber}
             onPress={() => router.push('/notifications')}
-          />
-          <View style={styles.divider} />
-          <MenuItem
-            icon="compass"
-            iconBg="rgba(37, 99, 235, 0.12)"
-            iconColor={Colors.primary}
-            title="App Tour & Onboarding"
-            subtitle="Explore features & first-time walkthrough"
-            badge="TOUR"
-            badgeColor={Colors.primary}
-            onPress={() => router.push('/onboarding')}
           />
           <View style={styles.divider} />
           <MenuItem
@@ -316,7 +310,14 @@ const styles = StyleSheet.create({
   phoneText: {
     fontSize: 13,
     color: '#94A3B8',
+    marginBottom: 4,
+  },
+  addressText: {
+    fontSize: 12,
+    color: '#64748B',
     marginBottom: 14,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
   planStatusRow: {
     flexDirection: 'row',

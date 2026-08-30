@@ -24,13 +24,18 @@ function RootNavigation() {
   const { hasCompletedOnboarding, user } = useAuth();
   const [splashFinished, setSplashFinished] = useState(false);
 
-  const handleSplashFinish = () => {
-    setSplashFinished(true);
+  useEffect(() => {
+    if (!splashFinished || hasCompletedOnboarding === null) return;
+
     if (hasCompletedOnboarding === false) {
       router.replace('/onboarding');
     } else if (!user) {
       router.replace('/(auth)/login');
     }
+  }, [splashFinished, hasCompletedOnboarding, user]);
+
+  const handleSplashFinish = () => {
+    setSplashFinished(true);
   };
 
   return (

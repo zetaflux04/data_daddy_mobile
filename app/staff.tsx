@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,54 +11,88 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
 import { AppHeader } from '../components/AppHeader';
 
 interface StaffMember {
-  id: string;
+  _id?: string;
+  id?: string;
   name: string;
   phone: string;
   role: 'owner' | 'technician' | 'staff';
-  active: boolean;
+  isActive?: boolean;
+  active?: boolean;
 }
-
-const initialStaff: StaffMember[] = [
-  { id: '1', name: 'Sunil Verma', phone: '9876543210', role: 'owner', active: true },
-  { id: '2', name: 'Deepak Sharma', phone: '9811223344', role: 'technician', active: true },
-  { id: '3', name: 'Aakash Patel', phone: '9766554433', role: 'technician', active: true },
-  { id: '4', name: 'Neha Gupta', phone: '9988112233', role: 'staff', active: true },
-];
 
 export default function StaffScreen() {
   const insets = useSafeAreaInsets();
-  const [staff, setStaff] = useState<StaffMember[]>(initialStaff);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form State
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<'technician' | 'staff'>('technician');
 
-  const handleAddStaff = () => {
-    if (!name.trim() || !phone.trim() || phone.trim().length !== 10) {
+  const fetchStaff = async () => {
+    try {
+      const list = await api.getStaff();
+      setStaff(list);
+    } catch {
+      setStaff([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchStaff();
+    setIsRefreshing(false);
+  };
+
+  const handleAddStaff = async () => {
+    if (!name.trim() || !phone.trim() || phone.trim().replace(/\D/g, '').length !== 10) {
       Alert.alert('Invalid Details', 'Please provide a valid name and 10-digit mobile phone number.');
       return;
     }
 
-    const newMember: StaffMember = {
-      id: String(Date.now()),
-      name: name.trim(),
-      phone: phone.trim(),
-      role,
-      active: true,
-    };
+    setIsSaving(true);
+    try {
+      const cleanPhone = phone.trim().replace(/\D/g, '').slice(-10);
+      const newMember = await api.addStaff({
+        name: name.trim(),
+        phone: cleanPhone,
+        role,
+      });
 
-    setStaff([...staff, newMember]);
-    setIsModalOpen(false);
-    setName('');
-    setPhone('');
-    Alert.alert('Staff Added', `${name} has been added as a ${role}.`);
+      if (newMember) {
+        setIsModalOpen(false);
+        setName('');
+        setPhone('');
+        Alert.alert('Staff Added', `${name} has been added as a ${role}.`);
+        fetchStaff();
+      } else {
+        Alert.alert('Error', 'Could not add staff member. Check connection or if phone number already exists.');
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.response?.data?.message || 'Failed to add staff member.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -74,28 +108,40 @@ export default function StaffScreen() {
 
       <FlatList
         data={staff}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id || item.id || `${item.phone}_${Math.random()}`}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconBox}>
-              <Ionicons name="people-outline" size={32} color="#94A3B8" />
+          isLoading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>Loading staff directory...</Text>
             </View>
-            <Text style={styles.emptyTitle}>No Staff Members Added</Text>
-            <Text style={styles.emptySubtitle}>
-              Tap the button below to add your technicians and front-desk staff.
-            </Text>
-          </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconBox}>
+                <Ionicons name="people-outline" size={32} color="#94A3B8" />
+              </View>
+              <Text style={styles.emptyTitle}>No Staff Members Found</Text>
+              <Text style={styles.emptySubtitle}>
+                Tap the button below to add your technicians and front-desk staff.
+              </Text>
+            </View>
+          )
         }
         renderItem={({ item }) => (
           <View style={styles.staffCard}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+              <Text style={styles.avatarText}>{item.name ? item.name.charAt(0).toUpperCase() : 'U'}</Text>
             </View>
 
             <View style={styles.info}>
               <View style={styles.nameRow}>
-                <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.name} numberOfLines={1}>
+                  {item.name}
+                </Text>
                 <View
                   style={[
                     styles.roleBadge,
@@ -114,7 +160,7 @@ export default function StaffScreen() {
                         ? { color: Colors.primary }
                         : { color: '#475569' },
                     ]}>
-                    {item.role.toUpperCase()}
+                    {(item.role || 'staff').toUpperCase()}
                   </Text>
                 </View>
               </View>
@@ -122,7 +168,7 @@ export default function StaffScreen() {
               <Text style={styles.phone}>+91 {item.phone}</Text>
             </View>
 
-            <View style={styles.statusDot} />
+            <View style={[styles.statusDot, { backgroundColor: item.isActive !== false ? '#10B981' : '#94A3B8' }]} />
           </View>
         )}
       />
@@ -148,28 +194,26 @@ export default function StaffScreen() {
           style={styles.modalOverlay}>
           <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Staff / Technician</Text>
-              <Pressable
-                onPress={() => setIsModalOpen(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.modalTitle}>Add Staff Member</Text>
+              <Pressable onPress={() => setIsModalOpen(false)}>
                 <Ionicons name="close" size={24} color="#64748B" />
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-              <Text style={styles.label}>Full Name *</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Full Name *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Ramesh Suthar"
+                placeholder="e.g. Ramesh Sharma"
                 placeholderTextColor="#94A3B8"
                 value={name}
                 onChangeText={setName}
               />
 
-              <Text style={styles.label}>Mobile Phone *</Text>
+              <Text style={styles.inputLabel}>Mobile Phone (10 digits) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="10-digit number"
+                placeholder="e.g. 9811223344"
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 maxLength={10}
@@ -177,28 +221,53 @@ export default function StaffScreen() {
                 onChangeText={setPhone}
               />
 
-              <Text style={styles.label}>Assign Role</Text>
-              <View style={styles.roleRow}>
-                {(['technician', 'staff'] as const).map((r) => (
-                  <Pressable
-                    key={r}
-                    style={[styles.roleChip, role === r && styles.roleChipActive]}
-                    onPress={() => setRole(r)}>
-                    <Text style={[styles.roleChipText, role === r && styles.roleChipTextActive]}>
-                      {r.toUpperCase()}
-                    </Text>
-                  </Pressable>
-                ))}
+              <Text style={styles.inputLabel}>Staff Role *</Text>
+              <View style={styles.roleSelectionRow}>
+                <Pressable
+                  style={[styles.roleSelectBtn, role === 'technician' && styles.roleSelectBtnActive]}
+                  onPress={() => setRole('technician')}>
+                  <Ionicons
+                    name="build-outline"
+                    size={16}
+                    color={role === 'technician' ? Colors.primary : '#64748B'}
+                  />
+                  <Text
+                    style={[
+                      styles.roleSelectText,
+                      role === 'technician' && styles.roleSelectTextActive,
+                    ]}>
+                    Technician
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.roleSelectBtn, role === 'staff' && styles.roleSelectBtnActive]}
+                  onPress={() => setRole('staff')}>
+                  <Ionicons
+                    name="person-outline"
+                    size={16}
+                    color={role === 'staff' ? Colors.primary : '#64748B'}
+                  />
+                  <Text
+                    style={[
+                      styles.roleSelectText,
+                      role === 'staff' && styles.roleSelectTextActive,
+                    ]}>
+                    Front Desk / Staff
+                  </Text>
+                </Pressable>
               </View>
 
-              <View style={styles.modalActions}>
-                <Pressable style={styles.cancelBtn} onPress={() => setIsModalOpen(false)}>
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </Pressable>
-                <Pressable style={styles.saveBtn} onPress={handleAddStaff}>
-                  <Text style={styles.saveBtnText}>Save Staff</Text>
-                </Pressable>
-              </View>
+              <Pressable
+                disabled={isSaving}
+                style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isSaving ? 0.88 : 1 }]}
+                onPress={handleAddStaff}>
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.submitBtnText}>Save Staff Member</Text>
+                )}
+              </Pressable>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -215,30 +284,56 @@ const styles = StyleSheet.create({
   topNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    padding: 12,
-    margin: 16,
-    marginBottom: 8,
-    borderRadius: 12,
-    gap: 8,
+    backgroundColor: Colors.primaryGlow,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   noticeText: {
     flex: 1,
     fontSize: 12,
-    color: Colors.primary,
+    color: '#1E40AF',
     lineHeight: 16,
   },
   listContent: {
     padding: 16,
-    paddingTop: 8,
+    paddingBottom: 100,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  emptyIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
   staffCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 10,
+    padding: 14,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -246,7 +341,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: Colors.primaryGlow,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -269,6 +364,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
+    flexShrink: 1,
   },
   roleBadge: {
     paddingHorizontal: 6,
@@ -280,18 +376,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   phone: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.emerald,
+    backgroundColor: '#10B981',
+    marginLeft: 8,
   },
   bottomBar: {
-    padding: 16,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
   },
@@ -306,7 +408,7 @@ const styles = StyleSheet.create({
   },
   addStaffBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
   // Modal
@@ -328,104 +430,67 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#0F172A',
   },
-  label: {
+  inputLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: '#475569',
     marginBottom: 6,
-    marginTop: 8,
+    marginTop: 10,
   },
   input: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 11,
     fontSize: 14,
     color: '#0F172A',
   },
-  roleRow: {
+  roleSelectionRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 20,
+    marginTop: 4,
+    marginBottom: 16,
   },
-  roleChip: {
+  roleSelectBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-  },
-  roleChipActive: {
-    backgroundColor: Colors.primary,
-  },
-  roleChipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  roleChipTextActive: {
-    color: '#FFFFFF',
-  },
-  modalActions: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
   },
-  cancelBtnText: {
-    fontSize: 14,
+  roleSelectBtnActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryGlow,
+  },
+  roleSelectText: {
+    fontSize: 13,
     fontWeight: '700',
     color: '#64748B',
   },
-  saveBtn: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
+  roleSelectTextActive: {
+    color: Colors.primary,
+  },
+  submitBtn: {
     backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
+    marginTop: 10,
   },
-  saveBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+  submitBtnText: {
     color: '#FFFFFF',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  emptyIconBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: '#94A3B8',
-    textAlign: 'center',
-    maxWidth: 260,
-    lineHeight: 18,
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
