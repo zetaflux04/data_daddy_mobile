@@ -8,26 +8,38 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../constants/Colors';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { requestOtp, verifyOtp, isLoading } = useAuth();
 
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSendOtp = async () => {
+    if (!agreedToTerms) {
+      Alert.alert(
+        'Agreement Required',
+        'Please check the box to agree to our Terms of Service and Privacy Policy before continuing.'
+      );
+      return;
+    }
+
     const clean = phone.replace(/\D/g, '').slice(-10);
     if (clean.length !== 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit Indian mobile number.');
+      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit mobile number.');
       return;
     }
 
@@ -43,6 +55,14 @@ export default function LoginScreen() {
   };
 
   const handleVerifyOtp = async () => {
+    if (!agreedToTerms) {
+      Alert.alert(
+        'Agreement Required',
+        'Please agree to our Terms of Service and Privacy Policy to continue.'
+      );
+      return;
+    }
+
     if (!otp || otp.length < 6) {
       Alert.alert('Invalid OTP', 'Please enter the 6-digit OTP code.');
       return;
@@ -67,139 +87,147 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 16) }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.content}>
-        {/* Brand Hero */}
-        <View style={styles.heroBox}>
-          <LinearGradient
-            colors={Colors.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.logoBadge}>
-            <Ionicons name="construct" size={32} color="#FFFFFF" />
-          </LinearGradient>
-          <View style={styles.brandTitleRow}>
-            <Text style={styles.brandTitle}>Data</Text>
-            <Text style={[styles.brandTitle, { color: Colors.primary }]}>Daddy</Text>
-          </View>
-          <Text style={styles.brandSubtitle}>
-            India's #1 digital register & job card tracker for repair shops
-          </Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        
+        {/* Top Brand Showcase matching Image 2 */}
+        <View style={styles.brandHero}>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.brandTitle}>DataDaddy</Text>
+          <Text style={styles.brandSubtitle}>Sign in to manage your workshop.</Text>
         </View>
 
-        {/* Card */}
+        {/* Main Card with Top Orange Accent Bar */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            {isOtpSent ? 'Enter 6-Digit OTP' : 'Sign in with Mobile'}
-          </Text>
-          <Text style={styles.cardSub}>
-            {isOtpSent
-              ? `We sent an OTP via Fast2SMS to +91 ${phone}`
-              : 'Enter your 10-digit mobile number to receive a secure login OTP'}
-          </Text>
+          <View style={styles.cardTopAccent} />
 
-          {!isOtpSent ? (
-            <>
-              <Text style={styles.inputLabel}>Mobile Phone Number</Text>
-              <View style={styles.phoneInputRow}>
-                <View style={styles.countryCodeBox}>
-                  <Text style={styles.countryCodeText}>🇮🇳 +91</Text>
+          <View style={styles.cardInner}>
+            <Text style={styles.cardHeading}>
+              {isOtpSent ? 'Verify OTP' : 'Welcome Back'}
+            </Text>
+
+            {!isOtpSent ? (
+              <>
+                <Text style={styles.inputLabel}>MOBILE NUMBER</Text>
+                <View style={styles.phoneInputRow}>
+                  <View style={styles.countryCodeBox}>
+                    <Text style={styles.countryCodeText}>+91</Text>
+                  </View>
+                  <TextInput
+                    style={styles.phoneInput}
+                    placeholder="Enter 10 digit number"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={phone}
+                    onChangeText={setPhone}
+                  />
                 </View>
+
+                {/* Send OTP Button (Golden Orange) */}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    { opacity: pressed || isLoading ? 0.88 : 1 },
+                  ]}
+                  disabled={isLoading}
+                  onPress={handleSendOtp}>
+                  <Text style={styles.primaryBtnText}>
+                    {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                  </Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={styles.otpHelperText}>
+                  Enter the 6-digit verification code sent to +91 {phone}
+                </Text>
+
                 <TextInput
-                  style={styles.phoneInput}
-                  placeholder="98765 43210"
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  value={phone}
-                  onChangeText={setPhone}
+                  style={styles.otpInput}
+                  placeholder="• • • • • •"
+                  placeholderTextColor="#CBD5E1"
+                  keyboardType="numeric"
+                  maxLength={6}
+                  value={otp}
+                  onChangeText={setOtp}
                 />
-              </View>
 
-              <Pressable
-                style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isLoading ? 0.9 : 1 }]}
-                disabled={isLoading}
-                onPress={handleSendOtp}>
-                <LinearGradient
-                  colors={Colors.gradients.primary}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.submitBtnGradient}>
-                  <Text style={styles.submitBtnText}>
-                    {isLoading ? 'Sending SMS...' : 'Get OTP via Fast2SMS'}
-                  </Text>
-                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-                </LinearGradient>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Text style={styles.inputLabel}>Enter OTP</Text>
-              <TextInput
-                style={styles.otpInput}
-                placeholder="• • • • • •"
-                keyboardType="numeric"
-                maxLength={6}
-                value={otp}
-                onChangeText={setOtp}
-              />
+                {devOtpHint && (
+                  <View style={styles.devHintBox}>
+                    <Text style={styles.devHintText}>
+                      💡 Test OTP: <Text style={{ fontWeight: '800' }}>{devOtpHint}</Text>
+                    </Text>
+                  </View>
+                )}
 
-              {devOtpHint && (
-                <View style={styles.devHintBox}>
-                  <Text style={styles.devHintText}>
-                    💡 Demo Fast2SMS Code: <Text style={{ fontWeight: '800' }}>{devOtpHint}</Text>
-                  </Text>
-                </View>
-              )}
-
-              <Pressable
-                style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isLoading ? 0.9 : 1 }]}
-                disabled={isLoading}
-                onPress={handleVerifyOtp}>
-                <LinearGradient
-                  colors={Colors.gradients.primary}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.submitBtnGradient}>
-                  <Text style={styles.submitBtnText}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    { opacity: pressed || isLoading ? 0.88 : 1 },
+                  ]}
+                  disabled={isLoading}
+                  onPress={handleVerifyOtp}>
+                  <Text style={styles.primaryBtnText}>
                     {isLoading ? 'Verifying...' : 'Verify & Continue'}
                   </Text>
-                  <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-                </LinearGradient>
-              </Pressable>
+                </Pressable>
 
-              <Pressable
-                style={styles.changePhoneBtn}
-                onPress={() => {
-                  setIsOtpSent(false);
-                  setOtp('');
-                }}>
-                <Text style={styles.changePhoneText}>Change phone number</Text>
-              </Pressable>
-            </>
-          )}
-
-          {/* Quick Demo Bypass */}
-          <View style={styles.demoBypassBox}>
-            <Pressable
-              style={styles.demoBypassBtn}
-              onPress={() => router.replace('/(tabs)')}>
-              <Ionicons name="flash" size={14} color={Colors.primary} />
-              <Text style={styles.demoBypassText}>Instant Demo Access (Skip Login)</Text>
-            </Pressable>
-          </View>
-
-          {/* View Onboarding Tour Link */}
-          <View style={styles.tourLinkBox}>
-            <Pressable
-              style={styles.tourLinkBtn}
-              onPress={() => router.push('/onboarding')}>
-              <Ionicons name="compass-outline" size={15} color="#64748B" />
-              <Text style={styles.tourLinkText}>New to DataDaddy? Take the 1-min tour</Text>
-            </Pressable>
+                <Pressable
+                  style={styles.changePhoneBtn}
+                  onPress={() => {
+                    setIsOtpSent(false);
+                    setOtp('');
+                  }}>
+                  <Text style={styles.changePhoneText}>Change mobile number</Text>
+                </Pressable>
+              </>
+            )}
           </View>
         </View>
-      </View>
+
+        {/* Terms & Conditions & Privacy Policy with Tick/Untick Checkbox */}
+        <View style={styles.legalSection}>
+          <Pressable
+            style={styles.checkboxRow}
+            onPress={() => setAgreedToTerms((prev) => !prev)}>
+            <View
+              style={[
+                styles.checkboxBox,
+                agreedToTerms && styles.checkboxBoxChecked,
+              ]}>
+              {agreedToTerms && (
+                <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+              )}
+            </View>
+            <View style={styles.legalTextWrap}>
+              <Text style={styles.legalNoticeText}>
+                By continuing, you agree to our{' '}
+                <Text
+                  style={styles.legalLink}
+                  onPress={() => router.push('/terms')}>
+                  Terms of Service
+                </Text>{' '}
+                and{' '}
+                <Text
+                  style={styles.legalLink}
+                  onPress={() => router.push('/privacy')}>
+                  Privacy Policy
+                </Text>
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -209,110 +237,111 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
   },
-  heroBox: {
+  brandHero: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 32,
   },
-  logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
+  logoImage: {
+    width: 140,
+    height: 70,
+    marginBottom: 12,
   },
   brandTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
-    color: '#0F172A',
-    marginBottom: 6,
+    color: '#0F2942',
     letterSpacing: -0.5,
+    marginBottom: 6,
   },
   brandSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 18,
-    maxWidth: 280,
+    fontWeight: '500',
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    overflow: 'hidden',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
+    shadowRadius: 16,
+    elevation: 3,
+    marginBottom: 24,
   },
-  cardTitle: {
-    fontSize: 18,
+  cardTopAccent: {
+    height: 4,
+    backgroundColor: '#F59E0B',
+    width: '100%',
+  },
+  cardInner: {
+    padding: 24,
+  },
+  cardHeading: {
+    fontSize: 20,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 4,
-  },
-  cardSub: {
-    fontSize: 13,
-    color: '#64748B',
-    lineHeight: 18,
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '800',
     color: '#475569',
+    letterSpacing: 0.6,
     marginBottom: 8,
   },
   phoneInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 14,
+    overflow: 'hidden',
     marginBottom: 20,
-    gap: 8,
+    backgroundColor: '#FFFFFF',
+    height: 52,
   },
   countryCodeBox: {
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 48,
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    height: '100%',
     justifyContent: 'center',
+    alignItems: 'center',
+    borderRightWidth: 1,
+    borderRightColor: '#CBD5E1',
   },
   countryCodeText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
   },
   phoneInput: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
     paddingHorizontal: 14,
-    height: 48,
-    fontSize: 16,
-    fontWeight: '700',
+    height: '100%',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#0F172A',
+  },
+  otpHelperText: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+    marginBottom: 16,
   },
   otpInput: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderColor: '#CBD5E1',
+    borderRadius: 14,
     height: 52,
     fontSize: 22,
     fontWeight: '800',
@@ -322,40 +351,33 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   devHintBox: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FEF3C7',
     padding: 10,
     borderRadius: 10,
     marginBottom: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
   },
   devHintText: {
     fontSize: 13,
-    color: Colors.primary,
+    color: '#B45309',
   },
-  brandTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  submitBtn: {
+  primaryBtn: {
+    backgroundColor: '#F59E0B',
+    height: 52,
     borderRadius: 14,
-    overflow: 'hidden',
-    shadowColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 3,
   },
-  submitBtnGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    gap: 8,
-  },
-  submitBtnText: {
+  primaryBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
   },
   changePhoneBtn: {
@@ -367,37 +389,42 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '600',
   },
-  demoBypassBox: {
-    marginTop: 18,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+  legalSection: {
     alignItems: 'center',
+    paddingHorizontal: 12,
   },
-  demoBypassBtn: {
+  checkboxRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#94A3B8',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    marginTop: 2,
   },
-  demoBypassText: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontWeight: '700',
+  checkboxBoxChecked: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
   },
-  tourLinkBox: {
-    marginTop: 10,
-    alignItems: 'center',
+  legalTextWrap: {
+    flex: 1,
   },
-  tourLinkBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  tourLinkText: {
+  legalNoticeText: {
     fontSize: 12,
     color: '#64748B',
-    fontWeight: '600',
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  legalLink: {
+    color: '#2563EB',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });

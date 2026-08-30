@@ -7,33 +7,26 @@ import {
   FlatList,
   Pressable,
   Platform,
-  SafeAreaView,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
-import { Colors } from '../constants/Colors';
 
 const { width } = Dimensions.get('window');
 
-interface SlideItem {
+interface OnboardingSlide {
   id: string;
-  badge: string;
-  badgeColor: string;
-  badgeIcon: keyof typeof Ionicons.glyphMap;
   title: string;
-  highlightText: string;
-  titleEnd: string;
-  description: string;
-  tags: string[];
+  subtitle: string;
   renderGraphic: () => React.ReactNode;
 }
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { completeOnboarding, user } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -59,76 +52,88 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleBack = () => {
-    if (currentIndex > 0) {
-      flatListRef.current?.scrollToIndex({
-        index: currentIndex - 1,
-        animated: true,
-      });
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
-
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const slideIndex = Math.round(
-      event.nativeEvent.contentOffset.x / width
-    );
+    const slideIndex = Math.round(event.nativeEvent.contentOffset.x / width);
     if (slideIndex !== currentIndex && slideIndex >= 0 && slideIndex < slides.length) {
       setCurrentIndex(slideIndex);
     }
   };
 
-  const slides: SlideItem[] = [
+  const slides: OnboardingSlide[] = [
     {
       id: '1',
-      badge: 'DIGITAL JOB CARDS',
-      badgeColor: Colors.primary,
-      badgeIcon: 'clipboard',
-      title: 'Ditch the ',
-      highlightText: 'Paper Register',
-      titleEnd: ' for Good',
-      description:
-        'Create professional digital job cards in under 30 seconds. Track brand, model, customer complaints, diagnostics, and cost estimates seamlessly.',
-      tags: ['⚡ 30s Intake', '🏷️ Unique Job IDs', '🔍 Instant Search'],
+      title: 'Track Every Repair',
+      subtitle: "Never lose a customer's order again.\nStay organized and efficient.",
       renderGraphic: () => (
-        <View style={styles.graphicCard}>
-          <LinearGradient
-            colors={['#1E293B', '#0F172A']}
-            style={styles.mockupHeader}>
-            <View style={styles.mockupHeaderLeft}>
-              <View style={styles.deviceCircle}>
-                <Ionicons name="phone-portrait" size={16} color="#60A5FA" />
+        <View style={styles.cardContainer}>
+          <View style={styles.mockupJobCard}>
+            {/* Mockup Header */}
+            <View style={styles.jobCardTop}>
+              <View style={styles.jobCardBadge}>
+                <Ionicons name="construct" size={14} color="#D97706" />
               </View>
-              <View>
-                <Text style={styles.mockupJobId}>JOB #DD-2026-084</Text>
-                <Text style={styles.mockupDevice}>iPhone 14 Pro Max • Space Black</Text>
-              </View>
+              <Text style={styles.jobCardTitle}>Repair Job Card</Text>
             </View>
-            <View style={styles.statusPill}>
-              <Text style={styles.statusPillText}>IN PROGRESS</Text>
-            </View>
-          </LinearGradient>
 
-          <View style={styles.mockupBody}>
-            <View style={styles.mockupRow}>
-              <Text style={styles.mockupLabel}>Customer</Text>
-              <Text style={styles.mockupValue}>Rahul Sharma (+91 98765 43210)</Text>
-            </View>
-            <View style={styles.mockupDivider} />
-            <View style={styles.mockupRow}>
-              <Text style={styles.mockupLabel}>Reported Issue</Text>
-              <Text style={styles.mockupValueHighlight}>Screen Flickering & Battery Drain</Text>
-            </View>
-            <View style={styles.mockupDivider} />
-            <View style={styles.mockupFooter}>
-              <View>
-                <Text style={styles.costLabel}>ESTIMATED REPAIR</Text>
-                <Text style={styles.costValue}>₹4,850</Text>
+            {/* Client & Job Info Grid */}
+            <View style={styles.jobCardGrid}>
+              <View style={styles.jobCardCol}>
+                <View style={styles.rowItem}>
+                  <Ionicons name="person-outline" size={12} color="#64748B" />
+                  <Text style={styles.gridHeading}>Client Details</Text>
+                </View>
+                <Text style={styles.gridValueSmall}>Customer: Rahul S.</Text>
+                <Text style={styles.gridSubSmall}>Contact: 98765 43210</Text>
               </View>
-              <View style={styles.advanceBadge}>
-                <Ionicons name="shield-checkmark" size={13} color="#10B981" />
-                <Text style={styles.advanceText}>Advance: ₹1,000</Text>
+
+              <View style={styles.jobCardCol}>
+                <View style={styles.rowItem}>
+                  <Ionicons name="calendar-outline" size={12} color="#64748B" />
+                  <Text style={styles.gridHeading}>Job Information</Text>
+                </View>
+                <Text style={styles.gridValueSmall}>Job ID: #DD-2026-084</Text>
+                <Text style={styles.gridSubSmall}>Status: In Progress</Text>
               </View>
+            </View>
+
+            {/* Repair Items Checkbox list */}
+            <View style={styles.repairItemsBox}>
+              <View style={styles.rowItem}>
+                <Ionicons name="build-outline" size={12} color="#64748B" />
+                <Text style={styles.gridHeading}>Repair Items</Text>
+              </View>
+
+              <View style={styles.checkItem}>
+                <Ionicons name="checkbox" size={13} color="#F59E0B" />
+                <Text style={styles.checkText}>1. Screen Replacement (iPhone 13)</Text>
+                <Text style={styles.checkTime}>Est. 2 hrs</Text>
+              </View>
+
+              <View style={styles.checkItem}>
+                <Ionicons name="checkbox" size={13} color="#F59E0B" />
+                <Text style={styles.checkText}>2. Battery Service</Text>
+                <Text style={styles.checkTime}>Est. 1 hr</Text>
+              </View>
+
+              <View style={styles.checkItem}>
+                <Ionicons name="checkbox" size={13} color="#F59E0B" />
+                <Text style={styles.checkText}>3. Camera Lens Shield</Text>
+                <Text style={styles.checkTime}>Est. 30 min</Text>
+              </View>
+            </View>
+
+            {/* Technician Notes */}
+            <View style={styles.notesBox}>
+              <View style={styles.rowItem}>
+                <Ionicons name="pencil-outline" size={11} color="#64748B" />
+                <Text style={styles.notesTitle}>Technician Notes</Text>
+              </View>
+              <Text style={styles.notesBody}>Check water resistance seals post-repair. Priority: High</Text>
+            </View>
+
+            {/* Mockup Action Button */}
+            <View style={styles.mockupBtn}>
+              <Text style={styles.mockupBtnText}>Start Repair</Text>
             </View>
           </View>
         </View>
@@ -136,51 +141,45 @@ export default function OnboardingScreen() {
     },
     {
       id: '2',
-      badge: 'FAST2SMS GATEWAY',
-      badgeColor: '#0284C7',
-      badgeIcon: 'paper-plane',
-      title: 'Automated ',
-      highlightText: 'SMS Alerts',
-      titleEnd: ' for Customers',
-      description:
-        'Keep customers delighted and informed. Automated SMS updates for device intake, repair completed, and delivery. Zero phone call interruptions.',
-      tags: ['📱 Fast2SMS Integration', '💬 Ready for Pickup SMS', '⚡ 1-Tap Updates'],
+      title: 'Automated SMS Alerts',
+      subtitle: 'Keep customers updated instantly.\nZero phone call interruptions.',
       renderGraphic: () => (
-        <View style={styles.graphicCard}>
-          {/* SMS Notification Banner */}
-          <LinearGradient
-            colors={['#0369A1', '#075985']}
-            style={styles.smsHeader}>
-            <View style={styles.smsHeaderIcon}>
-              <Ionicons name="chatbox-ellipses" size={18} color="#FFFFFF" />
+        <View style={styles.cardContainer}>
+          <View style={styles.mockupJobCard}>
+            {/* SMS Header */}
+            <View style={styles.jobCardTop}>
+              <View style={[styles.jobCardBadge, { backgroundColor: '#E0F2FE' }]}>
+                <Ionicons name="chatbox-ellipses" size={14} color="#0284C7" />
+              </View>
+              <Text style={styles.jobCardTitle}>Automated Customer SMS</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.smsHeaderTitle}>Fast2SMS Gateway • INSTANT</Text>
-              <Text style={styles.smsHeaderSub}>Delivered to +91 98765 43210</Text>
-            </View>
-            <View style={styles.smsSentBadge}>
-              <Text style={styles.smsSentText}>SENT</Text>
-            </View>
-          </LinearGradient>
 
-          <View style={styles.smsBubble}>
-            <View style={styles.smsBubbleHeader}>
-              <Text style={styles.smsSender}>TechFix Solutions (DataDaddy)</Text>
-              <Text style={styles.smsTime}>Just now</Text>
+            <View style={styles.smsBubbleItem}>
+              <View style={styles.smsHeaderRow}>
+                <Text style={styles.smsSenderName}>DataDaddy Alert</Text>
+                <Text style={styles.smsTimeText}>Just now</Text>
+              </View>
+              <Text style={styles.smsMessageBody}>
+                Dear Customer, your <Text style={{ fontWeight: '800', color: '#0F172A' }}>iPhone 14 Pro Max</Text> has been repaired and is <Text style={{ fontWeight: '800', color: '#16A34A' }}>READY FOR PICKUP</Text>!
+              </Text>
+              <View style={styles.smsDeliveryStatus}>
+                <Ionicons name="checkmark-done" size={14} color="#16A34A" />
+                <Text style={styles.smsDeliveredText}>SMS Delivered to +91 98765 43210</Text>
+              </View>
             </View>
-            <Text style={styles.smsBody}>
-              "Dear Rahul, your iPhone 14 Pro Max is <Text style={{ fontWeight: '800', color: '#10B981' }}>REPAIRED & READY FOR PICKUP</Text>!
-              Total Balance: ₹3,850. Thank you for choosing us!"
-            </Text>
-            <View style={styles.smsActionRow}>
-              <View style={styles.smsBadgeItem}>
-                <Ionicons name="checkmark-done" size={14} color="#0284C7" />
-                <Text style={styles.smsBadgeText}>Delivery Confirmed</Text>
+
+            <View style={[styles.smsBubbleItem, { marginTop: 10, backgroundColor: '#F8FAFC' }]}>
+              <View style={styles.smsHeaderRow}>
+                <Text style={styles.smsSenderName}>Job Intake Confirmation</Text>
+                <Text style={styles.smsTimeText}>2 hrs ago</Text>
               </View>
-              <View style={styles.smsBadgeItem}>
-                <Ionicons name="flash" size={14} color="#F59E0B" />
-                <Text style={styles.smsBadgeText}>1.2s Fast Delivery</Text>
-              </View>
+              <Text style={styles.smsMessageBody}>
+                Job ID: #DD-2026-084 created. Estimated: ₹4,850. Track status in real-time.
+              </Text>
+            </View>
+
+            <View style={[styles.mockupBtn, { backgroundColor: '#0284C7', marginTop: 14 }]}>
+              <Text style={styles.mockupBtnText}>SMS Gateway Active</Text>
             </View>
           </View>
         </View>
@@ -188,91 +187,42 @@ export default function OnboardingScreen() {
     },
     {
       id: '3',
-      badge: 'PROFIT & LOSS TRACKER',
-      badgeColor: '#10B981',
-      badgeIcon: 'trending-up',
-      title: 'Real-Time ',
-      highlightText: 'P&L & Staff',
-      titleEnd: ' Control',
-      description:
-        'Know your true profits. Track spare parts expenses, assign jobs to technicians, monitor pending balances, and grow your shop revenue.',
-      tags: ['📊 Real-Time P&L', '🔧 Parts Cost Log', '👥 Staff Permissions'],
+      title: 'Real-Time Profit & Loss',
+      subtitle: 'Know your true shop margins.\nTrack parts expenses and technician dues.',
       renderGraphic: () => (
-        <View style={styles.graphicCard}>
-          <LinearGradient
-            colors={['#064E3B', '#065F46']}
-            style={styles.pnlHeader}>
-            <View>
-              <Text style={styles.pnlHeaderLabel}>MONTHLY SHOP REVENUE</Text>
-              <Text style={styles.pnlHeaderAmount}>₹1,84,500</Text>
+        <View style={styles.cardContainer}>
+          <View style={styles.mockupJobCard}>
+            {/* P&L Header */}
+            <View style={styles.jobCardTop}>
+              <View style={[styles.jobCardBadge, { backgroundColor: '#ECFDF5' }]}>
+                <Ionicons name="trending-up" size={14} color="#10B981" />
+              </View>
+              <Text style={styles.jobCardTitle}>Workshop Profit & Loss</Text>
             </View>
-            <View style={styles.pnlGrowthPill}>
-              <Ionicons name="trending-up" size={13} color="#FFFFFF" />
-              <Text style={styles.pnlGrowthText}>+28.4%</Text>
-            </View>
-          </LinearGradient>
 
-          <View style={styles.pnlMetricsRow}>
-            <View style={styles.pnlMetricBox}>
-              <Text style={styles.pnlMetricLabel}>PARTS COST</Text>
-              <Text style={styles.pnlMetricValue}>₹62,000</Text>
-              <Text style={styles.pnlMetricSub}>42 items used</Text>
+            <View style={styles.pnlRevenueBox}>
+              <Text style={styles.pnlLabel}>THIS MONTH'S REVENUE</Text>
+              <Text style={styles.pnlAmount}>₹1,84,500</Text>
+              <View style={styles.pnlBadge}>
+                <Ionicons name="arrow-up" size={12} color="#16A34A" />
+                <Text style={styles.pnlBadgeText}>+28.4% growth</Text>
+              </View>
             </View>
-            <View style={styles.pnlMetricDivider} />
-            <View style={styles.pnlMetricBox}>
-              <Text style={[styles.pnlMetricLabel, { color: '#059669' }]}>NET PROFIT</Text>
-              <Text style={[styles.pnlMetricValue, { color: '#059669' }]}>₹1,22,500</Text>
-              <Text style={[styles.pnlMetricSub, { color: '#10B981' }]}>66.4% Margin</Text>
-            </View>
-          </View>
 
-          <View style={styles.techAssignBox}>
-            <Ionicons name="person" size={14} color="#6366F1" />
-            <Text style={styles.techAssignText}>
-              Assigned Tech: <Text style={{ fontWeight: '700', color: '#0F172A' }}>Suresh Kumar</Text> (Commission 15%)
-            </Text>
-          </View>
-        </View>
-      ),
-    },
-    {
-      id: '4',
-      badge: 'JOIN 5,000+ SHOPS',
-      badgeColor: '#8B5CF6',
-      badgeIcon: 'rocket',
-      title: 'Ready to Run a ',
-      highlightText: 'Smarter Shop?',
-      titleEnd: '',
-      description:
-        'Join thousands of electronics and mobile repair technicians across India modernizing their daily business operations with DataDaddy.',
-      tags: ['🔒 100% Cloud Synced', '⚡ Fast Setup', '🇮🇳 Made for India'],
-      renderGraphic: () => (
-        <View style={[styles.graphicCard, { padding: 22, alignItems: 'center' }]}>
-          <LinearGradient
-            colors={['#2563EB', '#7C3AED']}
-            style={styles.finalHeroBadge}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}>
-            <Ionicons name="rocket-sharp" size={42} color="#FFFFFF" />
-          </LinearGradient>
-
-          <Text style={styles.finalHeroTitle}>All Systems Ready</Text>
-          <Text style={styles.finalHeroSubtitle}>
-            Fast2SMS Connected • Cloud Storage Online • Digital Register Activated
-          </Text>
-
-          <View style={styles.featurePillsWrap}>
-            <View style={styles.featurePill}>
-              <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-              <Text style={styles.featurePillText}>Instant OTP Login</Text>
+            <View style={styles.pnlStatsRow}>
+              <View style={styles.pnlStatBox}>
+                <Text style={styles.pnlStatLabel}>PARTS COST</Text>
+                <Text style={styles.pnlStatVal}>₹62,000</Text>
+              </View>
+              <View style={styles.pnlDivider} />
+              <View style={styles.pnlStatBox}>
+                <Text style={[styles.pnlStatLabel, { color: '#16A34A' }]}>NET PROFIT</Text>
+                <Text style={[styles.pnlStatVal, { color: '#16A34A' }]}>₹1,22,500</Text>
+              </View>
             </View>
-            <View style={styles.featurePill}>
-              <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-              <Text style={styles.featurePillText}>Auto Fast2SMS</Text>
-            </View>
-            <View style={styles.featurePill}>
-              <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-              <Text style={styles.featurePillText}>Live P&L Tracking</Text>
+
+            <View style={[styles.mockupBtn, { backgroundColor: '#10B981', marginTop: 14 }]}>
+              <Text style={styles.mockupBtnText}>Live Digital Register</Text>
             </View>
           </View>
         </View>
@@ -281,26 +231,14 @@ export default function OnboardingScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Top App Header with Logo and Skip */}
+    <View style={[styles.container, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 20) }]}>
+      {/* Top Header: Skip Button */}
       <View style={styles.topHeader}>
-        <View style={styles.brandRow}>
-          <LinearGradient
-            colors={Colors.gradients.primary}
-            style={styles.brandLogoBox}>
-            <Ionicons name="construct" size={18} color="#FFFFFF" />
-          </LinearGradient>
-          <View>
-            <Text style={styles.brandName}>DataDaddy</Text>
-            <Text style={styles.brandSub}>Repair Register</Text>
-          </View>
-        </View>
-
+        <View style={{ flex: 1 }} />
         <Pressable
-          style={({ pressed }) => [styles.skipBtn, { opacity: pressed ? 0.7 : 1 }]}
+          style={({ pressed }) => [styles.skipBtn, { opacity: pressed ? 0.6 : 1 }]}
           onPress={handleFinish}>
-          <Text style={styles.skipBtnText}>Skip</Text>
-          <Ionicons name="chevron-forward" size={16} color="#64748B" />
+          <Text style={styles.skipText}>Skip</Text>
         </Pressable>
       </View>
 
@@ -316,45 +254,21 @@ export default function OnboardingScreen() {
         scrollEventThrottle={16}
         renderItem={({ item }) => (
           <View style={styles.slide}>
-            {/* Visual Graphic Mockup */}
-            <View style={styles.graphicContainer}>{item.renderGraphic()}</View>
+            {/* Center Graphic Card */}
+            <View style={styles.graphicArea}>{item.renderGraphic()}</View>
 
-            {/* Slide Content Card */}
-            <View style={styles.slideContent}>
-              {/* Badge */}
-              <View style={[styles.badge, { backgroundColor: `${item.badgeColor}18` }]}>
-                <Ionicons name={item.badgeIcon} size={13} color={item.badgeColor} />
-                <Text style={[styles.badgeText, { color: item.badgeColor }]}>
-                  {item.badge}
-                </Text>
-              </View>
-
-              {/* Title with Gradient Emphasis */}
-              <Text style={styles.titleText}>
-                {item.title}
-                <Text style={{ color: Colors.primary }}>{item.highlightText}</Text>
-                {item.titleEnd}
-              </Text>
-
-              {/* Description */}
-              <Text style={styles.descriptionText}>{item.description}</Text>
-
-              {/* Feature Chips */}
-              <View style={styles.tagsRow}>
-                {item.tags.map((tag: string, idx: number) => (
-                  <View key={idx} style={styles.tagPill}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
+            {/* Text Area */}
+            <View style={styles.textArea}>
+              <Text style={styles.titleText}>{item.title}</Text>
+              <Text style={styles.subtitleText}>{item.subtitle}</Text>
             </View>
           </View>
         )}
       />
 
-      {/* Bottom Navigation & Indicator Bar */}
-      <View style={styles.bottomControls}>
-        {/* Pagination Dots */}
+      {/* Bottom Area: Indicators & Golden Orange Button */}
+      <View style={styles.bottomArea}>
+        {/* Pagination Indicators (1 elongated pill + 2 dots) */}
         <View style={styles.paginationRow}>
           {slides.map((_, index) => {
             const isActive = currentIndex === index;
@@ -370,43 +284,20 @@ export default function OnboardingScreen() {
           })}
         </View>
 
-        {/* Buttons Row */}
-        <View style={styles.actionRow}>
-          {currentIndex > 0 ? (
-            <Pressable
-              style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]}
-              onPress={handleBack}>
-              <Ionicons name="arrow-back" size={20} color="#475569" />
-              <Text style={styles.backBtnText}>Back</Text>
-            </Pressable>
-          ) : (
-            <View style={{ width: 80 }} />
-          )}
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryBtn,
-              { opacity: pressed ? 0.9 : 1 },
-            ]}
-            onPress={handleNext}>
-            <LinearGradient
-              colors={Colors.gradients.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.primaryBtnGradient}>
-              <Text style={styles.primaryBtnText}>
-                {currentIndex === slides.length - 1 ? 'Get Started Now' : 'Next'}
-              </Text>
-              <Ionicons
-                name={currentIndex === slides.length - 1 ? 'rocket' : 'arrow-forward'}
-                size={18}
-                color="#FFFFFF"
-              />
-            </LinearGradient>
-          </Pressable>
-        </View>
+        {/* Golden Orange Next Button matching Image 1 */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.nextBtn,
+            { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] },
+          ]}
+          onPress={handleNext}>
+          <Text style={styles.nextBtnText}>
+            {currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
+          </Text>
+          <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+        </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -414,505 +305,327 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+    justifyContent: 'space-between',
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 36 : 10,
-    paddingBottom: 12,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  brandLogoBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  brandName: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: -0.3,
-  },
-  brandSub: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
   skipBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: '#EDF2F7',
-    gap: 2,
   },
-  skipBtnText: {
-    fontSize: 13,
+  skipText: {
+    fontSize: 15,
     fontWeight: '700',
-    color: '#475569',
+    color: '#334155',
   },
   slide: {
     width: width,
-    paddingHorizontal: 20,
-    justifyContent: 'space-between',
-    paddingBottom: 10,
-  },
-  graphicContainer: {
-    flex: 1.15,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
-  graphicCard: {
+  graphicArea: {
     width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 28,
+  },
+  cardContainer: {
+    width: '100%',
+    maxWidth: 320,
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    borderRadius: 28,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    overflow: 'hidden',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  mockupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  mockupHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  deviceCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mockupJobId: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#60A5FA',
-    letterSpacing: 0.5,
-  },
-  mockupDevice: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  statusPill: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.4)',
-  },
-  statusPillText: {
-    color: '#F59E0B',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  mockupBody: {
-    padding: 16,
-  },
-  mockupRow: {
-    marginVertical: 2,
-  },
-  mockupLabel: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  mockupValue: {
-    fontSize: 13,
-    color: '#1E293B',
-    fontWeight: '600',
-  },
-  mockupValueHighlight: {
-    fontSize: 13,
-    color: '#2563EB',
-    fontWeight: '700',
-  },
-  mockupDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 10,
-  },
-  mockupFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  costLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  costValue: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#0F172A',
-  },
-  advanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  advanceText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#059669',
-  },
-  smsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  smsHeaderIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  smsHeaderTitle: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  smsHeaderSub: {
-    color: '#BAE6FD',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  smsSentBadge: {
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  smsSentText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  smsBubble: {
-    padding: 16,
-    backgroundColor: '#F8FAFC',
-  },
-  smsBubbleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  smsSender: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0369A1',
-  },
-  smsTime: {
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  smsBody: {
-    fontSize: 13,
-    color: '#334155',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  smsActionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  smsBadgeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 4,
-  },
-  smsBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  pnlHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-  },
-  pnlHeaderLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#A7F3D0',
-    letterSpacing: 0.5,
-  },
-  pnlHeaderAmount: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  pnlGrowthPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    gap: 4,
-  },
-  pnlGrowthText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  pnlMetricsRow: {
-    flexDirection: 'row',
-    padding: 16,
-    alignItems: 'center',
-  },
-  pnlMetricBox: {
-    flex: 1,
-  },
-  pnlMetricDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 12,
-  },
-  pnlMetricLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748B',
-    marginBottom: 2,
-  },
-  pnlMetricValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  pnlMetricSub: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  techAssignBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E7FF',
-    gap: 6,
-  },
-  techAssignText: {
-    fontSize: 12,
-    color: '#4338CA',
-  },
-  finalHeroBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    shadowRadius: 20,
     elevation: 6,
   },
-  finalHeroTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 6,
+  mockupJobCard: {
+    backgroundColor: '#FAF7EE',
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#F3E8C8',
   },
-  finalHeroSubtitle: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  featurePillsWrap: {
+  jobCardTop: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    alignItems: 'center',
     gap: 8,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDE0B8',
   },
-  featurePill: {
-    flexDirection: 'row',
+  jobCardBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FEF3C7',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    gap: 4,
+    justifyContent: 'center',
   },
-  featurePillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#334155',
-  },
-  slideContent: {
-    flex: 1,
-    paddingTop: 8,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 5,
-    marginBottom: 8,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  titleText: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: -0.6,
-    lineHeight: 32,
-    marginBottom: 8,
-  },
-  descriptionText: {
+  jobCardTitle: {
     fontSize: 14,
-    color: '#64748B',
-    lineHeight: 20,
-    marginBottom: 14,
+    fontWeight: '800',
+    color: '#78350F',
   },
-  tagsRow: {
+  jobCardGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  tagPill: {
+    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  jobCardCol: {
+    flex: 1,
+  },
+  rowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 3,
+  },
+  gridHeading: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+  },
+  gridValueSmall: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  gridSubSmall: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  repairItemsBox: {
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  checkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 5,
+  },
+  checkText: {
+    fontSize: 10,
+    color: '#334155',
+    fontWeight: '600',
+    flex: 1,
+  },
+  checkTime: {
+    fontSize: 9,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  notesBox: {
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  notesTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  notesBody: {
+    fontSize: 9,
+    color: '#475569',
+    marginTop: 1,
+  },
+  mockupBtn: {
+    backgroundColor: '#F59E0B',
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  mockupBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  smsBubbleItem: {
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
   },
-  tagText: {
-    fontSize: 12,
-    fontWeight: '600',
+  smsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  smsSenderName: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0284C7',
+  },
+  smsTimeText: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  smsMessageBody: {
+    fontSize: 11,
     color: '#334155',
+    lineHeight: 16,
   },
-  bottomControls: {
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    backgroundColor: '#F8FAFC',
+  smsDeliveryStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  smsDeliveredText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  pnlRevenueBox: {
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  pnlLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.5,
+  },
+  pnlAmount: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginVertical: 2,
+  },
+  pnlBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 2,
+  },
+  pnlBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#16A34A',
+  },
+  pnlStatsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  pnlStatBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  pnlStatLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  pnlStatVal: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 1,
+  },
+  pnlDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
+  },
+  textArea: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  titleText: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0F2942',
+    letterSpacing: -0.4,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  subtitleText: {
+    fontSize: 15,
+    color: '#475569',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  bottomArea: {
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === 'ios' ? 8 : 14,
+    alignItems: 'center',
   },
   paginationRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    marginBottom: 16,
+    marginBottom: 24,
   },
   dot: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
   },
   dotActive: {
-    width: 28,
-    backgroundColor: Colors.primary,
+    width: 32,
+    backgroundColor: '#1E293B',
   },
   dotInactive: {
-    width: 8,
+    width: 7,
     backgroundColor: '#CBD5E1',
   },
-  actionRow: {
+  nextBtn: {
+    width: '100%',
+    backgroundColor: '#F59E0B',
+    height: 56,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 4,
-  },
-  backBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  primaryBtn: {
-    flex: 1,
-    marginLeft: 12,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: Colors.primary,
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 4,
   },
-  primaryBtnGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  primaryBtnText: {
+  nextBtnText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
   },
 });

@@ -11,16 +11,19 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { JobCard, JobStatus } from '../../types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { DeviceIcon } from '../../components/DeviceIcon';
 import { Colors } from '../../constants/Colors';
+import { AppHeader } from '../../components/AppHeader';
 
 const statusFlow: JobStatus[] = ['pending', 'in_progress', 'parts_delayed', 'repaired', 'delivered'];
 
 export default function JobDetailScreen() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [job, setJob] = useState<JobCard | null>(null);
@@ -57,12 +60,12 @@ export default function JobDetailScreen() {
       if (newStatus === 'repaired') {
         Alert.alert(
           'Status Updated: Repaired',
-          `SMS sent to customer ${job.customerSnapshot.phone} via Fast2SMS: "Device for ${job.jobId} is ready for pickup."`
+          `SMS sent to customer ${job.customerSnapshot.phone}: "Device for ${job.jobId} is ready for pickup."`
         );
       } else if (newStatus === 'delivered') {
         Alert.alert(
           'Status Updated: Delivered',
-          `SMS sent to customer ${job.customerSnapshot.phone} via Fast2SMS: "Device for ${job.jobId} has been delivered. Thank you!"`
+          `Device marked as delivered. Invoice sent to ${job.customerSnapshot.phone}.`
         );
       }
     }
@@ -70,7 +73,7 @@ export default function JobDetailScreen() {
 
   const handleRecordPayment = async () => {
     if (!job || !payAmount || Number(payAmount) <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid payment amount.');
+      Alert.alert('Invalid Amount', 'Please enter a valid amount.');
       return;
     }
 
@@ -95,8 +98,11 @@ export default function JobDetailScreen() {
 
   if (!job) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={{ color: '#64748B' }}>Loading job details...</Text>
+      <View style={styles.container}>
+        <AppHeader title="Job Card Details" />
+        <View style={styles.centerContainer}>
+          <Text style={{ color: '#64748B' }}>Loading job details...</Text>
+        </View>
       </View>
     );
   }
@@ -104,31 +110,36 @@ export default function JobDetailScreen() {
   const hasDue = job.cost.due > 0;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Top Banner Card */}
-      <View style={styles.topCard}>
-        <View style={styles.headerRow}>
-          <DeviceIcon type={job.deviceType} size={24} />
-          <View style={styles.titleInfo}>
-            <View style={styles.jobIdRow}>
-              <View style={styles.jobIdBadge}>
-                <Text style={styles.jobIdText}>{job.jobId}</Text>
+    <View style={styles.container}>
+      <AppHeader title="Job Card Details" subtitle={job.jobId} />
+
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]}>
+        {/* Top Banner Card */}
+        <View style={styles.topCard}>
+          <View style={styles.headerRow}>
+            <DeviceIcon type={job.deviceType} size={24} />
+            <View style={styles.titleInfo}>
+              <View style={styles.jobIdRow}>
+                <View style={styles.jobIdBadge}>
+                  <Text style={styles.jobIdText}>{job.jobId}</Text>
+                </View>
+                <Text style={styles.dateText}>
+                  {new Date(job.createdAt).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
               </View>
-              <Text style={styles.dateText}>
-                {new Date(job.createdAt).toLocaleDateString('en-IN', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+              <Text style={styles.deviceName}>
+                {job.brand} {job.model}
               </Text>
             </View>
-            <Text style={styles.deviceName}>
-              {job.brand} {job.model}
-            </Text>
+            <StatusBadge status={job.status} size="md" />
           </View>
-          <StatusBadge status={job.status} size="md" />
-        </View>
 
         {job.serialOrImei || job.passcodePattern ? (
           <View style={styles.deviceMetaRow}>
@@ -181,7 +192,7 @@ export default function JobDetailScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Update Job Status</Text>
         <Text style={styles.pipelineHelp}>
-          Tap any status to update. Fast2SMS is sent automatically on Repaired and Delivered.
+          Tap any status to update. Customer SMS is sent automatically on Repaired and Delivered.
         </Text>
 
         <View style={styles.statusButtonsGrid}>
@@ -266,11 +277,11 @@ export default function JobDetailScreen() {
         )}
       </View>
 
-      {/* Fast2SMS Logs */}
+      {/* SMS Logs */}
       <View style={styles.card}>
         <View style={styles.smsLogHeader}>
           <Ionicons name="chatbubble-ellipses" size={18} color="#0284C7" />
-          <Text style={[styles.cardTitle, { marginLeft: 8 }]}>Fast2SMS Updates Delivered</Text>
+          <Text style={[styles.cardTitle, { marginLeft: 8 }]}>Customer SMS Updates Delivered</Text>
         </View>
 
         {job.smsLogs && job.smsLogs.length > 0 ? (
@@ -409,8 +420,9 @@ export default function JobDetailScreen() {
         </View>
       </Modal>
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -418,6 +430,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  scrollArea: {
+    flex: 1,
   },
   content: {
     padding: 16,

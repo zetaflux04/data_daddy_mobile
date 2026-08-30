@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { SplashScreenView } from '../components/SplashScreenView';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 import React from 'react';
 
@@ -27,6 +28,8 @@ function RootNavigation() {
     setSplashFinished(true);
     if (hasCompletedOnboarding === false) {
       router.replace('/onboarding');
+    } else if (!user) {
+      router.replace('/(auth)/login');
     }
   };
 
@@ -35,14 +38,7 @@ function RootNavigation() {
       <StatusBar style={!splashFinished ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
-          headerStyle: {
-            backgroundColor: '#FFFFFF',
-          },
-          headerTintColor: '#0F172A',
-          headerTitleStyle: {
-            fontWeight: '700',
-          },
-          headerShadowVisible: false,
+          headerShown: false,
           contentStyle: { backgroundColor: '#F8FAFC' },
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -56,79 +52,68 @@ function RootNavigation() {
         <Stack.Screen
           name="job/[id]"
           options={{
-            title: 'Job Card Details',
-            headerBackTitle: 'Back',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="job/new"
           options={{
-            title: 'New Job Card',
+            headerShown: false,
             presentation: 'modal',
-            headerBackTitle: 'Cancel',
           }}
         />
         <Stack.Screen
           name="(auth)/login"
           options={{
-            title: 'Sign In',
             headerShown: false,
           }}
         />
         <Stack.Screen
           name="(auth)/register"
           options={{
-            title: 'Register Shop',
             headerShown: false,
           }}
         />
         <Stack.Screen
           name="analytics"
           options={{
-            title: 'Profit & Loss',
-            headerBackTitle: 'Profile',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="guides"
           options={{
-            title: 'Technician Guides',
-            headerBackTitle: 'Profile',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="staff"
           options={{
-            title: 'Staff & Technicians',
-            headerBackTitle: 'Profile',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="settings"
           options={{
-            title: 'Shop Settings',
-            headerBackTitle: 'Profile',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="privacy"
           options={{
-            title: 'Privacy Policy',
-            headerBackTitle: 'Profile',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="terms"
           options={{
-            title: 'Terms & Conditions',
-            headerBackTitle: 'Profile',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="notifications"
           options={{
-            title: 'Notifications & Alerts',
-            headerBackTitle: 'Back',
+            headerShown: false,
           }}
         />
       </Stack>
@@ -161,8 +146,10 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <RootNavigation />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <RootNavigation />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

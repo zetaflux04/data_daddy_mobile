@@ -7,12 +7,16 @@ import {
   TextInput,
   Pressable,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { DeviceType } from '../../types';
 import { Colors } from '../../constants/Colors';
+import { AppHeader } from '../../components/AppHeader';
 
 const deviceTypes: Array<{ type: DeviceType; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
   { type: 'mobile', label: 'Mobile', icon: 'phone-portrait-outline' },
@@ -22,6 +26,7 @@ const deviceTypes: Array<{ type: DeviceType; label: string; icon: keyof typeof I
 ];
 
 export default function NewJobScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ customerId?: string; name?: string; phone?: string }>();
 
@@ -73,7 +78,7 @@ export default function NewJobScreen() {
 
       Alert.alert(
         'Job Created!',
-        `Job Card ${newJob.jobId} created successfully. Fast2SMS "Order Received" notification sent to +91 ${customerPhone}.`,
+        `Job Card ${newJob.jobId} created successfully. Automated "Order Received" SMS sent to +91 ${customerPhone}.`,
         [
           {
             text: 'View Job Card',
@@ -87,14 +92,23 @@ export default function NewJobScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Fast2SMS Banner */}
-      <View style={styles.smsNotice}>
-        <Ionicons name="chatbox-ellipses" size={18} color="#0369A1" />
-        <Text style={styles.smsNoticeText}>
-          Customer will automatically receive an SMS with Job ID and shop contact number upon saving.
-        </Text>
-      </View>
+    <View style={styles.container}>
+      <AppHeader title="New Job Card" />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flexOne}>
+        <ScrollView
+          style={styles.flexOne}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]}
+          showsVerticalScrollIndicator={false}>
+          {/* SMS Notice Banner */}
+          <View style={styles.smsNotice}>
+            <Ionicons name="chatbox-ellipses" size={18} color="#0369A1" />
+            <Text style={styles.smsNoticeText}>
+              Customer will automatically receive an SMS with Job ID and shop contact number upon saving.
+            </Text>
+          </View>
 
       {/* Customer Section */}
       <View style={styles.sectionCard}>
@@ -262,8 +276,10 @@ export default function NewJobScreen() {
         </Text>
       </Pressable>
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -271,6 +287,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  flexOne: {
+    flex: 1,
   },
   content: {
     padding: 16,

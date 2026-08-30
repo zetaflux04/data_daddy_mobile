@@ -7,18 +7,20 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
+import { AppHeader } from '../components/AppHeader';
 
-interface NotificationItem {
+export interface NotificationItem {
   _id: string;
   title: string;
   message: string;
-  type: 'broadcast' | 'job' | 'sms' | 'system';
+  type: 'broadcast' | 'job' | 'system' | 'direct';
   priority?: 'info' | 'warning' | 'promo';
   createdAt: string;
   read?: boolean;
@@ -28,81 +30,56 @@ const filterTabs = [
   { key: 'all', label: 'All' },
   { key: 'broadcast', label: 'Announcements' },
   { key: 'job', label: 'Repair Alerts' },
-  { key: 'sms', label: 'Fast2SMS' },
+  { key: 'system', label: 'System' },
 ];
+
+function formatTimeAgo(dateStr: string): string {
+  if (!dateStr) return 'Recently';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    return dateStr; // Already relative string like "10 mins ago"
+  }
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffSec < 60) return 'Just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  if (diffSec < 172800) return 'Yesterday';
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+
+  return date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadNotifications = async () => {
     try {
+      setIsLoading(true);
       const data = await api.getNotifications();
-      // Combine with local mock notification items for rich demo experience
-      const defaultItems: NotificationItem[] = [
-        {
-          _id: 'notif_1',
-          title: '📢 Diwali Bulk Spare Parts Special Discount',
-          message:
-            'All verified repair centers receive an extra 15% discount on iPhone 13/14 OLED combos and Samsung display panels ordered this week.',
-          type: 'broadcast',
-          priority: 'promo',
-          createdAt: '10 mins ago',
-          read: false,
-        },
-        {
-          _id: 'notif_2',
-          title: '⚡ Fast2SMS Gateway: 100 Credits Added',
-          message:
-            'Your monthly SMS quota has been successfully topped up. Automated customer SMS alerts are fully active.',
-          type: 'sms',
-          priority: 'info',
-          createdAt: '2 hours ago',
-          read: false,
-        },
-        {
-          _id: 'notif_3',
-          title: '🔧 Job #DD-2026-084 Ready for Pickup',
-          message:
-            'Technician Suresh completed display and battery repair for Rahul Sharma (iPhone 14 Pro Max). Customer notified via SMS.',
-          type: 'job',
-          priority: 'info',
-          createdAt: '5 hours ago',
-          read: true,
-        },
-        {
-          _id: 'notif_4',
-          title: '⚠️ Spare Parts Delay Notice',
-          message:
-            'Shipments for OnePlus 11 motherboard chips are delayed by 24 hours. Estimated delivery updated in inventory.',
-          type: 'job',
-          priority: 'warning',
-          createdAt: 'Yesterday',
-          read: true,
-        },
-        {
-          _id: 'notif_5',
-          title: '🎉 New Feature: Digital P&L Export',
-          message:
-            'You can now download daily, weekly, and monthly Profit & Loss spreadsheets directly from your DataDaddy shop profile.',
-          type: 'broadcast',
-          priority: 'promo',
-          createdAt: '2 days ago',
-          read: true,
-        },
-      ];
-
-      // Merge backend items if any
-      const merged = [...data.map((d: any) => ({ ...d, read: false })), ...defaultItems];
-      // Deduplicate by _id
-      const unique = merged.filter(
-        (item, index, self) => index === self.findIndex((t) => t._id === item._id)
-      );
-      setNotifications(unique);
+      const items: NotificationItem[] = (Array.isArray(data) ? data : []).map((d: any) => ({
+        _id: d._id || d.id || `notif_${Math.random()}`,
+        title: d.title || 'Notification',
+        message: d.message || '',
+        type: d.type === 'sms' ? 'system' : d.type || 'broadcast',
+        priority: d.priority || 'info',
+        createdAt: d.createdAt ? formatTimeAgo(d.createdAt) : 'Just now',
+        read: d.read || false,
+      }));
+      setNotifications(items);
     } catch {
-      // Fallback loaded
+      setNotifications([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -131,34 +108,39 @@ export default function NotificationsScreen() {
     if (item.type === 'broadcast') {
       return { name: 'megaphone' as const, color: '#2563EB', bg: '#EFF6FF' };
     }
-    if (item.type === 'sms') {
-      return { name: 'paper-plane' as const, color: '#0284C7', bg: '#E0F2FE' };
-    }
     if (item.priority === 'warning') {
       return { name: 'alert-circle' as const, color: '#F59E0B', bg: '#FEF3C7' };
     }
-    return { name: 'construct' as const, color: '#10B981', bg: '#ECFDF5' };
+    if (item.type === 'job') {
+      return { name: 'construct' as const, color: '#10B981', bg: '#ECFDF5' };
+    }
+    return { name: 'notifications' as const, color: '#6366F1', bg: '#EEF2FF' };
   };
 
   return (
-    <View style={styles.container}>
-      {/* Top Controls: Unread Counter & Mark as Read */}
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <AppHeader
+        title="Notifications & Alerts"
+        rightAction={
+          unreadCount > 0 ? (
+            <Pressable
+              style={({ pressed }) => [styles.headerMarkBtn, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={markAllAsRead}>
+              <Ionicons name="checkmark-done" size={16} color={Colors.primary} />
+              <Text style={styles.headerMarkText}>Read all</Text>
+            </Pressable>
+          ) : undefined
+        }
+      />
+
+      {/* Top Controls: Unread Counter */}
       <View style={styles.topBar}>
         <View style={styles.unreadStatus}>
           <View style={styles.unreadBadge}>
             <Text style={styles.unreadBadgeText}>{unreadCount} NEW</Text>
           </View>
-          <Text style={styles.unreadSub}>Real-time alerts & broadcasts</Text>
+          <Text style={styles.unreadSub}>Real-time updates & alerts</Text>
         </View>
-
-        {unreadCount > 0 && (
-          <Pressable
-            style={({ pressed }) => [styles.markReadBtn, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={markAllAsRead}>
-            <Ionicons name="checkmark-done" size={16} color={Colors.primary} />
-            <Text style={styles.markReadText}>Mark all read</Text>
-          </Pressable>
-        )}
       </View>
 
       {/* Horizontal Filter Chips */}
@@ -187,86 +169,94 @@ export default function NotificationsScreen() {
         </ScrollView>
       </View>
 
-      {/* Notification List */}
-      <FlatList
-        data={filteredNotifications}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.primary}
-          />
-        }
-        renderItem={({ item }) => {
-          const icon = getIconConfig(item);
-          return (
-            <Pressable
-              style={({ pressed }) => [
-                styles.notifCard,
-                !item.read && styles.notifCardUnread,
-                { opacity: pressed ? 0.92 : 1 },
-              ]}
-              onPress={() => {
-                // Mark item read
-                setNotifications((prev) =>
-                  prev.map((n) => (n._id === item._id ? { ...n, read: true } : n))
-                );
-              }}>
-              <View style={styles.cardHeader}>
-                <View style={[styles.iconBox, { backgroundColor: icon.bg }]}>
-                  <Ionicons name={icon.name} size={18} color={icon.color} />
-                </View>
-                <View style={styles.cardHeaderInfo}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    {!item.read && <View style={styles.unreadDot} />}
+      {/* Loading state indicator */}
+      {isLoading && !isRefreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Fetching latest notifications...</Text>
+        </View>
+      ) : (
+        /* Notification List */
+        <FlatList
+          data={filteredNotifications}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+              colors={[Colors.primary]}
+            />
+          }
+          renderItem={({ item }) => {
+            const icon = getIconConfig(item);
+            return (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.notifCard,
+                  !item.read && styles.notifCardUnread,
+                  { opacity: pressed ? 0.92 : 1 },
+                ]}
+                onPress={() => {
+                  setNotifications((prev) =>
+                    prev.map((n) => (n._id === item._id ? { ...n, read: true } : n))
+                  );
+                }}>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.iconBox, { backgroundColor: icon.bg }]}>
+                    <Ionicons name={icon.name} size={18} color={icon.color} />
                   </View>
-                  <Text style={styles.timestamp}>{item.createdAt}</Text>
+                  <View style={styles.cardHeaderInfo}>
+                    <View style={styles.titleRow}>
+                      <Text style={styles.cardTitle} numberOfLines={2}>
+                        {item.title}
+                      </Text>
+                      {!item.read && <View style={styles.unreadDot} />}
+                    </View>
+                    <Text style={styles.timestamp}>{item.createdAt}</Text>
+                  </View>
                 </View>
+
+                <Text style={styles.cardMessage}>{item.message}</Text>
+
+                {item.type === 'job' && (
+                  <View style={styles.actionChipRow}>
+                    <Pressable
+                      style={styles.actionChip}
+                      onPress={() => router.push('/(tabs)/jobs')}>
+                      <Text style={styles.actionChipText}>View Job Cards →</Text>
+                    </Pressable>
+                  </View>
+                )}
+
+                {item.type === 'broadcast' && (
+                  <View style={styles.actionChipRow}>
+                    <Pressable
+                      style={[styles.actionChip, { backgroundColor: '#EFF6FF' }]}
+                      onPress={() => router.push('/analytics')}>
+                      <Text style={[styles.actionChipText, { color: Colors.primary }]}>
+                        View Details →
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+              </Pressable>
+            );
+          }}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconBox}>
+                <Ionicons name="notifications-off-outline" size={36} color="#94A3B8" />
               </View>
-
-              <Text style={styles.cardMessage}>{item.message}</Text>
-
-              {item.type === 'job' && (
-                <View style={styles.actionChipRow}>
-                  <Pressable
-                    style={styles.actionChip}
-                    onPress={() => router.push('/(tabs)/jobs')}>
-                    <Text style={styles.actionChipText}>View Job Cards →</Text>
-                  </Pressable>
-                </View>
-              )}
-
-              {item.type === 'broadcast' && (
-                <View style={styles.actionChipRow}>
-                  <Pressable
-                    style={[styles.actionChip, { backgroundColor: '#EFF6FF' }]}
-                    onPress={() => router.push('/analytics')}>
-                    <Text style={[styles.actionChipText, { color: Colors.primary }]}>
-                      View Promo Details →
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-            </Pressable>
-          );
-        }}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconBox}>
-              <Ionicons name="notifications-off-outline" size={40} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>No notifications found</Text>
+              <Text style={styles.emptySubtitle}>
+                You're all caught up! Admin broadcasts, repair updates, and alerts will appear here.
+              </Text>
             </View>
-            <Text style={styles.emptyTitle}>No notifications found</Text>
-            <Text style={styles.emptySubtitle}>
-              You're all caught up! Admin broadcasts and repair alerts will appear here.
-            </Text>
-          </View>
-        }
-      />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -286,10 +276,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
+  headerMarkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 8,
+  },
+  headerMarkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
   unreadStatus: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 1,
   },
   unreadBadge: {
     backgroundColor: Colors.primary,
@@ -307,6 +312,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
+    flexShrink: 1,
   },
   markReadBtn: {
     flexDirection: 'row',
@@ -351,9 +357,22 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '800',
   },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
   listContent: {
     padding: 16,
-    paddingBottom: 30,
+    paddingBottom: 24,
+    flexGrow: 1,
   },
   notifCard: {
     backgroundColor: '#FFFFFF',
@@ -376,7 +395,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
   iconBox: {
@@ -386,32 +405,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    marginTop: 2,
   },
   cardHeaderInfo: {
     flex: 1,
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 6,
   },
   cardTitle: {
     fontSize: 14,
     fontWeight: '800',
     color: '#0F172A',
     flex: 1,
-    marginRight: 8,
+    lineHeight: 19,
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: Colors.primary,
+    marginTop: 5,
   },
   timestamp: {
     fontSize: 11,
     color: '#94A3B8',
-    marginTop: 2,
+    marginTop: 3,
   },
   cardMessage: {
     fontSize: 13,
@@ -437,11 +459,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
+    paddingHorizontal: 20,
+    flex: 1,
   },
   emptyIconBox: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
@@ -452,6 +476,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#1E293B',
     marginBottom: 4,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 13,

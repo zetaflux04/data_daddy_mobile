@@ -8,11 +8,15 @@ import {
   TextInput,
   Modal,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { ExpenseItem, DashboardSummary } from '../types';
 import { Colors } from '../constants/Colors';
+import { AppHeader } from '../components/AppHeader';
 
 const categories = [
   { key: 'spare_part', label: 'Spare Part', icon: 'hardware-chip-outline' },
@@ -24,6 +28,7 @@ const categories = [
 ];
 
 export default function AnalyticsScreen() {
+  const insets = useSafeAreaInsets();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -73,85 +78,110 @@ export default function AnalyticsScreen() {
   const marginPct = revenue > 0 ? Math.round((netProfit / revenue) * 100) : 0;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Net Profit Hero Card */}
-      <View style={styles.heroCard}>
-        <Text style={styles.heroSub}>Shop Net Profit (This Month)</Text>
-        <Text style={styles.heroValue}>₹{netProfit.toLocaleString('en-IN')}</Text>
+    <View style={styles.container}>
+      <AppHeader
+        title="Profit & Loss"
+        rightAction={
+          <Pressable
+            style={({ pressed }) => [styles.headerAddBtn, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => setIsAddExpenseOpen(true)}>
+            <Ionicons name="add" size={18} color={Colors.primary} />
+            <Text style={styles.headerAddText}>Add</Text>
+          </Pressable>
+        }
+      />
 
-        <View style={styles.heroBadges}>
-          <View style={styles.marginPill}>
-            <Ionicons name="trending-up" size={14} color={Colors.emerald} />
-            <Text style={styles.marginText}>{marginPct}% Profit Margin</Text>
-          </View>
-          <Text style={styles.heroDuesNotice}>
-            ₹{(summary?.financials.totalDuesPending ?? 0).toLocaleString('en-IN')} dues uncollected
-          </Text>
-        </View>
-      </View>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 16 }]}
+        showsVerticalScrollIndicator={false}>
+        {/* Net Profit Hero Card */}
+        <View style={styles.heroCard}>
+          <Text style={styles.heroSub}>Shop Net Profit (This Month)</Text>
+          <Text style={styles.heroValue}>₹{netProfit.toLocaleString('en-IN')}</Text>
 
-      {/* Revenue vs Expense Comparison Card */}
-      <View style={styles.compareCard}>
-        <Text style={styles.cardHeaderTitle}>Revenue vs Expenses</Text>
-
-        <View style={styles.barItem}>
-          <View style={styles.barLabelRow}>
-            <Text style={styles.barLabel}>Total Collected</Text>
-            <Text style={[styles.barAmount, { color: Colors.primary }]}>
-              ₹{revenue.toLocaleString('en-IN')}
+          <View style={styles.heroBadges}>
+            <View style={styles.marginPill}>
+              <Ionicons name="trending-up" size={14} color={Colors.emerald} />
+              <Text style={styles.marginText}>{marginPct}% Margin</Text>
+            </View>
+            <Text style={styles.heroDuesNotice} numberOfLines={1}>
+              ₹{(summary?.financials.totalDuesPending ?? 0).toLocaleString('en-IN')} dues uncollected
             </Text>
           </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressBar, { width: '100%', backgroundColor: Colors.primary }]} />
+        </View>
+
+        {/* Revenue vs Expense Comparison Card */}
+        <View style={styles.compareCard}>
+          <Text style={styles.cardHeaderTitle}>Revenue vs Expenses</Text>
+
+          <View style={styles.barItem}>
+            <View style={styles.barLabelRow}>
+              <Text style={styles.barLabel}>Total Collected</Text>
+              <Text style={[styles.barAmount, { color: Colors.primary }]}>
+                ₹{revenue.toLocaleString('en-IN')}
+              </Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressBar, { width: '100%', backgroundColor: Colors.primary }]} />
+            </View>
+          </View>
+
+          <View style={styles.barItem}>
+            <View style={styles.barLabelRow}>
+              <Text style={styles.barLabel}>Total Expenses & Parts</Text>
+              <Text style={[styles.barAmount, { color: Colors.rose }]}>
+                ₹{expenseTotal.toLocaleString('en-IN')}
+              </Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: `${revenue > 0 ? Math.min(100, Math.round((expenseTotal / revenue) * 100)) : 0}%`,
+                    backgroundColor: Colors.rose,
+                  },
+                ]}
+              />
+            </View>
           </View>
         </View>
 
-        <View style={styles.barItem}>
-          <View style={styles.barLabelRow}>
-            <Text style={styles.barLabel}>Total Expenses & Parts</Text>
-            <Text style={[styles.barAmount, { color: Colors.rose }]}>
-              ₹{expenseTotal.toLocaleString('en-IN')}
-            </Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressBar,
-                {
-                  width: `${revenue > 0 ? Math.min(100, Math.round((expenseTotal / revenue) * 100)) : 0}%`,
-                  backgroundColor: Colors.rose,
-                },
-              ]}
-            />
-          </View>
+        {/* Expense Manager Section */}
+        <View style={styles.expenseSectionHeader}>
+          <Text style={styles.cardHeaderTitle}>Shop Expenses & Parts</Text>
+          <Pressable
+            style={({ pressed }) => [styles.addExpBtn, { opacity: pressed ? 0.88 : 1 }]}
+            onPress={() => setIsAddExpenseOpen(true)}>
+            <Ionicons name="add" size={16} color="#FFFFFF" />
+            <Text style={styles.addExpBtnText}>Add Expense</Text>
+          </Pressable>
         </View>
-      </View>
 
-      {/* Expense Manager Section */}
-      <View style={styles.expenseSectionHeader}>
-        <Text style={styles.cardHeaderTitle}>Shop Expenses & Parts</Text>
-        <Pressable
-          style={({ pressed }) => [styles.addExpBtn, { opacity: pressed ? 0.88 : 1 }]}
-          onPress={() => setIsAddExpenseOpen(true)}>
-          <Ionicons name="add" size={16} color="#FFFFFF" />
-          <Text style={styles.addExpBtnText}>Add Expense</Text>
-        </Pressable>
-      </View>
-
-      {expenses.map((exp) => (
-        <View key={exp._id} style={styles.expenseItemCard}>
-          <View style={styles.expIconBox}>
-            <Ionicons name="receipt-outline" size={18} color="#64748B" />
+        {expenses.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Ionicons name="receipt-outline" size={32} color="#94A3B8" />
+            <Text style={styles.emptyText}>No expenses recorded this month</Text>
+            <Text style={styles.emptySubText}>Add parts purchases, rent, or staff payouts above</Text>
           </View>
-          <View style={styles.expInfo}>
-            <Text style={styles.expTitle}>{exp.title}</Text>
-            <Text style={styles.expDate}>
-              {new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {exp.category.replace('_', ' ')}
-            </Text>
-          </View>
-          <Text style={styles.expAmount}>-₹{exp.amount.toLocaleString('en-IN')}</Text>
-        </View>
-      ))}
+        ) : (
+          expenses.map((exp) => (
+            <View key={exp._id} style={styles.expenseItemCard}>
+              <View style={styles.expIconBox}>
+                <Ionicons name="receipt-outline" size={18} color="#64748B" />
+              </View>
+              <View style={styles.expInfo}>
+                <Text style={styles.expTitle}>{exp.title}</Text>
+                <Text style={styles.expDate}>
+                  {new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {exp.category.replace('_', ' ')}
+                </Text>
+              </View>
+              <Text style={styles.expAmount}>-₹{exp.amount.toLocaleString('en-IN')}</Text>
+            </View>
+          ))
+        )}
+      </ScrollView>
 
       {/* Add Expense Modal */}
       <Modal
@@ -159,68 +189,75 @@ export default function AnalyticsScreen() {
         transparent
         animationType="slide"
         onRequestClose={() => setIsAddExpenseOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Record Expense / Part Cost</Text>
-              <Pressable onPress={() => setIsAddExpenseOpen(false)}>
+              <Pressable
+                onPress={() => setIsAddExpenseOpen(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name="close" size={24} color="#64748B" />
               </Pressable>
             </View>
 
-            <Text style={styles.inputLabel}>Title *</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. iPhone 13 Screen combo purchase"
-              value={expTitle}
-              onChangeText={setExpTitle}
-            />
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              <Text style={styles.inputLabel}>Title *</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. iPhone 13 Screen combo purchase"
+                placeholderTextColor="#94A3B8"
+                value={expTitle}
+                onChangeText={setExpTitle}
+              />
 
-            <Text style={styles.inputLabel}>Amount (₹) *</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. 2800"
-              keyboardType="numeric"
-              value={expAmount}
-              onChangeText={setExpAmount}
-            />
+              <Text style={styles.inputLabel}>Amount (₹) *</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. 2800"
+                placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
+                value={expAmount}
+                onChangeText={setExpAmount}
+              />
 
-            <Text style={styles.inputLabel}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
-              {categories.map((c) => (
-                <Pressable
-                  key={c.key}
-                  style={[styles.catChip, expCategory === c.key && styles.catChipActive]}
-                  onPress={() => setExpCategory(c.key as any)}>
-                  <Text style={[styles.catChipText, expCategory === c.key && styles.catChipTextActive]}>
-                    {c.label}
-                  </Text>
+              <Text style={styles.inputLabel}>Category</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+                {categories.map((c) => (
+                  <Pressable
+                    key={c.key}
+                    style={[styles.catChip, expCategory === c.key && styles.catChipActive]}
+                    onPress={() => setExpCategory(c.key as any)}>
+                    <Text style={[styles.catChipText, expCategory === c.key && styles.catChipTextActive]}>
+                      {c.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <Text style={styles.inputLabel}>Note (Optional)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Purchased from Nehru Place distributor"
+                placeholderTextColor="#94A3B8"
+                value={expNote}
+                onChangeText={setExpNote}
+              />
+
+              <View style={styles.modalActions}>
+                <Pressable style={styles.cancelBtn} onPress={() => setIsAddExpenseOpen(false)}>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
                 </Pressable>
-              ))}
+                <Pressable style={styles.saveBtn} onPress={handleSaveExpense}>
+                  <Text style={styles.saveBtnText}>Save Expense</Text>
+                </Pressable>
+              </View>
             </ScrollView>
-
-            <Text style={styles.inputLabel}>Note (Optional)</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. Purchased from Nehru Place distributor"
-              value={expNote}
-              onChangeText={setExpNote}
-            />
-
-            <View style={styles.modalActions}>
-              <Pressable style={styles.cancelBtn} onPress={() => setIsAddExpenseOpen(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.saveBtn} onPress={handleSaveExpense}>
-                <Text style={styles.saveBtnText}>Save Expense</Text>
-              </Pressable>
-            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-
-      <View style={{ height: 30 }} />
-    </ScrollView>
+    </View>
   );
 }
 
@@ -228,6 +265,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  scrollArea: {
+    flex: 1,
+  },
+  headerAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 8,
+  },
+  headerAddText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+    marginBottom: 16,
+    gap: 6,
+  },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  emptySubText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
   },
   content: {
     padding: 16,

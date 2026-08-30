@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import {
   mockShop,
   mockUser,
@@ -12,15 +13,19 @@ import {
 } from './mockData';
 import { JobCard, CustomerItem, ExpenseItem, RepairGuideItem, DashboardSummary, JobStatus } from '../types';
 
-// Default to Android emulator loopback or localhost
-const DEFAULT_BASE_URL =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:5000/api'
-    : 'http://localhost:5000/api';
+// Dynamically resolve backend host from Expo packager when on local network/device
+const getBackendBaseUrl = (): string => {
+  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    return `http://${ip}:5000/api`;
+  }
+  return Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+};
 
 export const apiClient = axios.create({
-  baseURL: DEFAULT_BASE_URL,
-  timeout: 5000,
+  baseURL: getBackendBaseUrl(),
+  timeout: 8000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -38,7 +43,7 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Local in-memory store for mutations when in offline/demo fallback mode
+// In-memory local fallback store
 let localJobs: JobCard[] = [...mockJobs];
 let localCustomers: CustomerItem[] = [...mockCustomers];
 let localExpenses: ExpenseItem[] = [...mockExpenses];
@@ -185,7 +190,7 @@ export const api = {
           due: Math.max(0, estCost - adv),
         },
         payments: adv > 0 ? [{ amount: adv, mode: data.paymentMode || 'cash', paidAt: new Date().toISOString() }] : [],
-        smsLogs: [{ type: 'order_received', status: 'sent', providerRef: 'Fast2SMS ID: F2S_LIVE', sentAt: new Date().toISOString() }],
+        smsLogs: [{ type: 'order_received', status: 'sent', providerRef: 'SMS Delivery Confirmed', sentAt: new Date().toISOString() }],
         dates: {
           receivedAt: new Date().toISOString(),
           promisedDeliveryAt: data.promisedDeliveryAt,
@@ -214,7 +219,7 @@ export const api = {
           job.smsLogs.push({
             type: 'repaired',
             status: 'sent',
-            providerRef: 'Fast2SMS Ready SMS',
+            providerRef: 'Ready for Pickup SMS',
             sentAt: new Date().toISOString(),
           });
         } else if (status === 'delivered') {
@@ -222,7 +227,7 @@ export const api = {
           job.smsLogs.push({
             type: 'delivered',
             status: 'sent',
-            providerRef: 'Fast2SMS Delivered SMS',
+            providerRef: 'Delivered SMS',
             sentAt: new Date().toISOString(),
           });
         }
@@ -328,22 +333,13 @@ export const api = {
     }
   },
 
-  // Notifications from Admin Broadcast
+  // Notifications from Admin Broadcast & Shop Notifications
   async getNotifications(): Promise<any[]> {
     try {
       const res = await apiClient.get('/notifications');
       return res.data.notifications || [];
     } catch {
-      return [
-        {
-          _id: 'notif_mobile_01',
-          title: '📢 Diwali Bulk Spare Parts Special Discount',
-          message: 'All verified repair centers receive an extra 15% discount on iPhone 13/14 OLED combos and Samsung display panels ordered this week.',
-          priority: 'promo',
-          type: 'broadcast',
-          createdAt: new Date().toISOString(),
-        },
-      ];
+      return [];
     }
   },
 };

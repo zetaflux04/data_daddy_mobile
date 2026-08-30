@@ -8,9 +8,14 @@ import {
   Modal,
   TextInput,
   Alert,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
+import { AppHeader } from '../components/AppHeader';
 
 interface StaffMember {
   id: string;
@@ -28,6 +33,7 @@ const initialStaff: StaffMember[] = [
 ];
 
 export default function StaffScreen() {
+  const insets = useSafeAreaInsets();
   const [staff, setStaff] = useState<StaffMember[]>(initialStaff);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
@@ -57,6 +63,8 @@ export default function StaffScreen() {
 
   return (
     <View style={styles.container}>
+      <AppHeader title="Staff & Technicians" />
+
       <View style={styles.topNotice}>
         <Ionicons name="information-circle-outline" size={18} color={Colors.primary} />
         <Text style={styles.noticeText}>
@@ -68,6 +76,17 @@ export default function StaffScreen() {
         data={staff}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconBox}>
+              <Ionicons name="people-outline" size={32} color="#94A3B8" />
+            </View>
+            <Text style={styles.emptyTitle}>No Staff Members Added</Text>
+            <Text style={styles.emptySubtitle}>
+              Tap the button below to add your technicians and front-desk staff.
+            </Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <View style={styles.staffCard}>
             <View style={styles.avatar}>
@@ -76,7 +95,7 @@ export default function StaffScreen() {
 
             <View style={styles.info}>
               <View style={styles.nameRow}>
-                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
                 <View
                   style={[
                     styles.roleBadge,
@@ -109,9 +128,9 @@ export default function StaffScreen() {
       />
 
       {/* Add Staff Button */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
-          style={styles.addStaffBtn}
+          style={({ pressed }) => [styles.addStaffBtn, { opacity: pressed ? 0.88 : 1 }]}
           onPress={() => setIsModalOpen(true)}>
           <Ionicons name="person-add" size={18} color="#FFFFFF" />
           <Text style={styles.addStaffBtnText}>Add Technician / Staff</Text>
@@ -124,57 +143,65 @@ export default function StaffScreen() {
         transparent
         animationType="slide"
         onRequestClose={() => setIsModalOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Staff / Technician</Text>
-              <Pressable onPress={() => setIsModalOpen(false)}>
+              <Pressable
+                onPress={() => setIsModalOpen(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name="close" size={24} color="#64748B" />
               </Pressable>
             </View>
 
-            <Text style={styles.label}>Full Name *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Ramesh Suthar"
-              value={name}
-              onChangeText={setName}
-            />
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              <Text style={styles.label}>Full Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Ramesh Suthar"
+                placeholderTextColor="#94A3B8"
+                value={name}
+                onChangeText={setName}
+              />
 
-            <Text style={styles.label}>Mobile Phone *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="10-digit number"
-              keyboardType="phone-pad"
-              maxLength={10}
-              value={phone}
-              onChangeText={setPhone}
-            />
+              <Text style={styles.label}>Mobile Phone *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="10-digit number"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={phone}
+                onChangeText={setPhone}
+              />
 
-            <Text style={styles.label}>Assign Role</Text>
-            <View style={styles.roleRow}>
-              {(['technician', 'staff'] as const).map((r) => (
-                <Pressable
-                  key={r}
-                  style={[styles.roleChip, role === r && styles.roleChipActive]}
-                  onPress={() => setRole(r)}>
-                  <Text style={[styles.roleChipText, role === r && styles.roleChipTextActive]}>
-                    {r.toUpperCase()}
-                  </Text>
+              <Text style={styles.label}>Assign Role</Text>
+              <View style={styles.roleRow}>
+                {(['technician', 'staff'] as const).map((r) => (
+                  <Pressable
+                    key={r}
+                    style={[styles.roleChip, role === r && styles.roleChipActive]}
+                    onPress={() => setRole(r)}>
+                    <Text style={[styles.roleChipText, role === r && styles.roleChipTextActive]}>
+                      {r.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <View style={styles.modalActions}>
+                <Pressable style={styles.cancelBtn} onPress={() => setIsModalOpen(false)}>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
                 </Pressable>
-              ))}
-            </View>
-
-            <View style={styles.modalActions}>
-              <Pressable style={styles.cancelBtn} onPress={() => setIsModalOpen(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.saveBtn} onPress={handleAddStaff}>
-                <Text style={styles.saveBtnText}>Save Staff</Text>
-              </Pressable>
-            </View>
+                <Pressable style={styles.saveBtn} onPress={handleAddStaff}>
+                  <Text style={styles.saveBtnText}>Save Staff</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -372,5 +399,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  emptyIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 18,
   },
 });

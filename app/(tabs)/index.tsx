@@ -132,25 +132,6 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Quick Action Banner: Fast2SMS status */}
-      <View style={styles.smsAlertBanner}>
-        <View style={styles.smsIconCircle}>
-          <Ionicons name="paper-plane" size={16} color="#0284C7" />
-        </View>
-        <View style={styles.smsAlertContent}>
-          <View style={styles.smsAlertTitleRow}>
-            <Text style={styles.smsAlertTitle}>Fast2SMS Gateway Online</Text>
-            <View style={styles.smsOnlineBadge}>
-              <View style={styles.smsOnlineDot} />
-              <Text style={styles.smsOnlineBadgeText}>Active</Text>
-            </View>
-          </View>
-          <Text style={styles.smsAlertSubtitle}>
-            Order Received, Repaired & Delivery SMS are delivered instantly to customers.
-          </Text>
-        </View>
-      </View>
-
       {/* Recent Job Cards */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent Job Cards</Text>

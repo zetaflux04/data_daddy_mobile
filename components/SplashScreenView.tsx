@@ -7,6 +7,7 @@ import {
   Dimensions,
   Easing,
   Platform,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -163,16 +164,11 @@ export const SplashScreenView: React.FC<SplashScreenViewProps> = ({ onFinish }) 
               transform: [{ scale: logoScale }],
             },
           ]}>
-          <LinearGradient
-            colors={['#3B82F6', '#2563EB', '#1D4ED8']}
-            style={styles.logoGradientBox}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}>
-            <Ionicons name="construct" size={46} color="#FFFFFF" />
-          </LinearGradient>
-          <View style={styles.sparkleBadge}>
-            <Ionicons name="flash" size={14} color="#F59E0B" />
-          </View>
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.splashLogoImage}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         {/* Brand Text Content */}
@@ -195,7 +191,7 @@ export const SplashScreenView: React.FC<SplashScreenViewProps> = ({ onFinish }) 
 
           <View style={styles.pillContainer}>
             <Ionicons name="shield-checkmark" size={13} color="#10B981" />
-            <Text style={styles.pillText}>Fast2SMS • P&L Tracker • Digital Job Cards</Text>
+            <Text style={styles.pillText}>SMS Alerts • P&L Tracker • Digital Job Cards</Text>
           </View>
         </Animated.View>
 
@@ -257,27 +253,9 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 10,
   },
-  logoGradientBox: {
-    width: 100,
-    height: 100,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  sparkleBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: '#1E293B',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#3B82F6',
+  splashLogoImage: {
+    width: 130,
+    height: 130,
   },
   textContainer: {
     alignItems: 'center',

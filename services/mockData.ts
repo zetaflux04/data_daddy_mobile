@@ -75,8 +75,8 @@ export const mockJobs: JobCard[] = [
     cost: { estimated: 2800, final: 2800, advancePaid: 2800, due: 0 },
     payments: [{ amount: 2800, mode: 'upi', paidAt: new Date(Date.now() - 3600000 * 8).toISOString() }],
     smsLogs: [
-      { type: 'order_received', status: 'sent', providerRef: 'Fast2SMS ID: F2S_98231', sentAt: new Date(Date.now() - 3600000 * 24).toISOString() },
-      { type: 'repaired', status: 'sent', providerRef: 'Fast2SMS ID: F2S_98319', sentAt: new Date(Date.now() - 3600000 * 8).toISOString() },
+      { type: 'order_received', status: 'sent', providerRef: 'SMS Delivery Confirmed', sentAt: new Date(Date.now() - 3600000 * 24).toISOString() },
+      { type: 'repaired', status: 'sent', providerRef: 'SMS Delivery Confirmed', sentAt: new Date(Date.now() - 3600000 * 8).toISOString() },
     ],
     dates: {
       receivedAt: new Date(Date.now() - 3600000 * 24).toISOString(),

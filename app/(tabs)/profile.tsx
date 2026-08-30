@@ -8,6 +8,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -70,6 +71,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
 );
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { shop, user, logout } = useAuth();
 
@@ -88,7 +90,10 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]}
+      showsVerticalScrollIndicator={false}>
       {/* Shop Profile Card */}
       <View style={styles.shopCard}>
         <View style={styles.shopAvatarWrapper}>
@@ -115,7 +120,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.smsPill}>
             <Ionicons name="chatbox-ellipses" size={14} color="#0284C7" />
-            <Text style={styles.smsPillText}>Fast2SMS Linked</Text>
+            <Text style={styles.smsPillText}>SMS Alerts Active</Text>
           </View>
         </View>
       </View>

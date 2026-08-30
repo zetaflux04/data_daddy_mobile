@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import { Pressable, View, StyleSheet, Platform, Text } from 'react-native';
+import { Pressable, View, StyleSheet, Platform, Text, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 
@@ -47,9 +47,11 @@ export default function TabLayout() {
           title: 'Dashboard',
           headerTitle: () => (
             <View style={styles.headerBrandRow}>
-              <View style={styles.brandIconBox}>
-                <Ionicons name="construct" size={16} color="#FFFFFF" />
-              </View>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={{ width: 28, height: 28 }}
+                resizeMode="contain"
+              />
               <Text style={styles.brandHeaderTitle}>Data<Text style={{ color: Colors.primary }}>Daddy</Text></Text>
               <View style={styles.onlineBadge}>
                 <View style={styles.onlineDot} />

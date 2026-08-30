@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile, ShopProfile } from '../types';
 import { api } from '../services/api';
-import { mockUser, mockShop } from '../services/mockData';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -20,9 +19,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Start with default demo user & shop so app can be tested immediately
-  const [user, setUser] = useState<UserProfile | null>(mockUser);
-  const [shop, setShop] = useState<ShopProfile | null>(mockShop);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [shop, setShop] = useState<ShopProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
 

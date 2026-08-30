@@ -1,81 +1,140 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppHeader } from '../components/AppHeader';
+import { Colors } from '../constants/Colors';
 
 export default function PrivacyPolicyScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Privacy Policy</Text>
-      <Text style={styles.updated}>Last updated: August 2026</Text>
+    <View style={styles.container}>
+      <AppHeader title="Privacy Policy" />
 
-      <Text style={styles.paragraph}>
-        Welcome to <Text style={styles.bold}>DataDaddy</Text>. We are committed to protecting the privacy of repair shop owners, technicians, and their customers.
-      </Text>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.badgeRow}>
+          <View style={styles.dateBadge}>
+            <Text style={styles.dateBadgeText}>Last updated: August 2026</Text>
+          </View>
+        </View>
 
-      <Text style={styles.heading}>1. Information We Collect</Text>
-      <Text style={styles.paragraph}>
-        - <Text style={styles.bold}>Shop & Account Details:</Text> Shop business name, owner name, contact number, and physical store address.
-      </Text>
-      <Text style={styles.paragraph}>
-        - <Text style={styles.bold}>Repair Job Information:</Text> Customer contact details (name and phone), device model, serial/IMEI numbers, reported hardware/software issues, and repair status.
-      </Text>
-      <Text style={styles.paragraph}>
-        - <Text style={styles.bold}>Telephony & SMS:</Text> Logs of automated transactional SMS sent to customers via Fast2SMS.
-      </Text>
+        <Text style={styles.intro}>
+          Welcome to <Text style={styles.bold}>DataDaddy</Text>. We are committed to protecting the privacy and confidentiality of repair shop owners, technicians, and their customer data.
+        </Text>
 
-      <Text style={styles.heading}>2. How We Use Information</Text>
-      <Text style={styles.paragraph}>
-        Your data is strictly used to maintain your shop's digital registers, calculate profit & loss, send customer job card status alerts, and authenticate technician accounts. We do not sell or monetize customer contacts.
-      </Text>
+        <View style={styles.sectionCard}>
+          <Text style={styles.heading}>1. Information We Collect</Text>
+          <Text style={styles.paragraph}>
+            • <Text style={styles.bold}>Shop & Account Details:</Text> Shop business name, owner name, mobile contact number, and physical store address.
+          </Text>
+          <Text style={styles.paragraph}>
+            • <Text style={styles.bold}>Repair Job Information:</Text> Customer contact details (name and phone), device brand, model, serial/IMEI numbers, reported hardware/software issues, passcode pattern, and repair progress.
+          </Text>
+          <Text style={styles.paragraph}>
+            • <Text style={styles.bold}>Telephony & SMS Logs:</Text> Logs of automated transactional SMS sent to customers for order intake, repair completion, and invoice delivery.
+          </Text>
+        </View>
 
-      <Text style={styles.heading}>3. Data Security & Storage</Text>
-      <Text style={styles.paragraph}>
-        All data is transmitted using encrypted HTTPS channels. Technician guides and schematics are hosted privately on secure cloud storage with short-lived pre-signed access tokens.
-      </Text>
+        <View style={styles.sectionCard}>
+          <Text style={styles.heading}>2. How We Use Information</Text>
+          <Text style={styles.paragraph}>
+            Your data is strictly used to maintain your shop's digital registers, calculate profit & loss, send customer job card status alerts, and authenticate technician accounts.
+          </Text>
+          <Text style={styles.highlightText}>
+            We NEVER sell, trade, or monetize your customer database or shop financials to third parties.
+          </Text>
+        </View>
 
-      <Text style={styles.heading}>4. Contact Us</Text>
-      <Text style={styles.paragraph}>
-        If you have any questions regarding this Privacy Policy, please contact our support team at <Text style={styles.bold}>support@datadaddy.in</Text>.
-      </Text>
+        <View style={styles.sectionCard}>
+          <Text style={styles.heading}>3. Data Security & Storage</Text>
+          <Text style={styles.paragraph}>
+            All communications are encrypted in transit via industry-standard HTTPS/TLS protocols. Technician guides, schematics, and invoices are hosted privately on secure cloud storage with short-lived pre-signed access tokens.
+          </Text>
+        </View>
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        <View style={styles.sectionCard}>
+          <Text style={styles.heading}>4. Contact Us</Text>
+          <Text style={styles.paragraph}>
+            If you have questions or privacy inquiries, please contact our support team at:
+          </Text>
+          <Text style={styles.emailText}>support@datadaddy.in</Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
+  },
+  scrollArea: {
+    flex: 1,
   },
   content: {
-    padding: 20,
+    padding: 16,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 4,
+  badgeRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
   },
-  updated: {
+  dateBadge: {
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  dateBadgeText: {
     fontSize: 12,
-    color: '#94A3B8',
-    marginBottom: 20,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  intro: {
+    fontSize: 14,
+    color: '#334155',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   heading: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#0F172A',
-    marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   paragraph: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#475569',
-    lineHeight: 22,
-    marginBottom: 10,
+    lineHeight: 20,
+    marginBottom: 8,
   },
   bold: {
     fontWeight: '700',
     color: '#0F172A',
   },
+  highlightText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.emerald,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  emailText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.primary,
+    marginTop: 4,
+  },
 });
+

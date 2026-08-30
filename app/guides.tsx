@@ -11,14 +11,17 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { RepairGuideItem } from '../types';
 import { Colors } from '../constants/Colors';
 import { useAuth } from '../context/AuthContext';
+import { AppHeader } from '../components/AppHeader';
 
 const brands = ['All', 'Apple', 'Samsung', 'Dell', 'OnePlus', 'Xiaomi'];
 
 export default function GuidesScreen() {
+  const insets = useSafeAreaInsets();
   const { shop } = useAuth();
   const [guides, setGuides] = useState<RepairGuideItem[]>([]);
   const [selectedBrand, setSelectedBrand] = useState('All');
@@ -45,6 +48,8 @@ export default function GuidesScreen() {
 
   return (
     <View style={styles.container}>
+      <AppHeader title="Technician Guides" />
+
       {/* Search Header */}
       <View style={styles.searchHeader}>
         <View style={styles.searchBox}>
@@ -56,6 +61,11 @@ export default function GuidesScreen() {
             value={search}
             onChangeText={setSearch}
           />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={18} color="#94A3B8" />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -79,7 +89,21 @@ export default function GuidesScreen() {
       <FlatList
         data={guides}
         keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 16 },
+        ]}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconBox}>
+              <Ionicons name="book-outline" size={32} color="#94A3B8" />
+            </View>
+            <Text style={styles.emptyTitle}>No Guides Found</Text>
+            <Text style={styles.emptySubtitle}>
+              Try searching with another device model or brand keyword.
+            </Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <Pressable
             style={({ pressed }) => [styles.guideCard, { opacity: pressed ? 0.92 : 1 }]}
@@ -131,14 +155,22 @@ export default function GuidesScreen() {
           animationType="slide"
           onRequestClose={() => setActiveGuideModal(null)}>
           <View style={styles.readerContainer}>
-            <View style={styles.readerHeader}>
+            <View style={[styles.readerHeader, { paddingTop: Math.max(insets.top, 16) + 8 }]}>
               <Text style={styles.readerBrand}>{activeGuideModal.brand} • {activeGuideModal.model}</Text>
-              <Pressable onPress={() => setActiveGuideModal(null)} style={styles.readerCloseBtn}>
+              <Pressable
+                onPress={() => setActiveGuideModal(null)}
+                style={styles.readerCloseBtn}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 <Ionicons name="close" size={24} color="#0F172A" />
               </Pressable>
             </View>
 
-            <ScrollView contentContainerStyle={styles.readerContent}>
+            <ScrollView
+              contentContainerStyle={[
+                styles.readerContent,
+                { paddingBottom: Math.max(insets.bottom, 24) + 20 },
+              ]}
+              showsVerticalScrollIndicator={false}>
               <Text style={styles.readerTitle}>{activeGuideModal.title}</Text>
               <Text style={styles.readerSummary}>{activeGuideModal.summary}</Text>
 
@@ -438,5 +470,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#475569',
     lineHeight: 19,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  emptyIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 18,
   },
 });
