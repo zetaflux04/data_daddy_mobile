@@ -1,0 +1,218 @@
+import { JobCard, CustomerItem, ExpenseItem, RepairGuideItem, DashboardSummary, ShopProfile, UserProfile } from '../types';
+
+export const mockShop: ShopProfile = {
+  id: 'shop_demo_01',
+  name: 'OK-Repair Solutions',
+  ownerName: 'Sunil Verma',
+  phone: '9876543210',
+  plan: 'pro',
+  subscriptionStatus: 'active',
+};
+
+export const mockUser: UserProfile = {
+  id: 'user_demo_01',
+  name: 'Sunil Verma',
+  phone: '9876543210',
+  role: 'owner',
+};
+
+export const mockJobs: JobCard[] = [
+  {
+    _id: 'job_01',
+    jobId: 'JOB-1042',
+    shopId: 'shop_demo_01',
+    customerId: 'cust_01',
+    customerSnapshot: { name: 'Amit Sharma', phone: '9823456781' },
+    deviceType: 'mobile',
+    brand: 'Apple',
+    model: 'iPhone 13',
+    serialOrImei: '356789123456789',
+    passcodePattern: '1234',
+    problemDescription: 'Shattered front OLED glass, touch erratic on upper left half. Needs display combo replacement.',
+    status: 'pending',
+    cost: { estimated: 4500, final: 4500, advancePaid: 1000, due: 3500 },
+    payments: [{ amount: 1000, mode: 'upi', paidAt: new Date(Date.now() - 3600000 * 2).toISOString() }],
+    smsLogs: [{ type: 'order_received', status: 'sent', providerRef: 'Fast2SMS ID: F2S_99120', sentAt: new Date(Date.now() - 3600000 * 2).toISOString() }],
+    dates: {
+      receivedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+      promisedDeliveryAt: new Date(Date.now() + 3600000 * 24).toISOString(),
+    },
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+  {
+    _id: 'job_02',
+    jobId: 'JOB-1041',
+    shopId: 'shop_demo_01',
+    customerId: 'cust_02',
+    customerSnapshot: { name: 'Pooja Patel', phone: '9712345678' },
+    deviceType: 'laptop',
+    brand: 'Dell',
+    model: 'Inspiron 15 3511',
+    serialOrImei: 'DELL-981249A',
+    problemDescription: 'Laptop overheating and shutting down randomly within 15 minutes of booting. Fan makes grinding noise.',
+    status: 'in_progress',
+    cost: { estimated: 2200, final: 2200, advancePaid: 500, due: 1700 },
+    payments: [{ amount: 500, mode: 'cash', paidAt: new Date(Date.now() - 3600000 * 18).toISOString() }],
+    smsLogs: [{ type: 'order_received', status: 'sent', providerRef: 'Fast2SMS ID: F2S_98941', sentAt: new Date(Date.now() - 3600000 * 18).toISOString() }],
+    dates: {
+      receivedAt: new Date(Date.now() - 3600000 * 18).toISOString(),
+      promisedDeliveryAt: new Date(Date.now() + 3600000 * 6).toISOString(),
+    },
+    createdAt: new Date(Date.now() - 3600000 * 18).toISOString(),
+  },
+  {
+    _id: 'job_03',
+    jobId: 'JOB-1040',
+    shopId: 'shop_demo_01',
+    customerId: 'cust_03',
+    customerSnapshot: { name: 'Rahul Mehta', phone: '9988776655' },
+    deviceType: 'mobile',
+    brand: 'Samsung',
+    model: 'Galaxy S22',
+    serialOrImei: 'SM-S901B-128',
+    problemDescription: 'Battery draining fast (drops from 80% to 20% in 1 hr). Back glass slightly lifted due to swollen cell.',
+    status: 'repaired',
+    cost: { estimated: 2800, final: 2800, advancePaid: 2800, due: 0 },
+    payments: [{ amount: 2800, mode: 'upi', paidAt: new Date(Date.now() - 3600000 * 8).toISOString() }],
+    smsLogs: [
+      { type: 'order_received', status: 'sent', providerRef: 'Fast2SMS ID: F2S_98231', sentAt: new Date(Date.now() - 3600000 * 24).toISOString() },
+      { type: 'repaired', status: 'sent', providerRef: 'Fast2SMS ID: F2S_98319', sentAt: new Date(Date.now() - 3600000 * 8).toISOString() },
+    ],
+    dates: {
+      receivedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+      promisedDeliveryAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+    },
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+  {
+    _id: 'job_04',
+    jobId: 'JOB-1039',
+    shopId: 'shop_demo_01',
+    customerId: 'cust_04',
+    customerSnapshot: { name: 'Vikram Singh', phone: '9845123490' },
+    deviceType: 'tablet',
+    brand: 'Apple',
+    model: 'iPad 9th Gen',
+    serialOrImei: 'DMPZK871Q16R',
+    problemDescription: 'Charging port pins corroded. Not accepting Lightning cable charging.',
+    status: 'delivered',
+    cost: { estimated: 1800, final: 1800, advancePaid: 1800, due: 0 },
+    payments: [{ amount: 1800, mode: 'cash', paidAt: new Date(Date.now() - 3600000 * 30).toISOString() }],
+    smsLogs: [
+      { type: 'order_received', status: 'sent', sentAt: new Date(Date.now() - 3600000 * 48).toISOString() },
+      { type: 'repaired', status: 'sent', sentAt: new Date(Date.now() - 3600000 * 32).toISOString() },
+      { type: 'delivered', status: 'sent', sentAt: new Date(Date.now() - 3600000 * 30).toISOString() },
+    ],
+    dates: {
+      receivedAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+      deliveredAt: new Date(Date.now() - 3600000 * 30).toISOString(),
+    },
+    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+  },
+  {
+    _id: 'job_05',
+    jobId: 'JOB-1038',
+    shopId: 'shop_demo_01',
+    customerId: 'cust_05',
+    customerSnapshot: { name: 'Kavita Joshi', phone: '9123456701' },
+    deviceType: 'mobile',
+    brand: 'OnePlus',
+    model: 'OnePlus 9 Pro',
+    problemDescription: 'Green line on AMOLED screen after software update. Waiting for OEM warranty/screen delivery.',
+    status: 'parts_delayed',
+    cost: { estimated: 6500, final: 6500, advancePaid: 2000, due: 4500 },
+    payments: [{ amount: 2000, mode: 'upi', paidAt: new Date(Date.now() - 3600000 * 72).toISOString() }],
+    smsLogs: [{ type: 'order_received', status: 'sent', sentAt: new Date(Date.now() - 3600000 * 72).toISOString() }],
+    dates: {
+      receivedAt: new Date(Date.now() - 3600000 * 72).toISOString(),
+      promisedDeliveryAt: new Date(Date.now() + 3600000 * 48).toISOString(),
+    },
+    createdAt: new Date(Date.now() - 3600000 * 72).toISOString(),
+  },
+];
+
+export const mockCustomers: CustomerItem[] = [
+  { _id: 'cust_01', shopId: 'shop_demo_01', name: 'Amit Sharma', phone: '9823456781', email: 'amit.sharma@gmail.com', address: 'B-12, Sector 18, Noida', totalOrdersCount: 3, updatedAt: new Date().toISOString() },
+  { _id: 'cust_02', shopId: 'shop_demo_01', name: 'Pooja Patel', phone: '9712345678', email: 'pooja.p@yahoo.com', address: 'A-45, Ring Road, Surat', totalOrdersCount: 1, updatedAt: new Date().toISOString() },
+  { _id: 'cust_03', shopId: 'shop_demo_01', name: 'Rahul Mehta', phone: '9988776655', address: '104, Sunrise Heights, Mumbai', totalOrdersCount: 4, updatedAt: new Date().toISOString() },
+  { _id: 'cust_04', shopId: 'shop_demo_01', name: 'Vikram Singh', phone: '9845123490', address: 'Near Bus Stand, Jaipur', totalOrdersCount: 2, updatedAt: new Date().toISOString() },
+  { _id: 'cust_05', shopId: 'shop_demo_01', name: 'Kavita Joshi', phone: '9123456701', address: 'Flat 302, Green Park, Delhi', totalOrdersCount: 1, updatedAt: new Date().toISOString() },
+];
+
+export const mockExpenses: ExpenseItem[] = [
+  { _id: 'exp_01', category: 'spare_part', title: 'iPhone 13 OLED Display (OG Crown)', amount: 2800, date: new Date().toISOString() },
+  { _id: 'exp_02', category: 'spare_part', title: 'Samsung S22 EB-BS901ABY Battery', amount: 1100, date: new Date(Date.now() - 86400000).toISOString() },
+  { _id: 'exp_03', category: 'tools', title: 'Relife RL-004M Anti-Static Heat Mat', amount: 650, date: new Date(Date.now() - 86400000 * 3).toISOString() },
+  { _id: 'exp_04', category: 'rent', title: 'Shop Monthly Rent Advance', amount: 12000, date: new Date(Date.now() - 86400000 * 10).toISOString() },
+];
+
+export const mockDashboard: DashboardSummary = {
+  jobs: {
+    pending: 4,
+    inProgress: 3,
+    partsDelayed: 1,
+    readyForPickup: 2,
+    delivered: 18,
+    todayNew: 3,
+  },
+  financials: {
+    totalRevenue: 42800,
+    totalExpense: 16550,
+    netProfit: 26250,
+    totalDuesPending: 9700,
+  },
+};
+
+export const mockGuides: RepairGuideItem[] = [
+  {
+    _id: 'guide_01',
+    title: 'iPhone 13 / 13 Pro OLED Screen Replacement & True Tone Transfer',
+    brand: 'Apple',
+    model: 'iPhone 13',
+    problemCategory: 'display',
+    summary: 'Full teardown of display panel, sensor flex ribbon relocation without tearing, and EEPROM True Tone programmer steps.',
+    difficulty: 'medium',
+    isPremium: true,
+    steps: [
+      { stepNumber: 1, title: 'Heat & Pentalobe Screws', description: 'Remove bottom 2x P2 Pentalobe screws. Heat screen edge at 75°C for 2 min.' },
+      { stepNumber: 2, title: 'Right-to-Left Book Opening', description: 'Display opens towards the left side. Never force right side open past 90 degrees.' },
+      { stepNumber: 3, title: 'Disconnect Battery Prior to Flexes', description: 'Always disconnect battery connector first to prevent blowing the OLED diode.' },
+      { stepNumber: 4, title: 'Transfer Sensor Assembly', description: 'Carefully peel microphone/sensor flex. Transfer to replacement panel.' },
+    ],
+    videoUrl: 'https://demo-cdn.repairshopmanager.com/media/iphone13_guide.mp4',
+    schematicUrl: 'https://demo-cdn.repairshopmanager.com/media/iphone13_boardview.pdf',
+  },
+  {
+    _id: 'guide_02',
+    title: 'Samsung Galaxy S22 5G Battery & USB-C Sub-board Repair',
+    brand: 'Samsung',
+    model: 'Galaxy S22',
+    problemCategory: 'battery',
+    summary: 'Back glass thermal removal, adhesive soft release with 99% IPA, sub-board testing for slow charging / no fast charge.',
+    difficulty: 'medium',
+    isPremium: true,
+    steps: [
+      { stepNumber: 1, title: 'Back Glass Heat Cycle', description: 'Apply 80°C heat for 3 minutes. Slice perimeter adhesive with plastic card.' },
+      { stepNumber: 2, title: 'Midframe & NFC Antenna', description: 'Unscrew 16x Phillips #00 screws and unclip the midframe bracket.' },
+      { stepNumber: 3, title: 'Safe Battery Extraction', description: 'Drip 99% IPA around battery perimeter. Lift slowly with flat nylon spudger.' },
+    ],
+    videoUrl: 'https://demo-cdn.repairshopmanager.com/media/s22_battery.mp4',
+    schematicUrl: 'https://demo-cdn.repairshopmanager.com/media/s22_schematic.pdf',
+  },
+  {
+    _id: 'guide_03',
+    title: 'Dell XPS 15 9500 19V Main Power Rail Short Troubleshooting',
+    brand: 'Dell',
+    model: 'XPS 15 9500',
+    problemCategory: 'motherboard',
+    summary: 'Multimeter diode mode tracing, detecting shorted ceramic bypass caps on 19V line, charging MOSFET testing.',
+    difficulty: 'expert',
+    isPremium: true,
+    steps: [
+      { stepNumber: 1, title: 'Voltage Injection Test', description: 'Inject 1V 1A into 19V power rail. Observe hot component via alcohol mist.' },
+      { stepNumber: 2, title: 'Check Input MOSFETs', description: 'Measure Gate-Source resistance on first/second DC-in MOSFETs.' },
+      { stepNumber: 3, title: 'Capacitor Replacement', description: 'Desolder shorted 10uF 25V 0805 cap using hot air at 380°C.' },
+    ],
+    schematicUrl: 'https://demo-cdn.repairshopmanager.com/media/xps15_schematic.pdf',
+  },
+];
