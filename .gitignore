@@ -37,7 +37,7 @@ Thumbs.db
 # local env files
 .env
 .env*.local
-!.env.example
+.env.example
 
 # IDE and Editor files
 .vscode/

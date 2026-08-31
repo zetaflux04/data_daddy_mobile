@@ -13,14 +13,14 @@ import {
   UserProfile,
 } from '../types';
 
-// Dynamically resolve backend host from Expo packager when on local network/device
+// Base URL for backend API (Live Render deployment with local/env fallback)
+const LIVE_API_BASE_URL = 'https://data-daddy-backend.onrender.com/api';
+
 const getBackendBaseUrl = (): string => {
-  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost;
-  if (hostUri) {
-    const ip = hostUri.split(':')[0];
-    return `http://${ip}:5000/api`;
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
   }
-  return Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+  return LIVE_API_BASE_URL;
 };
 
 let onUnauthorizedCallback: (() => void) | null = null;
@@ -31,7 +31,7 @@ export const setUnauthorizedHandler = (cb: (() => void) | null) => {
 
 export const apiClient = axios.create({
   baseURL: getBackendBaseUrl(),
-  timeout: 10000,
+  timeout: 30000, // 30s timeout for cloud cold starts
   headers: {
     'Content-Type': 'application/json',
   },
