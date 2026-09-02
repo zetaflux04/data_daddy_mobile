@@ -11,7 +11,8 @@ interface AuthContextType {
   requestOtp: (phone: string) => Promise<{ success: boolean; message: string; devOtp?: string }>;
   verifyOtp: (phone: string, otp: string) => Promise<{ success: boolean; needsRegistration?: boolean; message?: string }>;
   registerShop: (data: { phone: string; shopName: string; ownerName: string; address?: any }) => Promise<{ success: boolean }>;
-  updateShopProfile: (data: { name?: string; ownerName?: string; phone?: string; address?: any; settings?: any }) => Promise<ShopProfile | null>;
+  updateShopProfile: (data: { name?: string; ownerName?: string; phone?: string; logoUrl?: string; address?: any; settings?: any }) => Promise<ShopProfile | null>;
+  uploadShopLogo: (fileUri: string, mimeType?: string, fileName?: string) => Promise<string | null>;
   refreshShopProfile: () => Promise<ShopProfile | null>;
   completeOnboarding: () => Promise<void>;
   resetOnboarding: () => Promise<void>;
@@ -142,6 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     name?: string;
     ownerName?: string;
     phone?: string;
+    logoUrl?: string;
     address?: any;
     settings?: any;
   }) => {
@@ -151,19 +153,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (updatedShop) {
         setShop(updatedShop);
         await AsyncStorage.setItem('@repairshop_shop', JSON.stringify(updatedShop));
-        if (data.ownerName || data.phone) {
+        if (data.ownerName || data.phone || data.logoUrl) {
           setUser((prev) =>
             prev
               ? {
                   ...prev,
                   ...(data.ownerName && { name: data.ownerName }),
                   ...(data.phone && { phone: data.phone }),
+                  ...(data.logoUrl && { avatarUrl: data.logoUrl }),
                 }
               : null
           );
         }
       }
       return updatedShop;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const uploadShopLogo = async (fileUri: string, mimeType?: string, fileName?: string): Promise<string | null> => {
+    setIsLoading(true);
+    try {
+      const res = await api.uploadProfilePhoto(fileUri, mimeType, fileName);
+      if (res.success && res.url) {
+        const newUrl = res.url;
+        setShop((prev) => (prev ? { ...prev, logoUrl: newUrl } : null));
+        setUser((prev) => (prev ? { ...prev, avatarUrl: newUrl } : null));
+
+        const storedShopStr = await AsyncStorage.getItem('@repairshop_shop');
+        if (storedShopStr) {
+          try {
+            const parsed = JSON.parse(storedShopStr);
+            parsed.logoUrl = newUrl;
+            await AsyncStorage.setItem('@repairshop_shop', JSON.stringify(parsed));
+          } catch {}
+        }
+
+        // Also fetch fresh profile in background to ensure database consistency
+        api.getShopProfile().then((fresh) => {
+          if (fresh) {
+            setShop(fresh);
+            AsyncStorage.setItem('@repairshop_shop', JSON.stringify(fresh)).catch(() => {});
+          }
+        }).catch(() => {});
+
+        return newUrl;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to upload shop logo to S3:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -201,6 +241,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         verifyOtp,
         registerShop,
         updateShopProfile,
+        uploadShopLogo,
         refreshShopProfile,
         completeOnboarding,
         resetOnboarding,

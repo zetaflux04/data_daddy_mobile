@@ -7,11 +7,14 @@ import {
   Pressable,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { resolveImageUrl } from '../../services/api';
 import { Colors } from '../../constants/Colors';
 
 interface MenuItemProps {
@@ -73,7 +76,79 @@ const MenuItem: React.FC<MenuItemProps> = ({
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { shop, user, logout } = useAuth();
+  const { shop, user, logout, uploadShopLogo } = useAuth();
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const handlePickImage = () => {
+    Alert.alert(
+      'Profile Photo / Shop Logo',
+      'Upload a profile photo to store in AWS S3',
+      [
+        {
+          text: 'Take Photo',
+          onPress: async () => {
+            try {
+              const permission = await ImagePicker.requestCameraPermissionsAsync();
+              if (!permission.granted) {
+                Alert.alert('Permission Required', 'Camera access is needed to take a photo.');
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!result.canceled && result.assets?.[0]?.uri) {
+                await processImageUpload(result.assets[0]);
+              }
+            } catch (e: any) {
+              Alert.alert('Camera Error', e.message || 'Could not launch camera');
+            }
+          },
+        },
+        {
+          text: 'Choose from Gallery',
+          onPress: async () => {
+            try {
+              const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (!permission.granted) {
+                Alert.alert('Permission Required', 'Photo library access is needed to select a picture.');
+                return;
+              }
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!result.canceled && result.assets?.[0]?.uri) {
+                await processImageUpload(result.assets[0]);
+              }
+            } catch (e: any) {
+              Alert.alert('Gallery Error', e.message || 'Could not pick image');
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const processImageUpload = async (asset: ImagePicker.ImagePickerAsset) => {
+    setIsUploadingPhoto(true);
+    try {
+      const fileName = asset.fileName || `photo_${Date.now()}.jpg`;
+      const mimeType = asset.mimeType || 'image/jpeg';
+      const s3Url = await uploadShopLogo(asset.uri, mimeType, fileName);
+      if (s3Url) {
+        Alert.alert('Success', 'Profile photo uploaded to AWS S3 and updated successfully!');
+      }
+    } catch (e: any) {
+      Alert.alert('Upload Failed', e.message || 'Could not upload profile photo to AWS S3.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out from DataDaddy?', [
@@ -98,14 +173,29 @@ export default function ProfileScreen() {
       <View style={styles.shopCard}>
         <View style={styles.shopAvatarWrapper}>
           <View style={styles.shopAvatar}>
-            <Text style={styles.shopAvatarText}>
-              {shop?.name ? shop.name.charAt(0).toUpperCase() : 'D'}
-            </Text>
+            {isUploadingPhoto ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : shop?.logoUrl ? (
+              <Image
+                source={{ uri: resolveImageUrl(shop.logoUrl) }}
+                style={styles.shopAvatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.shopAvatarText}>
+                {shop?.name ? shop.name.charAt(0).toUpperCase() : 'D'}
+              </Text>
+            )}
           </View>
           <Pressable
-            style={styles.avatarCameraBtn}
-            onPress={() => Alert.alert('Upload Photo', 'Choose shop logo from gallery or take a picture.')}>
-            <Ionicons name="camera" size={14} color="#FFFFFF" />
+            style={({ pressed }) => [styles.avatarCameraBtn, { opacity: pressed ? 0.8 : 1 }]}
+            onPress={handlePickImage}
+            disabled={isUploadingPhoto}>
+            {isUploadingPhoto ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="camera" size={14} color="#FFFFFF" />
+            )}
           </Pressable>
         </View>
 
@@ -275,6 +365,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
+    overflow: 'hidden',
+  },
+  shopAvatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   shopAvatarText: {
     fontSize: 30,

@@ -17,10 +17,62 @@ import {
 const LIVE_API_BASE_URL = 'https://data-daddy-backend.onrender.com/api';
 
 const getBackendBaseUrl = (): string => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
+  let url = process.env.EXPO_PUBLIC_API_URL || LIVE_API_BASE_URL;
+
+  // Auto-correct https://localhost or https://127.0.0.1 to http://
+  if (url.startsWith('https://localhost') || url.startsWith('https://127.0.0.1')) {
+    url = url.replace('https://', 'http://');
   }
-  return LIVE_API_BASE_URL;
+
+  // On native mobile (Android/iOS), resolve localhost/127.0.0.1 to host machine IP or Android emulator gateway
+  if (Platform.OS !== 'web' && (url.includes('localhost') || url.includes('127.0.0.1'))) {
+    const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+      const hostIp = hostUri.split(':')[0];
+      if (hostIp) {
+        return url.replace('localhost', hostIp).replace('127.0.0.1', hostIp);
+      }
+    }
+    if (Platform.OS === 'android') {
+      return url.replace('localhost', '10.0.2.2').replace('127.0.0.1', '10.0.2.2');
+    }
+  }
+
+  return url;
+};
+
+/**
+ * Resolve direct S3 URLs, relative upload paths, or S3 keys to the accessible backend media streaming URL
+ */
+export const resolveImageUrl = (url?: string | null): string | undefined => {
+  if (!url) return undefined;
+
+  // If already a full http/https url (non-S3)
+  if (url.includes('.amazonaws.com/')) {
+    const key = url.split('.amazonaws.com/')[1];
+    const baseUrl = getBackendBaseUrl();
+    return `${baseUrl}/uploads/media/${key}`;
+  }
+
+  // If it's a relative URL starting with /api/uploads/
+  if (url.startsWith('/api/uploads/')) {
+    const base = getBackendBaseUrl().replace(/\/api\/?$/, '');
+    return `${base}${url}`;
+  }
+
+  // If relative URL starting with /uploads/
+  if (url.startsWith('/uploads/')) {
+    const base = getBackendBaseUrl();
+    return `${base}${url}`;
+  }
+
+  // If it's a raw S3 key
+  if (url.startsWith('profiles/') || url.startsWith('general/') || url.startsWith('banners/')) {
+    const base = getBackendBaseUrl();
+    return `${base}/uploads/media/${url}`;
+  }
+
+  return url;
 };
 
 let onUnauthorizedCallback: (() => void) | null = null;
@@ -108,11 +160,45 @@ export const api = {
     name?: string;
     ownerName?: string;
     phone?: string;
+    logoUrl?: string;
     address?: any;
     settings?: any;
   }): Promise<ShopProfile | null> {
     const res = await apiClient.patch('/shops/profile', data);
     return res.data?.shop || null;
+  },
+
+  /**
+   * Upload Profile Photo / Shop Logo to AWS S3
+   */
+  async uploadProfilePhoto(
+    fileUri: string,
+    mimeType: string = 'image/jpeg',
+    fileName: string = 'profile.jpg'
+  ): Promise<{ success: boolean; url: string; key?: string; message?: string }> {
+    const formData = new FormData();
+
+    if (Platform.OS === 'web') {
+      // In Web mode, fetch blob from uri and append
+      const res = await fetch(fileUri);
+      const blob = await res.blob();
+      formData.append('image', blob, fileName);
+    } else {
+      // In native iOS / Android
+      formData.append('image', {
+        uri: fileUri,
+        name: fileName,
+        type: mimeType,
+      } as any);
+    }
+
+    const res = await apiClient.post('/uploads/profile', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return res.data;
   },
 
   // Staff Management

@@ -118,6 +118,7 @@ export interface UserProfile {
   name: string;
   phone: string;
   role: 'owner' | 'technician' | 'staff';
+  avatarUrl?: string;
 }
 
 export interface ShopAddress {
@@ -139,6 +140,7 @@ export interface ShopProfile {
   name: string;
   ownerName: string;
   phone: string;
+  logoUrl?: string;
   address?: ShopAddress | string;
   plan?: 'free' | 'pro';
   subscriptionStatus?: 'active' | 'expired' | 'canceled';

@@ -180,13 +180,13 @@ export default function GuidesScreen() {
                 <View style={styles.mediaRow}>
                   <Pressable
                     style={styles.mediaBtn}
-                    onPress={() => Alert.alert('Schematic Ready', 'Secure Cloudinary / CDN URL verified. Opening schematic boardview viewer.')}>
+                    onPress={() => Alert.alert('Schematic Ready', 'Secure AWS S3 / CloudFront verified. Opening schematic boardview viewer.')}>
                     <Ionicons name="document-attach" size={18} color={Colors.primary} />
                     <Text style={styles.mediaBtnText}>Open Schematic PDF</Text>
                   </Pressable>
                   <Pressable
                     style={[styles.mediaBtn, { backgroundColor: '#F0FDF4' }]}
-                    onPress={() => Alert.alert('Video Tutorial Ready', 'Streaming walkthrough from Cloudinary CDN.')}>
+                    onPress={() => Alert.alert('Video Tutorial Ready', 'Streaming walkthrough securely from AWS S3 storage.')}>
                     <Ionicons name="play-circle" size={18} color={Colors.emerald} />
                     <Text style={[styles.mediaBtnText, { color: Colors.emerald }]}>Play Video</Text>
                   </Pressable>

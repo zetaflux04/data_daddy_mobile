@@ -7,12 +7,13 @@ import {
   RefreshControl,
   Pressable,
   Platform,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { api } from '../../services/api';
+import { api, resolveImageUrl } from '../../services/api';
 import { JobCard, DashboardSummary } from '../../types';
 import { MetricCard } from '../../components/MetricCard';
 import { JobCardItem } from '../../components/JobCardItem';
@@ -59,6 +60,24 @@ export default function DashboardScreen() {
       }>
       {/* Compact Shop Profile Header Bar */}
       <View style={styles.shopTopBar}>
+        <Pressable
+          style={styles.shopAvatarBtn}
+          onPress={() => router.push('/(tabs)/profile')}>
+          {shop?.logoUrl ? (
+            <Image
+              source={{ uri: resolveImageUrl(shop.logoUrl) }}
+              style={styles.shopHeaderAvatarImg}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.shopHeaderAvatarFallback}>
+              <Text style={styles.shopHeaderAvatarLetter}>
+                {shop?.name ? shop.name.charAt(0).toUpperCase() : 'D'}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+
         <View style={styles.shopTopInfo}>
           <Text style={styles.shopTopGreeting}>Welcome back 👋</Text>
           <View style={styles.shopNameRow}>
@@ -196,10 +215,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 2,
+    gap: 12,
+  },
+  shopAvatarBtn: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  shopHeaderAvatarImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  shopHeaderAvatarFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  shopHeaderAvatarLetter: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
   },
   shopTopInfo: {
     flex: 1,
-    marginRight: 10,
   },
   shopTopGreeting: {
     fontSize: 12,
