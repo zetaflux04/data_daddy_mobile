@@ -116,6 +116,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setShop(res.shop);
         await AsyncStorage.setItem('@repairshop_user', JSON.stringify(res.user));
         await AsyncStorage.setItem('@repairshop_shop', JSON.stringify(res.shop));
+
+        // Fetch fresh shop profile from DB in background to ensure all fields are synchronized
+        api.getShopProfile().then((fresh) => {
+          if (fresh) {
+            setShop(fresh);
+            AsyncStorage.setItem('@repairshop_shop', JSON.stringify(fresh)).catch(() => {});
+          }
+        }).catch(() => {});
       }
       return res;
     } finally {
@@ -132,6 +140,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setShop(res.shop);
         await AsyncStorage.setItem('@repairshop_user', JSON.stringify(res.user));
         await AsyncStorage.setItem('@repairshop_shop', JSON.stringify(res.shop));
+
+        api.getShopProfile().then((fresh) => {
+          if (fresh) {
+            setShop(fresh);
+            AsyncStorage.setItem('@repairshop_shop', JSON.stringify(fresh)).catch(() => {});
+          }
+        }).catch(() => {});
       }
       return res;
     } finally {

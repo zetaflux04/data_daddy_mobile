@@ -40,7 +40,7 @@ function RootNavigation() {
 
   return (
     <>
-      <StatusBar style={!splashFinished ? 'light' : 'dark'} />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerShown: false,

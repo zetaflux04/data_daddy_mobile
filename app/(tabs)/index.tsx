@@ -22,7 +22,7 @@ import { Colors } from '../../constants/Colors';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { shop } = useAuth();
+  const { shop, refreshShopProfile } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [recentJobs, setRecentJobs] = useState<JobCard[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -32,6 +32,7 @@ export default function DashboardScreen() {
       const [sumData, jobsData] = await Promise.all([
         api.getDashboardSummary(),
         api.getJobs(),
+        refreshShopProfile().catch(() => null),
       ]);
       setSummary(sumData);
       setRecentJobs(jobsData.slice(0, 5));

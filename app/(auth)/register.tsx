@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   },
   cardTopAccent: {
     height: 4,
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#2563EB',
     width: '100%',
   },
   cardInner: {
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   primaryBtn: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#2563EB',
     height: 52,
     borderRadius: 14,
     flexDirection: 'row',
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     marginTop: 8,
-    shadowColor: '#F59E0B',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -299,8 +299,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxBoxChecked: {
-    backgroundColor: '#F59E0B',
-    borderColor: '#F59E0B',
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
   },
   legalTextWrap: {
     flex: 1,

@@ -10,118 +10,72 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface SplashScreenViewProps {
   onFinish?: () => void;
 }
 
 export const SplashScreenView: React.FC<SplashScreenViewProps> = ({ onFinish }) => {
-  const logoScale = useRef(new Animated.Value(0.7)).current;
+  const logoScale = useRef(new Animated.Value(0.92)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const pulseAnim2 = useRef(new Animated.Value(1)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
-  const textTranslateY = useRef(new Animated.Value(20)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+  const contentTranslateY = useRef(new Animated.Value(10)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const containerOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // 1. Initial logo entrance
+    // Smooth, refined entrance animations
     Animated.parallel([
       Animated.timing(logoScale, {
         toValue: 1,
-        duration: 900,
-        easing: Easing.out(Easing.back(1.5)),
+        duration: 700,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(logoOpacity, {
         toValue: 1,
-        duration: 700,
+        duration: 600,
         useNativeDriver: true,
       }),
-      Animated.timing(textOpacity, {
+      Animated.timing(contentOpacity, {
         toValue: 1,
-        duration: 800,
-        delay: 300,
+        duration: 600,
+        delay: 250,
         useNativeDriver: true,
       }),
-      Animated.timing(textTranslateY, {
+      Animated.timing(contentTranslateY, {
         toValue: 0,
-        duration: 800,
-        delay: 300,
+        duration: 600,
+        delay: 250,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(progressAnim, {
         toValue: 1,
-        duration: 1800,
+        duration: 1600,
         easing: Easing.inOut(Easing.quad),
         useNativeDriver: false,
       }),
     ]).start();
 
-    // 2. Continuous pulse animation for outer glowing rings
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.25,
-          duration: 1200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    const pulseLoop2 = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim2, {
-          toValue: 1.45,
-          duration: 1600,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim2, {
-          toValue: 1,
-          duration: 1600,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    pulseLoop.start();
-    pulseLoop2.start();
-
-    // 3. Smooth exit sequence after ~2.1s
+    // Smooth, clean exit transition
     const timer = setTimeout(() => {
       Animated.timing(containerOpacity, {
         toValue: 0,
-        duration: 450,
+        duration: 400,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }).start(() => {
-        pulseLoop.stop();
-        pulseLoop2.stop();
         if (onFinish) {
           onFinish();
         }
       });
-    }, 2100);
+    }, 1800);
 
     return () => {
       clearTimeout(timer);
-      pulseLoop.stop();
-      pulseLoop2.stop();
     };
   }, []);
 
@@ -133,64 +87,43 @@ export const SplashScreenView: React.FC<SplashScreenViewProps> = ({ onFinish }) 
   return (
     <Animated.View style={[styles.container, { opacity: containerOpacity }]}>
       <LinearGradient
-        colors={['#070B14', '#0F172A', '#1E3A8A']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={['#FFFFFF', '#F8FAFC']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
         style={styles.gradient}>
-        {/* Background Ambient Glow Elements */}
-        <Animated.View
-          style={[
-            styles.glowRingOuter,
-            {
-              transform: [{ scale: pulseAnim2 }],
-            },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.glowRingInner,
-            {
-              transform: [{ scale: pulseAnim }],
-            },
-          ]}
-        />
+        
+        {/* Centered Brand Showcase */}
+        <View style={styles.centerContainer}>
+          <Animated.View
+            style={[
+              styles.logoContainer,
+              {
+                opacity: logoOpacity,
+                transform: [{ scale: logoScale }],
+              },
+            ]}>
+            <Image
+              source={require('../assets/logo.png')}
+              style={styles.splashLogoImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
 
-        {/* Center Brand Showcase */}
-        <Animated.View
-          style={[
-            styles.logoContainer,
-            {
-              opacity: logoOpacity,
-              transform: [{ scale: logoScale }],
-            },
-          ]}>
-          <Image
-            source={require('../assets/logo.png')}
-            style={styles.splashLogoImage}
-            resizeMode="contain"
-          />
-        </Animated.View>
+          <Animated.View
+            style={[
+              styles.taglineContainer,
+              {
+                opacity: contentOpacity,
+                transform: [{ translateY: contentTranslateY }],
+              },
+            ]}>
+            <Text style={styles.brandTagline}>
+              Smart Digital Register for Repair Centers
+            </Text>
+          </Animated.View>
+        </View>
 
-        {/* Brand Content */}
-        <Animated.View
-          style={[
-            styles.textContainer,
-            {
-              opacity: textOpacity,
-              transform: [{ translateY: textTranslateY }],
-            },
-          ]}>
-          <Text style={styles.brandTagline}>
-            SMART DIGITAL REGISTER FOR REPAIR SHOPS
-          </Text>
-
-          <View style={styles.pillContainer}>
-            <Ionicons name="shield-checkmark" size={13} color="#10B981" />
-            <Text style={styles.pillText}>SMS Alerts • P&L Tracker • Digital Job Cards</Text>
-          </View>
-        </Animated.View>
-
-        {/* Sleek Minimal Progress Bar at Bottom */}
+        {/* Minimal Clean Bottom Progress */}
         <View style={styles.bottomArea}>
           <View style={styles.progressBarTrack}>
             <Animated.View
@@ -204,6 +137,7 @@ export const SplashScreenView: React.FC<SplashScreenViewProps> = ({ onFinish }) 
           </View>
           <Text style={styles.footerText}>Made for Indian Electronics & Mobile Centers</Text>
         </View>
+
       </LinearGradient>
     </Animated.View>
   );
@@ -213,97 +147,64 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
-    backgroundColor: '#070B14',
+    backgroundColor: '#FFFFFF',
   },
   gradient: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
   },
-  glowRingOuter: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(37, 99, 235, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.15)',
-  },
-  glowRingInner: {
-    position: 'absolute',
-    width: 190,
-    height: 190,
-    borderRadius: 95,
-    backgroundColor: 'rgba(37, 99, 235, 0.14)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(96, 165, 250, 0.25)',
+  centerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoContainer: {
-    position: 'relative',
-    marginBottom: 26,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   splashLogoImage: {
-    width: 160,
-    height: 160,
+    width: 260,
+    height: 130,
   },
-  textContainer: {
+  taglineContainer: {
+    marginTop: 6,
     alignItems: 'center',
-    marginTop: 8,
   },
   brandTagline: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#94A3B8',
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  pillContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    gap: 6,
-  },
-  pillText: {
-    color: '#E2E8F0',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
+    color: '#64748B',
+    letterSpacing: 0.2,
+    textAlign: 'center',
   },
   bottomArea: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 44 : 32,
-    left: 40,
-    right: 40,
+    bottom: Platform.OS === 'ios' ? 48 : 36,
+    left: 48,
+    right: 48,
     alignItems: 'center',
   },
   progressBarTrack: {
-    width: '100%',
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 140,
+    height: 3.5,
+    backgroundColor: '#E2E8F0',
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 14,
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#2563EB',
     borderRadius: 2,
   },
   footerText: {
     fontSize: 11,
-    color: '#64748B',
+    color: '#94A3B8',
     fontWeight: '500',
     textAlign: 'center',
+    letterSpacing: 0.2,
   },
 });
+
+export default SplashScreenView;

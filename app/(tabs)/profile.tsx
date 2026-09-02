@@ -76,8 +76,12 @@ const MenuItem: React.FC<MenuItemProps> = ({
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { shop, user, logout, uploadShopLogo } = useAuth();
+  const { shop, user, logout, uploadShopLogo, refreshShopProfile } = useAuth();
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  React.useEffect(() => {
+    refreshShopProfile().catch(() => {});
+  }, []);
 
   const handlePickImage = () => {
     Alert.alert(

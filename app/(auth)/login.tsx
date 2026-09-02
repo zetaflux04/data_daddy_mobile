@@ -104,7 +104,7 @@ export default function LoginScreen() {
           <Text style={styles.brandSubtitle}>Sign in to manage your workshop</Text>
         </View>
 
-        {/* Main Card with Top Orange Accent Bar */}
+        {/* Main Card with Top Blue Accent Bar */}
         <View style={styles.card}>
           <View style={styles.cardTopAccent} />
 
@@ -131,7 +131,7 @@ export default function LoginScreen() {
                   />
                 </View>
 
-                {/* Send OTP Button (Golden Orange) */}
+                {/* Send OTP Button (Brand Blue) */}
                 <Pressable
                   style={({ pressed }) => [
                     styles.primaryBtn,
@@ -247,9 +247,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logoImage: {
-    width: 220,
-    height: 100,
-    marginBottom: 8,
+    width: 300,
+    height: 150,
+    marginBottom: 10,
   },
   brandSubtitle: {
     fontSize: 14,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   cardTopAccent: {
     height: 4,
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#2563EB',
     width: '100%',
   },
   cardInner: {
@@ -344,25 +344,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   devHintBox: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#EFF6FF',
     padding: 10,
     borderRadius: 10,
     marginBottom: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#BFDBFE',
   },
   devHintText: {
     fontSize: 13,
-    color: '#B45309',
+    color: '#1D4ED8',
   },
   primaryBtn: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#2563EB',
     height: 52,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#F59E0B',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -403,8 +403,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxBoxChecked: {
-    backgroundColor: '#F59E0B',
-    borderColor: '#F59E0B',
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
   },
   legalTextWrap: {
     flex: 1,
