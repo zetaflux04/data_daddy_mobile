@@ -11,8 +11,9 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
-import { JobCard, JobStatus } from '../../types';
+import { JobCard } from '../../types';
 import { JobCardItem } from '../../components/JobCardItem';
+import { DateFilterBar, DateRangeKey } from '../../components/DateFilterBar';
 import { Colors } from '../../constants/Colors';
 
 const statusTabs: Array<{ key: string; label: string }> = [
@@ -28,6 +29,9 @@ export default function JobsScreen() {
   const router = useRouter();
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRangeKey>('all');
+  const [customStartDate, setCustomStartDate] = useState<string | undefined>(undefined);
+  const [customEndDate, setCustomEndDate] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,6 +41,9 @@ export default function JobsScreen() {
       const data = await api.getJobs({
         status: selectedStatus === 'all' ? undefined : selectedStatus,
         search: searchQuery,
+        dateRange: selectedDateRange,
+        startDate: customStartDate,
+        endDate: customEndDate,
       });
       setJobs(data);
     } finally {
@@ -46,7 +53,13 @@ export default function JobsScreen() {
 
   useEffect(() => {
     fetchJobs();
-  }, [selectedStatus, searchQuery]);
+  }, [selectedStatus, selectedDateRange, customStartDate, customEndDate, searchQuery]);
+
+  const handleDateRangeChange = (range: DateRangeKey, startDate?: string, endDate?: string) => {
+    setSelectedDateRange(range);
+    setCustomStartDate(startDate);
+    setCustomEndDate(endDate);
+  };
 
   return (
     <View style={styles.container}>
@@ -75,7 +88,15 @@ export default function JobsScreen() {
         </Pressable>
       </View>
 
-      {/* Horizontal Status Filter Chips */}
+      {/* Date Filter Bar (Day, Week, Month, Year, Custom) */}
+      <DateFilterBar
+        selectedRange={selectedDateRange}
+        onRangeChange={handleDateRangeChange}
+        customStartDate={customStartDate}
+        customEndDate={customEndDate}
+      />
+
+      {/* Status Filter Chips */}
       <View style={styles.filterScrollWrapper}>
         <ScrollView
           horizontal
@@ -122,15 +143,20 @@ export default function JobsScreen() {
             <Ionicons name="search-outline" size={48} color="#CBD5E1" />
             <Text style={styles.emptyTitle}>No matching jobs found</Text>
             <Text style={styles.emptySubtitle}>
-              {searchQuery ? `No jobs match "${searchQuery}"` : 'No jobs in this status filter'}
+              {searchQuery
+                ? `No jobs match "${searchQuery}"`
+                : 'No jobs in this date or status filter'}
             </Text>
             <Pressable
               style={styles.resetBtn}
               onPress={() => {
                 setSearchQuery('');
                 setSelectedStatus('all');
+                setSelectedDateRange('all');
+                setCustomStartDate(undefined);
+                setCustomEndDate(undefined);
               }}>
-              <Text style={styles.resetBtnText}>Clear Filters</Text>
+              <Text style={styles.resetBtnText}>Clear All Filters</Text>
             </Pressable>
           </View>
         }

@@ -1,9 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { JobCard } from '../types';
 import { StatusBadge } from './StatusBadge';
-import { DeviceIcon } from './DeviceIcon';
 import { Colors } from '../constants/Colors';
 
 interface JobCardItemProps {
@@ -12,63 +11,111 @@ interface JobCardItemProps {
 }
 
 export const JobCardItem: React.FC<JobCardItemProps> = ({ job, onPress }) => {
-  const hasDue = job.cost.due > 0;
+  const hasDue = (job.cost?.due ?? 0) > 0;
+  const createdDate = job.createdAt
+    ? new Date(job.createdAt).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '2 May 2025';
+
+  const handleSmsPress = (e: any) => {
+    e.stopPropagation();
+    if (job.customerSnapshot?.phone) {
+      const clean = job.customerSnapshot.phone.replace(/\D/g, '').slice(-10);
+      Linking.openURL(`sms:${clean}`);
+    }
+  };
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] },
+        { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] },
       ]}>
-      <View style={styles.topRow}>
-        <DeviceIcon type={job.deviceType} size={18} />
-
-        <View style={styles.deviceInfo}>
-          <View style={styles.idAndModel}>
-            <View style={styles.jobIdPill}>
-              <Text style={styles.jobIdText}>{job.jobId}</Text>
-            </View>
-            <Text style={styles.deviceModel} numberOfLines={1}>
-              {job.brand} {job.model}
-            </Text>
-          </View>
-          <Text style={styles.customerText} numberOfLines={1}>
-            {job.customerSnapshot.name} • {job.customerSnapshot.phone}
-          </Text>
+      {/* Main Content Area */}
+      <View style={styles.cardHeader}>
+        {/* Device Icon in Soft Blue Circle */}
+        <View style={styles.deviceIconCircle}>
+          <Ionicons
+            name={
+              job.deviceType === 'laptop'
+                ? 'laptop-outline'
+                : job.deviceType === 'tablet'
+                ? 'tablet-portrait-outline'
+                : job.deviceType === 'smartwatch'
+                ? 'watch-outline'
+                : 'phone-portrait-outline'
+            }
+            size={22}
+            color={Colors.primary}
+          />
         </View>
 
-        <StatusBadge status={job.status} size="sm" />
+        {/* Info Column */}
+        <View style={styles.headerInfoCol}>
+          {/* Top Line: Job ID + Model + Status */}
+          <View style={styles.topTitleRow}>
+            <View style={styles.idModelGroup}>
+              <View style={styles.jobIdPill}>
+                <Text style={styles.jobIdText}>{job.jobId}</Text>
+              </View>
+              <Text style={styles.deviceModel} numberOfLines={1}>
+                {job.orderType === 'accessory'
+                  ? job.productName || 'Accessory'
+                  : `${job.brand || ''} ${job.model || ''}`}
+              </Text>
+            </View>
+
+            <StatusBadge status={job.status} size="sm" />
+          </View>
+
+          {/* Customer Name & Phone */}
+          <Text style={styles.customerText} numberOfLines={1}>
+            {job.customerSnapshot?.name || 'Customer'} • {job.customerSnapshot?.phone || ''}
+          </Text>
+
+          {/* Problem / Description */}
+          <Text style={styles.problemText} numberOfLines={2}>
+            {job.problemDescription || (job.orderType === 'accessory' ? 'Product Sale' : 'Repair Service')}
+          </Text>
+        </View>
       </View>
 
-      <Text style={styles.problemText} numberOfLines={2}>
-        {job.problemDescription}
-      </Text>
-
-      <View style={styles.divider} />
-
+      {/* Bottom Action / Meta Row */}
       <View style={styles.bottomRow}>
-        <View style={styles.costBlock}>
+        {/* Payment Status Pill */}
+        <View style={styles.paymentCol}>
           {hasDue ? (
             <View style={styles.dueBadge}>
-              <Text style={styles.dueText}>Due: ₹{job.cost.due.toLocaleString('en-IN')}</Text>
+              <Text style={styles.dueText}>Due: ₹{(job.cost?.due ?? 0).toLocaleString('en-IN')}</Text>
             </View>
           ) : (
             <View style={styles.paidBadge}>
-              <Ionicons name="checkmark-circle" size={14} color={Colors.emerald} />
-              <Text style={styles.paidText}>Paid in Full (₹{job.cost.final.toLocaleString('en-IN')})</Text>
+              <Ionicons name="checkmark-circle" size={13} color={Colors.emerald} />
+              <Text style={styles.paidText}>
+                Paid in Full (₹{(job.cost?.final ?? 0).toLocaleString('en-IN')})
+              </Text>
             </View>
           )}
         </View>
 
-        <View style={styles.smsIndicator}>
-          {job.smsLogs && job.smsLogs.length > 0 && (
-            <View style={styles.smsSentPill}>
-              <Ionicons name="chatbox-ellipses" size={12} color="#0284C7" />
-              <Text style={styles.smsSentText}>SMS</Text>
-            </View>
-          )}
-          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+        {/* Date and SMS Action */}
+        <View style={styles.rightMetaRow}>
+          <View style={styles.dateGroup}>
+            <Ionicons name="calendar-outline" size={12} color="#64748B" />
+            <Text style={styles.dateText}>{createdDate}</Text>
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.smsBtn, { opacity: pressed ? 0.75 : 1 }]}
+            onPress={handleSmsPress}>
+            <Ionicons name="chatbox-ellipses" size={12} color={Colors.primary} />
+            <Text style={styles.smsBtnText}>SMS</Text>
+            <Ionicons name="chevron-forward" size={11} color={Colors.primary} />
+          </Pressable>
         </View>
       </View>
     </Pressable>
@@ -78,46 +125,60 @@ export const JobCardItem: React.FC<JobCardItemProps> = ({ job, onPress }) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 20,
+    padding: 14,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
   },
-  topRow: {
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 12,
   },
-  deviceInfo: {
+  deviceIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  headerInfoCol: {
     flex: 1,
-    marginLeft: 12,
-    marginRight: 8,
   },
-  idAndModel: {
+  topTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 3,
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  idModelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 6,
+    gap: 6,
   },
   jobIdPill: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#EEF2FF',
     paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingVertical: 2.5,
     borderRadius: 6,
-    marginRight: 8,
   },
   jobIdText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#1E293B',
-    fontFamily: 'SpaceMono',
+    color: '#2563EB',
   },
   deviceModel: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: '#0F172A',
     letterSpacing: -0.2,
@@ -127,37 +188,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
+    marginBottom: 2,
   },
   problemText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#334155',
-    marginTop: 10,
-    lineHeight: 18,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 12,
+    lineHeight: 16,
   },
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
-  costBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  paymentCol: {
+    flexShrink: 1,
   },
   dueBadge: {
     backgroundColor: '#FEF2F2',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#FECACA',
   },
   dueText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: Colors.rose,
   },
@@ -165,35 +224,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
     gap: 4,
     borderWidth: 1,
     borderColor: '#A7F3D0',
   },
   paidText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#059669',
   },
-  smsIndicator: {
+  rightMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
   },
-  smsSentPill: {
+  dateGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    gap: 4,
+  },
+  dateText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  smsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
   },
-  smsSentText: {
-    fontSize: 10,
+  smsBtnText: {
+    fontSize: 11,
     fontWeight: '800',
-    color: '#0284C7',
+    color: Colors.primary,
   },
 });

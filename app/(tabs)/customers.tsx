@@ -14,12 +14,16 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { CustomerItem } from '../../types';
+import { DateFilterBar, DateRangeKey } from '../../components/DateFilterBar';
 import { Colors } from '../../constants/Colors';
 
 export default function CustomersScreen() {
   const router = useRouter();
   const [customers, setCustomers] = useState<CustomerItem[]>([]);
   const [search, setSearch] = useState('');
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRangeKey>('all');
+  const [customStartDate, setCustomStartDate] = useState<string | undefined>(undefined);
+  const [customEndDate, setCustomEndDate] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
 
   // Add Customer Modal State
@@ -31,7 +35,12 @@ export default function CustomersScreen() {
   const fetchCustomers = async () => {
     setIsLoading(true);
     try {
-      const data = await api.getCustomers(search);
+      const data = await api.getCustomers({
+        search,
+        dateRange: selectedDateRange,
+        startDate: customStartDate,
+        endDate: customEndDate,
+      });
       setCustomers(data);
     } finally {
       setIsLoading(false);
@@ -40,7 +49,13 @@ export default function CustomersScreen() {
 
   useEffect(() => {
     fetchCustomers();
-  }, [search]);
+  }, [search, selectedDateRange, customStartDate, customEndDate]);
+
+  const handleDateRangeChange = (range: DateRangeKey, startDate?: string, endDate?: string) => {
+    setSelectedDateRange(range);
+    setCustomStartDate(startDate);
+    setCustomEndDate(endDate);
+  };
 
   const handleAddCustomer = async () => {
     if (!newName.trim() || !newPhone.trim()) {
@@ -105,6 +120,14 @@ export default function CustomersScreen() {
         </Pressable>
       </View>
 
+      {/* Date Filter Bar (Day, Week, Month, Year, Custom) */}
+      <DateFilterBar
+        selectedRange={selectedDateRange}
+        onRangeChange={handleDateRangeChange}
+        customStartDate={customStartDate}
+        customEndDate={customEndDate}
+      />
+
       {/* Customer List */}
       <FlatList
         data={customers}
@@ -167,6 +190,25 @@ export default function CustomersScreen() {
             </View>
           </View>
         )}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="people-outline" size={48} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No customers found</Text>
+            <Text style={styles.emptySubtitle}>
+              {search ? `No results matching "${search}"` : 'No customers found for the selected date filter'}
+            </Text>
+            <Pressable
+              style={styles.resetBtn}
+              onPress={() => {
+                setSearch('');
+                setSelectedDateRange('all');
+                setCustomStartDate(undefined);
+                setCustomEndDate(undefined);
+              }}>
+              <Text style={styles.resetBtnText}>Clear Filters</Text>
+            </Pressable>
+          </View>
+        }
       />
 
       {/* Add Customer Modal */}
@@ -277,11 +319,16 @@ const styles = StyleSheet.create({
   },
   customerCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -359,6 +406,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#0284C7',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#334155',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  resetBtn: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  resetBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
   },
   // Modal
   modalOverlay: {

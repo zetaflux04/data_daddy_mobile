@@ -101,6 +101,19 @@ export interface RepairGuideItem {
   schematicUrl?: string;
 }
 
+export interface WeeklyRevenuePoint {
+  day: string;
+  amount: number;
+}
+
+export interface StatusDistributionItem {
+  label: string;
+  key: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
+
 export interface DashboardSummary {
   jobs: {
     pending: number;
@@ -109,12 +122,18 @@ export interface DashboardSummary {
     readyForPickup: number;
     delivered: number;
     todayNew: number;
+    total?: number;
   };
   financials: {
     totalRevenue: number;
     totalExpense: number;
     netProfit: number;
     totalDuesPending: number;
+    revenueGrowthPct?: number;
+  };
+  charts?: {
+    weeklyRevenue: WeeklyRevenuePoint[];
+    statusDistribution: StatusDistributionItem[];
   };
 }
 

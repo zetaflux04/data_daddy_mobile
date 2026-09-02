@@ -267,7 +267,13 @@ export const api = {
   },
 
   // Jobs / Orders
-  async getJobs(params?: { status?: string; search?: string }): Promise<JobCard[]> {
+  async getJobs(params?: {
+    status?: string;
+    search?: string;
+    dateRange?: 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
+    startDate?: string;
+    endDate?: string;
+  }): Promise<JobCard[]> {
     try {
       const res = await apiClient.get('/orders', { params });
       return res.data?.orders || [];
@@ -320,9 +326,15 @@ export const api = {
   },
 
   // Customers
-  async getCustomers(search?: string): Promise<CustomerItem[]> {
+  async getCustomers(params?: string | {
+    search?: string;
+    dateRange?: 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
+    startDate?: string;
+    endDate?: string;
+  }): Promise<CustomerItem[]> {
     try {
-      const res = await apiClient.get('/customers', { params: { search } });
+      const queryParams = typeof params === 'string' ? { search: params } : params;
+      const res = await apiClient.get('/customers', { params: queryParams });
       return res.data?.customers || [];
     } catch {
       return [];

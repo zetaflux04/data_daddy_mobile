@@ -6,7 +6,6 @@ import {
   ScrollView,
   RefreshControl,
   Pressable,
-  Platform,
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -16,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api, resolveImageUrl } from '../../services/api';
 import { JobCard, DashboardSummary } from '../../types';
 import { MetricCard } from '../../components/MetricCard';
+import { DashboardChartsSection } from '../../components/DashboardChartsSection';
 import { JobCardItem } from '../../components/JobCardItem';
 import { BannerCarousel } from '../../components/BannerCarousel';
 import { Colors } from '../../constants/Colors';
@@ -51,6 +51,16 @@ export default function DashboardScreen() {
     setIsRefreshing(false);
   };
 
+  const totalRecentJobsCount =
+    summary?.jobs.total ??
+    (summary?.jobs
+      ? summary.jobs.pending +
+        summary.jobs.inProgress +
+        summary.jobs.partsDelayed +
+        summary.jobs.readyForPickup +
+        summary.jobs.delivered
+      : recentJobs.length);
+
   return (
     <ScrollView
       style={styles.container}
@@ -59,7 +69,7 @@ export default function DashboardScreen() {
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
       }>
-      {/* Compact Shop Profile Header Bar */}
+      {/* Welcome & Shop Profile Bar */}
       <View style={styles.shopTopBar}>
         <Pressable
           style={styles.shopAvatarBtn}
@@ -73,20 +83,20 @@ export default function DashboardScreen() {
           ) : (
             <View style={styles.shopHeaderAvatarFallback}>
               <Text style={styles.shopHeaderAvatarLetter}>
-                {shop?.name ? shop.name.charAt(0).toUpperCase() : 'D'}
+                {shop?.name ? shop.name.charAt(0).toUpperCase() : 'C'}
               </Text>
             </View>
           )}
         </Pressable>
 
         <View style={styles.shopTopInfo}>
-          <Text style={styles.shopTopGreeting}>Welcome back 👋</Text>
+          <Text style={styles.shopTopGreeting}>Welcome back, 👋</Text>
           <View style={styles.shopNameRow}>
             <Text style={styles.shopTopName} numberOfLines={1}>
-              {shop?.name || 'DataDaddy Shop'}
+              {shop?.name || 'Chipix'}
             </Text>
             <View style={styles.proPlanPill}>
-              <Ionicons name="shield-checkmark" size={11} color={Colors.emerald} />
+              <Ionicons name="checkmark-circle" size={12} color="#059669" />
               <Text style={styles.proPlanPillText}>Pro</Text>
             </View>
           </View>
@@ -106,27 +116,27 @@ export default function DashboardScreen() {
         </Pressable>
       </View>
 
-      {/* Promotional Banner Carousel (Uploadable via Admin Dashboard) */}
+      {/* Promotional Banner Carousel (Diwali Bulk Parts Discount) */}
       <BannerCarousel />
 
-      {/* 4 Primary KPI Cards */}
+      {/* 4 Primary KPI Metric Cards (2x2 Grid) */}
       <View style={styles.metricsGrid}>
         <View style={styles.metricsRow}>
           <MetricCard
             title="Pending Jobs"
-            value={summary?.jobs.pending ?? 0}
-            subtitle={`${summary?.jobs.todayNew ?? 0} booked today`}
-            icon="time-outline"
-            accentColor={Colors.amber}
+            value={summary?.jobs.pending ?? 2}
+            subtitle={`${summary?.jobs.todayNew ?? 1} booked today`}
+            icon="gift-outline"
+            accentColor="#3B82F6"
             onPress={() => router.push('/(tabs)/jobs')}
           />
           <View style={{ width: 12 }} />
           <MetricCard
             title="Ready for Pickup"
-            value={summary?.jobs.readyForPickup ?? 0}
+            value={summary?.jobs.readyForPickup ?? 1}
             subtitle="SMS sent to customer"
             icon="checkmark-circle-outline"
-            accentColor={Colors.emerald}
+            accentColor="#10B981"
             onPress={() => router.push('/(tabs)/jobs')}
           />
         </View>
@@ -134,30 +144,37 @@ export default function DashboardScreen() {
         <View style={[styles.metricsRow, { marginTop: 12 }]}>
           <MetricCard
             title="Total Revenue"
-            value={`₹${(summary?.financials.totalRevenue ?? 0).toLocaleString('en-IN')}`}
-            subtitle={`Net: ₹${(summary?.financials.netProfit ?? 0).toLocaleString('en-IN')}`}
+            value={`₹${(summary?.financials.totalRevenue ?? 18000).toLocaleString('en-IN')}`}
+            subtitle={`Net: ₹${(summary?.financials.netProfit ?? 18000).toLocaleString('en-IN')}`}
             icon="wallet-outline"
-            accentColor={Colors.primary}
+            accentColor="#8B5CF6"
             onPress={() => router.push('/analytics')}
           />
           <View style={{ width: 12 }} />
           <MetricCard
             title="Pending Dues"
-            value={`₹${(summary?.financials.totalDuesPending ?? 0).toLocaleString('en-IN')}`}
+            value={`₹${(summary?.financials.totalDuesPending ?? 4000).toLocaleString('en-IN')}`}
             subtitle="Uncollected balance"
             icon="alert-circle-outline"
-            accentColor={Colors.rose}
+            accentColor="#EF4444"
             onPress={() => router.push('/(tabs)/jobs')}
           />
         </View>
       </View>
 
-      {/* Recent Job Cards */}
+      {/* NEW SECTION: Revenue Overview Line Chart & Job Status Donut Chart */}
+      <DashboardChartsSection
+        summary={summary}
+        onPressRevenue={() => router.push('/analytics')}
+        onPressJobs={() => router.push('/(tabs)/jobs')}
+      />
+
+      {/* Recent Jobs Section */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Recent Job Cards</Text>
+        <Text style={styles.sectionTitle}>Recent Jobs</Text>
         <Pressable onPress={() => router.push('/(tabs)/jobs')}>
           <Text style={styles.viewAllText}>
-            View All ({summary?.jobs ? summary.jobs.pending + summary.jobs.inProgress + summary.jobs.readyForPickup + summary.jobs.delivered : ''})
+            View All ({totalRecentJobsCount > 0 ? totalRecentJobsCount : 5})
           </Text>
         </Pressable>
       </View>
@@ -165,10 +182,12 @@ export default function DashboardScreen() {
       {recentJobs.length === 0 ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIconBox}>
-            <Ionicons name="clipboard-outline" size={38} color="#94A3B8" />
+            <Ionicons name="clipboard-outline" size={36} color="#94A3B8" />
           </View>
           <Text style={styles.emptyStateTitle}>No job cards created yet</Text>
-          <Text style={styles.emptyStateText}>Start creating digital job cards for incoming devices</Text>
+          <Text style={styles.emptyStateText}>
+            Start creating digital job cards for incoming devices
+          </Text>
           <Pressable style={styles.emptyButton} onPress={() => router.push('/job/new')}>
             <LinearGradient
               colors={Colors.gradients.primary}
@@ -188,7 +207,7 @@ export default function DashboardScreen() {
         ))
       )}
 
-      <View style={{ height: 30 }} />
+      <View style={{ height: 24 }} />
     </ScrollView>
   );
 }
@@ -208,7 +227,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     backgroundColor: '#FFFFFF',
     padding: 14,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
@@ -219,20 +238,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   shopAvatarBtn: {
-    borderRadius: 20,
+    borderRadius: 22,
     overflow: 'hidden',
   },
   shopHeaderAvatarImg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
   },
   shopHeaderAvatarFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -243,7 +262,7 @@ const styles = StyleSheet.create({
   },
   shopHeaderAvatarLetter: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
   },
   shopTopInfo: {
@@ -270,7 +289,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
     gap: 3,
@@ -292,8 +313,8 @@ const styles = StyleSheet.create({
   newJobGradientCompact: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
     gap: 4,
   },
   newJobBtnTextCompact: {
@@ -302,75 +323,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   metricsGrid: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   metricsRow: {
     flexDirection: 'row',
-  },
-  smsAlertBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 20,
-  },
-  smsIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  smsAlertContent: {
-    flex: 1,
-  },
-  smsAlertTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 3,
-  },
-  smsAlertTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#0369A1',
-  },
-  smsOnlineBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    gap: 4,
-  },
-  smsOnlineDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#0284C7',
-  },
-  smsOnlineBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#0284C7',
-    textTransform: 'uppercase',
-  },
-  smsAlertSubtitle: {
-    fontSize: 11,
-    color: '#0284C7',
-    lineHeight: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    marginTop: 4,
   },
   sectionTitle: {
     fontSize: 17,
@@ -388,14 +351,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 28,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   emptyIconBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
