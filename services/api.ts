@@ -201,6 +201,38 @@ export const api = {
     return res.data;
   },
 
+  /**
+   * Upload Device / Product Photo to AWS S3 (for repair job cards)
+   */
+  async uploadDevicePhoto(
+    fileUri: string,
+    mimeType: string = 'image/jpeg',
+    fileName: string = 'device.jpg'
+  ): Promise<{ success: boolean; url: string; key?: string; message?: string }> {
+    const formData = new FormData();
+
+    if (Platform.OS === 'web') {
+      const res = await fetch(fileUri);
+      const blob = await res.blob();
+      formData.append('image', blob, fileName);
+    } else {
+      formData.append('image', {
+        uri: fileUri,
+        name: fileName,
+        type: mimeType,
+      } as any);
+    }
+    formData.append('folder', 'repairs');
+
+    const res = await apiClient.post('/uploads/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return res.data;
+  },
+
   // Staff Management
   async getStaff(): Promise<any[]> {
     try {

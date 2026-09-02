@@ -24,12 +24,17 @@ export interface JobCard {
     name: string;
     phone: string;
   };
+  orderType?: 'repair' | 'accessory';
   deviceType: DeviceType;
   brand: string;
   model: string;
   serialOrImei?: string;
   passcodePattern?: string;
   problemDescription: string;
+  photos?: string[];
+  // Accessory-specific fields
+  productName?: string;
+  productPrice?: number;
   status: JobStatus;
   cost: {
     estimated: number;

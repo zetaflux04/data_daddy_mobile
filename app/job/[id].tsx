@@ -12,11 +12,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../services/api';
+import { api, resolveImageUrl } from '../../services/api';
 import { JobCard, JobStatus } from '../../types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { DeviceIcon } from '../../components/DeviceIcon';
@@ -284,6 +285,29 @@ export default function JobDetailScreen() {
           <Text style={styles.cardTitle}>Reported Problem</Text>
           <Text style={styles.problemDesc}>{job.problemDescription}</Text>
         </View>
+
+        {/* Device Photos if uploaded */}
+        {job.photos && job.photos.length > 0 && (
+          <View style={styles.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={styles.cardTitle}>Product Photos ({job.photos.length})</Text>
+              <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>Inspection records</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+              {job.photos.map((photoUrl, idx) => {
+                const displayUrl = resolveImageUrl(photoUrl) || photoUrl;
+                return (
+                  <View key={idx} style={{ position: 'relative', marginRight: 10, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' }}>
+                    <Image source={{ uri: displayUrl }} style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: '#F1F5F9' }} />
+                    <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: 'rgba(15, 23, 42, 0.75)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>#{idx + 1}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Pipeline Status Controller */}
         <View style={styles.card}>
