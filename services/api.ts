@@ -411,6 +411,13 @@ export const api = {
         period?: number;
         unit?: 'days' | 'months' | 'years';
       };
+      repairedBy?: {
+        id?: string;
+        userId?: string;
+        name: string;
+        role?: string;
+      };
+      assignedTechnicianId?: string;
     }
   ): Promise<JobCard | null> {
     try {

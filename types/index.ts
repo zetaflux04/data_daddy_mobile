@@ -36,6 +36,17 @@ export interface JobCard {
   productName?: string;
   productPrice?: number;
   status: JobStatus;
+  assignedTechnicianId?: {
+    _id?: string;
+    name?: string;
+    phone?: string;
+  } | string;
+  repairedBy?: {
+    userId?: string;
+    id?: string;
+    name: string;
+    role?: string;
+  };
   cost: {
     estimated: number;
     final: number;

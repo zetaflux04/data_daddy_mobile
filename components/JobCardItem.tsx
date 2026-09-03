@@ -81,6 +81,16 @@ export const JobCardItem: React.FC<JobCardItemProps> = ({ job, onPress }) => {
           <Text style={styles.problemText} numberOfLines={2}>
             {job.problemDescription || (job.orderType === 'accessory' ? 'Product Sale' : 'Repair Service')}
           </Text>
+
+          {/* Repaired By Tag (if assigned) */}
+          {(job.repairedBy?.name || (typeof job.assignedTechnicianId === 'object' && job.assignedTechnicianId?.name)) && (
+            <View style={styles.repairedByTag}>
+              <Ionicons name="construct-outline" size={11} color="#0369A1" />
+              <Text style={styles.repairedByTagText} numberOfLines={1}>
+                Repaired by: {job.repairedBy?.name || (typeof job.assignedTechnicianId === 'object' ? job.assignedTechnicianId?.name : '')}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -266,5 +276,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: Colors.primary,
+  },
+  repairedByTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0F9FF',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginTop: 4,
+    borderWidth: 0.5,
+    borderColor: '#BAE6FD',
+  },
+  repairedByTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#0369A1',
   },
 });

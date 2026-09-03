@@ -25,6 +25,7 @@ import { Colors } from '../../constants/Colors';
 import { AppHeader } from '../../components/AppHeader';
 import { S3Image } from '../../components/S3Image';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
+import { useAuth } from '../../context/AuthContext';
 
 const statusFlow: JobStatus[] = ['pending', 'in_progress', 'parts_delayed', 'repaired', 'delivered'];
 
@@ -32,8 +33,18 @@ export default function JobDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { user, shop } = useAuth();
   const [job, setJob] = useState<JobCard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Staff & Technician State
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [selectedRepairedBy, setSelectedRepairedBy] = useState<{
+    id?: string;
+    name: string;
+    role?: string;
+  } | null>(null);
+  const [isTechDropdownOpen, setIsTechDropdownOpen] = useState(false);
 
   // Payment Modal
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
@@ -62,9 +73,53 @@ export default function JobDetailScreen() {
     }
   };
 
+  const loadStaff = async () => {
+    try {
+      const list = await api.getStaff();
+      setStaffList(list || []);
+    } catch {
+      setStaffList([]);
+    }
+  };
+
   useEffect(() => {
     loadJob();
+    loadStaff();
   }, [id]);
+
+  // Combined options: Shop Owner (Self) + Technicians added by the shop owner
+  const repairedByOptions = React.useMemo(() => {
+    const ownerName = shop?.ownerName || user?.name || 'Shop Owner';
+    const ownerId = user?.id || (user as any)?._id || 'owner_self';
+
+    const list: Array<{ id: string; name: string; label: string; role: string; isSelf: boolean }> = [
+      {
+        id: String(ownerId),
+        name: `${ownerName} (Self)`,
+        label: `${ownerName} (Self)`,
+        role: 'owner',
+        isSelf: true,
+      },
+    ];
+
+    (staffList || []).forEach((s) => {
+      const isOwnerRole = s.role === 'owner';
+      const matchesOwnerId = s._id && s._id === ownerId;
+      const matchesPhone = s.phone && (s.phone === user?.phone || s.phone === shop?.phone);
+      if (isOwnerRole || matchesOwnerId || matchesPhone) {
+        return;
+      }
+      list.push({
+        id: String(s._id || s.id),
+        name: s.name,
+        label: s.name,
+        role: s.role || 'technician',
+        isSelf: false,
+      });
+    });
+
+    return list;
+  }, [shop, user, staffList]);
 
   const handleStatusClick = (newStatus: JobStatus) => {
     if (!job) return;
@@ -73,6 +128,27 @@ export default function JobDetailScreen() {
       setHasWarranty(job.warranty?.hasWarranty ?? false);
       setWarrantyUnit(job.warranty?.unit ?? 'months');
       setWarrantyPeriod(job.warranty?.period ? String(job.warranty.period) : '3');
+
+      // Initialize selectedRepairedBy
+      if (job.repairedBy?.name) {
+        setSelectedRepairedBy(job.repairedBy);
+      } else if (job.assignedTechnicianId && typeof job.assignedTechnicianId === 'object' && job.assignedTechnicianId.name) {
+        setSelectedRepairedBy({
+          id: (job.assignedTechnicianId as any)._id,
+          name: job.assignedTechnicianId.name,
+          role: 'technician',
+        });
+      } else {
+        const ownerName = shop?.ownerName || user?.name || 'Shop Owner';
+        const ownerId = user?.id || (user as any)?._id || 'owner_self';
+        setSelectedRepairedBy({
+          id: String(ownerId),
+          name: `${ownerName} (Self)`,
+          role: 'owner',
+        });
+      }
+
+      setIsTechDropdownOpen(false);
       setIsDeliveryModalOpen(true);
     } else {
       handleUpdateStatus(newStatus);
@@ -117,14 +193,23 @@ export default function JobDetailScreen() {
           period: hasWarranty ? Number(warrantyPeriod) : undefined,
           unit: hasWarranty ? warrantyUnit : undefined,
         },
+        repairedBy: selectedRepairedBy
+          ? {
+              id: selectedRepairedBy.id,
+              name: selectedRepairedBy.name,
+              role: selectedRepairedBy.role,
+            }
+          : undefined,
+        assignedTechnicianId: selectedRepairedBy?.id,
       });
 
       if (updated) {
         setJob({ ...updated });
         setIsDeliveryModalOpen(false);
+        const techInfo = selectedRepairedBy?.name ? ` Repaired by: ${selectedRepairedBy.name}.` : '';
         Alert.alert(
           'Status Updated: Delivered',
-          `Device marked as delivered.${hasWarranty ? ` Warranty active for ${warrantyPeriod} ${warrantyUnit}.` : ''} Invoice sent to ${job.customerSnapshot.phone}.`
+          `Device marked as delivered.${hasWarranty ? ` Warranty active for ${warrantyPeriod} ${warrantyUnit}.` : ''}${techInfo} Invoice sent to ${job.customerSnapshot.phone}.`
         );
       }
     } catch {
@@ -151,10 +236,19 @@ export default function JobDetailScreen() {
       return;
     }
 
-    if (entered > job.cost.due) {
+    if (job.status !== 'delivered') {
+      Alert.alert('Payment Restricted', 'Payments can only be recorded once the job status is Delivered.');
+      return;
+    }
+
+    const estimatePrice = job.cost.final || job.cost.estimated || 0;
+    const currentPaid = job.cost.advancePaid || 0;
+    const maxPayable = job.cost.due;
+
+    if (entered > maxPayable || (currentPaid + entered) > estimatePrice) {
       Alert.alert(
         'Payment Exceeds Estimate',
-        `Payment amount cannot exceed the remaining balance of ₹${job.cost.due} (Estimate Price: ₹${job.cost.final}).`
+        `Payment amount (₹${entered}) cannot exceed the estimate price of ₹${estimatePrice} (Remaining due: ₹${maxPayable}). Total paid cannot be greater than the estimate price.`
       );
       return;
     }
@@ -165,6 +259,7 @@ export default function JobDetailScreen() {
         setJob({ ...updated });
         setIsPayModalOpen(false);
         setPayAmount('');
+        Alert.alert('Payment Recorded', `Successfully recorded ₹${entered.toLocaleString('en-IN')} via ${payMode.toUpperCase()}.`);
       }
     } catch (e: any) {
       Alert.alert('Payment Failed', e.response?.data?.message || 'Failed to record payment.');
@@ -268,6 +363,42 @@ export default function JobDetailScreen() {
           </View>
         )}
 
+        {/* Repaired By Card (if recorded) */}
+        {(job.repairedBy?.name || (typeof job.assignedTechnicianId === 'object' && job.assignedTechnicianId?.name)) && (
+          <View style={styles.repairedByCard}>
+            <View style={styles.repairedByHeader}>
+              <View style={styles.repairedByIconCircle}>
+                <Ionicons name="construct" size={18} color="#2563EB" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.repairedByTitle}>Repaired By</Text>
+                <Text style={styles.repairedBySub}>
+                  {job.repairedBy?.name || (typeof job.assignedTechnicianId === 'object' ? job.assignedTechnicianId?.name : '')}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.repairedByPill,
+                  (job.repairedBy?.role === 'owner' || job.repairedBy?.name?.includes('(Self)'))
+                    ? { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }
+                    : { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' },
+                ]}>
+                <Text
+                  style={[
+                    styles.repairedByPillText,
+                    (job.repairedBy?.role === 'owner' || job.repairedBy?.name?.includes('(Self)'))
+                      ? { color: '#92400E' }
+                      : { color: '#1E40AF' },
+                  ]}>
+                  {(job.repairedBy?.role === 'owner' || job.repairedBy?.name?.includes('(Self)'))
+                    ? 'SHOP OWNER (SELF)'
+                    : 'TECHNICIAN'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Customer Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -358,62 +489,64 @@ export default function JobDetailScreen() {
           </View>
         </View>
 
-        {/* Financials & Payments */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderBetween}>
-            <Text style={styles.cardTitle}>Billing & Payments</Text>
-            <Pressable style={styles.invoiceBtn} onPress={() => setIsInvoiceOpen(true)}>
-              <Ionicons name="document-text" size={14} color={Colors.primary} />
-              <Text style={styles.invoiceBtnText}>View Invoice</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.costSummaryRow}>
-            <View style={styles.costBox}>
-              <Text style={styles.costBoxLabel}>Estimate</Text>
-              <Text style={styles.costBoxVal}>₹{job.cost.final.toLocaleString('en-IN')}</Text>
+        {/* Financials & Payments — Only shown when job status is delivered */}
+        {job.status === 'delivered' && (
+          <View style={styles.card}>
+            <View style={styles.cardHeaderBetween}>
+              <Text style={styles.cardTitle}>Billing & Payments</Text>
+              <Pressable style={styles.invoiceBtn} onPress={() => setIsInvoiceOpen(true)}>
+                <Ionicons name="document-text" size={14} color={Colors.primary} />
+                <Text style={styles.invoiceBtnText}>View Invoice</Text>
+              </Pressable>
             </View>
-            <View style={styles.costBox}>
-              <Text style={styles.costBoxLabel}>Paid</Text>
-              <Text style={[styles.costBoxVal, { color: Colors.emerald }]}>
-                ₹{job.cost.advancePaid.toLocaleString('en-IN')}
-              </Text>
-            </View>
-            <View style={styles.costBox}>
-              <Text style={styles.costBoxLabel}>Balance Due</Text>
-              <Text style={[styles.costBoxVal, { color: hasDue ? Colors.rose : Colors.emerald }]}>
-                ₹{job.cost.due.toLocaleString('en-IN')}
-              </Text>
-            </View>
-          </View>
 
-          {hasDue && (
-            <Pressable
-              style={({ pressed }) => [styles.recordPayBtn, { opacity: pressed ? 0.9 : 1 }]}
-              onPress={() => setIsPayModalOpen(true)}>
-              <Ionicons name="cash-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.recordPayText}>Record Payment</Text>
-            </Pressable>
-          )}
+            <View style={styles.costSummaryRow}>
+              <View style={styles.costBox}>
+                <Text style={styles.costBoxLabel}>Estimate</Text>
+                <Text style={styles.costBoxVal}>₹{job.cost.final.toLocaleString('en-IN')}</Text>
+              </View>
+              <View style={styles.costBox}>
+                <Text style={styles.costBoxLabel}>Paid</Text>
+                <Text style={[styles.costBoxVal, { color: Colors.emerald }]}>
+                  ₹{job.cost.advancePaid.toLocaleString('en-IN')}
+                </Text>
+              </View>
+              <View style={styles.costBox}>
+                <Text style={styles.costBoxLabel}>Balance Due</Text>
+                <Text style={[styles.costBoxVal, { color: hasDue ? Colors.rose : Colors.emerald }]}>
+                  ₹{job.cost.due.toLocaleString('en-IN')}
+                </Text>
+              </View>
+            </View>
 
-          {/* Payments list */}
-          {job.payments && job.payments.length > 0 && (
-            <View style={styles.paymentHistory}>
-              <Text style={styles.subHeading}>Payment History</Text>
-              {job.payments.map((p, idx) => (
-                <View key={idx} style={styles.payRow}>
-                  <View style={styles.payModeBadge}>
-                    <Text style={styles.payModeText}>{p.mode.toUpperCase()}</Text>
+            {hasDue && (
+              <Pressable
+                style={({ pressed }) => [styles.recordPayBtn, { opacity: pressed ? 0.9 : 1 }]}
+                onPress={() => setIsPayModalOpen(true)}>
+                <Ionicons name="cash-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.recordPayText}>Record Payment</Text>
+              </Pressable>
+            )}
+
+            {/* Payments list */}
+            {job.payments && job.payments.length > 0 && (
+              <View style={styles.paymentHistory}>
+                <Text style={styles.subHeading}>Payment History</Text>
+                {job.payments.map((p, idx) => (
+                  <View key={idx} style={styles.payRow}>
+                    <View style={styles.payModeBadge}>
+                      <Text style={styles.payModeText}>{p.mode.toUpperCase()}</Text>
+                    </View>
+                    <Text style={styles.payDate}>
+                      {new Date(p.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </Text>
+                    <Text style={styles.payAmount}>+₹{p.amount.toLocaleString('en-IN')}</Text>
                   </View>
-                  <Text style={styles.payDate}>
-                    {new Date(p.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                  </Text>
-                  <Text style={styles.payAmount}>+₹{p.amount.toLocaleString('en-IN')}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* SMS Logs */}
         <View style={styles.card}>
@@ -561,6 +694,144 @@ export default function JobDetailScreen() {
                   </View>
                 )}
 
+                {/* 3. Repaired By Dropdown */}
+                <Text style={[styles.inputLabel, { marginTop: 14 }]}>3. Repaired By</Text>
+                <Text style={styles.inputSubLabel}>
+                  Select technician or shop owner (self) who completed this repair:
+                </Text>
+
+                {/* Dropdown Selector */}
+                <View style={styles.dropdownContainer}>
+                  <Pressable
+                    style={[
+                      styles.dropdownTrigger,
+                      isTechDropdownOpen && styles.dropdownTriggerActive,
+                    ]}
+                    onPress={() => setIsTechDropdownOpen((prev) => !prev)}>
+                    <View style={styles.dropdownTriggerLeft}>
+                      <View
+                        style={[
+                          styles.dropdownTriggerAvatar,
+                          (selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)'))
+                            ? { backgroundColor: '#FEF3C7' }
+                            : { backgroundColor: '#EFF6FF' },
+                        ]}>
+                        <Ionicons
+                          name={
+                            (selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)'))
+                              ? 'person-circle-outline'
+                              : 'construct-outline'
+                          }
+                          size={20}
+                          color={
+                            (selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)'))
+                              ? '#D97706'
+                              : Colors.primary
+                          }
+                        />
+                      </View>
+                      <View style={{ marginLeft: 10, flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={styles.dropdownTriggerValue} numberOfLines={1}>
+                            {selectedRepairedBy?.name || 'Select Technician'}
+                          </Text>
+                          {(selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)')) && (
+                            <View style={styles.selfBadge}>
+                              <Text style={styles.selfBadgeText}>SELF</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.dropdownTriggerSub}>
+                          {(selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)'))
+                            ? 'Shop Owner'
+                            : selectedRepairedBy?.role === 'technician'
+                            ? 'Technician'
+                            : 'Staff Member'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.dropdownChevronCircle}>
+                      <Ionicons
+                        name={isTechDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color="#475569"
+                      />
+                    </View>
+                  </Pressable>
+
+                  {/* Dropdown Menu Options */}
+                  {isTechDropdownOpen && (
+                    <View style={styles.dropdownMenu}>
+                      {repairedByOptions.map((opt, idx) => {
+                        const isSelected =
+                          selectedRepairedBy?.name === opt.name ||
+                          (selectedRepairedBy?.id && selectedRepairedBy?.id === opt.id);
+                        const isLast = idx === repairedByOptions.length - 1;
+                        return (
+                          <Pressable
+                            key={opt.id}
+                            style={[
+                              styles.dropdownMenuItem,
+                              isSelected && styles.dropdownMenuItemSelected,
+                              !isLast && styles.dropdownMenuItemDivider,
+                            ]}
+                            onPress={() => {
+                              setSelectedRepairedBy({ id: opt.id, name: opt.name, role: opt.role });
+                              setIsTechDropdownOpen(false);
+                            }}>
+                            <View style={styles.dropdownMenuItemLeft}>
+                              <View
+                                style={[
+                                  styles.dropdownMenuItemAvatar,
+                                  opt.isSelf ? { backgroundColor: '#FEF3C7' } : { backgroundColor: '#EFF6FF' },
+                                ]}>
+                                <Ionicons
+                                  name={opt.isSelf ? 'person-circle-outline' : 'construct-outline'}
+                                  size={17}
+                                  color={opt.isSelf ? '#D97706' : Colors.primary}
+                                />
+                              </View>
+                              <View style={{ marginLeft: 10, flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text
+                                    style={[
+                                      styles.dropdownMenuItemName,
+                                      isSelected && styles.dropdownMenuItemNameSelected,
+                                    ]}
+                                    numberOfLines={1}>
+                                    {opt.name}
+                                  </Text>
+                                  {opt.isSelf && (
+                                    <View style={styles.selfBadge}>
+                                      <Text style={styles.selfBadgeText}>SELF</Text>
+                                    </View>
+                                  )}
+                                </View>
+                                <Text style={styles.dropdownMenuItemRole}>
+                                  {opt.isSelf ? 'Shop Owner' : opt.role === 'technician' ? 'Technician' : 'Staff Member'}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {isSelected ? (
+                              <Ionicons name="checkmark-circle" size={19} color={Colors.emerald} />
+                            ) : (
+                              <Ionicons name="ellipse-outline" size={19} color="#CBD5E1" />
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+
+                {repairedByOptions.length === 1 && (
+                  <Text style={styles.techHintText}>
+                    💡 Tip: Add more technicians from Settings &gt; Staff to assign orders directly to team members.
+                  </Text>
+                )}
+
                 {/* Outstanding balance warning if applicable */}
                 {hasDue && (
                   <View style={styles.dueWarningBox}>
@@ -629,7 +900,10 @@ export default function JobDetailScreen() {
                 <TextInput
                   style={[
                     styles.modalInput,
-                    Number(payAmount) > job.cost.due && { borderColor: Colors.rose, borderWidth: 1.5 },
+                    (Number(payAmount) > job.cost.due || (job.cost.advancePaid + Number(payAmount)) > job.cost.final) && {
+                      borderColor: Colors.rose,
+                      borderWidth: 1.5,
+                    },
                   ]}
                   placeholder={`Max ₹${job.cost.due}`}
                   placeholderTextColor="#94A3B8"
@@ -638,9 +912,9 @@ export default function JobDetailScreen() {
                   onChangeText={setPayAmount}
                 />
 
-                {Number(payAmount) > job.cost.due && (
-                  <Text style={{ color: Colors.rose, fontSize: 12, marginTop: -6, marginBottom: 10, fontWeight: '600' }}>
-                    Payment cannot exceed remaining due ₹{job.cost.due} (Estimate: ₹{job.cost.final})
+                {(Number(payAmount) > job.cost.due || (job.cost.advancePaid + Number(payAmount)) > job.cost.final) && (
+                  <Text style={{ color: Colors.rose, fontSize: 12, marginTop: 4, marginBottom: 10, fontWeight: '600' }}>
+                    Payment amount cannot exceed remaining due ₹{job.cost.due} (Estimate: ₹{job.cost.final}).
                   </Text>
                 )}
 
@@ -661,9 +935,19 @@ export default function JobDetailScreen() {
                 <Pressable
                   style={[
                     styles.submitPayBtn,
-                    Number(payAmount) > job.cost.due && { backgroundColor: '#94A3B8' },
+                    (!payAmount ||
+                      Number(payAmount) <= 0 ||
+                      Number(payAmount) > job.cost.due ||
+                      (job.cost.advancePaid + Number(payAmount)) > job.cost.final) && {
+                      backgroundColor: '#94A3B8',
+                    },
                   ]}
-                  disabled={Number(payAmount) > job.cost.due}
+                  disabled={
+                    !payAmount ||
+                    Number(payAmount) <= 0 ||
+                    Number(payAmount) > job.cost.due ||
+                    (job.cost.advancePaid + Number(payAmount)) > job.cost.final
+                  }
                   onPress={handleRecordPayment}>
                   <Text style={styles.submitPayBtnText}>Confirm Payment</Text>
                 </Pressable>
@@ -710,6 +994,11 @@ export default function JobDetailScreen() {
                     <Text style={styles.invProblem}>IMEI / Serial: {job.serialOrImei}</Text>
                   )}
                   <Text style={styles.invProblem}>Issue: {job.problemDescription}</Text>
+                  {(job.repairedBy?.name || (typeof job.assignedTechnicianId === 'object' && job.assignedTechnicianId?.name)) && (
+                    <Text style={styles.invProblem}>
+                      Repaired By: {job.repairedBy?.name || (typeof job.assignedTechnicianId === 'object' ? job.assignedTechnicianId?.name : '')}
+                    </Text>
+                  )}
 
                   {job.warranty?.hasWarranty && (
                     <View style={styles.invWarrantyBox}>
@@ -1450,5 +1739,185 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  // Repaired By Card on Job Details
+  repairedByCard: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    marginBottom: 16,
+  },
+  repairedByHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  repairedByIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  repairedByTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0369A1',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  repairedBySub: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0C4A6E',
+    marginTop: 1,
+  },
+  repairedByPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  repairedByPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  inputSubLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 8,
+    marginTop: -2,
+  },
+  // Dropdown Styles for Repaired By
+  dropdownContainer: {
+    marginBottom: 8,
+  },
+  dropdownTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dropdownTriggerActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#F0F9FF',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  dropdownTriggerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  dropdownTriggerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropdownTriggerValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  dropdownTriggerSub: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  dropdownChevronCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  dropdownMenu: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderTopWidth: 0,
+    borderColor: Colors.primary,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  dropdownMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  dropdownMenuItemSelected: {
+    backgroundColor: '#F0FDF4',
+  },
+  dropdownMenuItemDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  dropdownMenuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  dropdownMenuItemAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropdownMenuItemName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  dropdownMenuItemNameSelected: {
+    color: '#0F172A',
+    fontWeight: '800',
+  },
+  dropdownMenuItemRole: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  selfBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 0.5,
+    borderColor: '#FDE68A',
+  },
+  selfBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#92400E',
+    letterSpacing: 0.5,
+  },
+  techHintText: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });

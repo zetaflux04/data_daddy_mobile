@@ -163,7 +163,7 @@ export default function NewJobScreen() {
       }
       const est = Number(estimatedCost) || 0;
       const adv = Number(advancePaid) || 0;
-      if (adv > est && est > 0) {
+      if (adv > est) {
         Alert.alert(
           'Invalid Advance Payment',
           `Advance payment (₹${adv}) cannot exceed the estimated price (₹${est}).`
