@@ -9,6 +9,9 @@ import {
   Linking,
   Modal,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +19,7 @@ import { api } from '../../services/api';
 import { CustomerItem } from '../../types';
 import { DateFilterBar, DateRangeKey } from '../../components/DateFilterBar';
 import { Colors } from '../../constants/Colors';
+import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 
 export default function CustomersScreen() {
   const router = useRouter();
@@ -216,57 +220,64 @@ export default function CustomersScreen() {
         visible={isAddModalVisible}
         transparent
         animationType="slide"
+        statusBarTranslucent
         onRequestClose={() => setIsAddModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setIsAddModalVisible(false)} />
+          <FloatingCloseButton onPress={() => setIsAddModalVisible(false)} />
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add New Customer</Text>
-              <Pressable onPress={() => setIsAddModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#64748B" />
-              </Pressable>
             </View>
 
-            <Text style={styles.inputLabel}>Customer Name *</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. Ramesh Kumar"
-              value={newName}
-              onChangeText={setNewName}
-            />
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
+              <Text style={styles.inputLabel}>Customer Name *</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Ramesh Kumar"
+                placeholderTextColor="#94A3B8"
+                value={newName}
+                onChangeText={setNewName}
+              />
 
-            <Text style={styles.inputLabel}>Mobile Phone Number *</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="10-digit number (e.g. 9876543210)"
-              keyboardType="phone-pad"
-              maxLength={10}
-              value={newPhone}
-              onChangeText={setNewPhone}
-            />
+              <Text style={styles.inputLabel}>Mobile Phone Number *</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="10-digit number (e.g. 9876543210)"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={newPhone}
+                onChangeText={setNewPhone}
+              />
 
-            <Text style={styles.inputLabel}>Address / Area (Optional)</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. Main Market, Shop #4"
-              value={newAddress}
-              onChangeText={setNewAddress}
-            />
+              <Text style={styles.inputLabel}>Address / Area (Optional)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Main Market, Shop #4"
+                placeholderTextColor="#94A3B8"
+                value={newAddress}
+                onChangeText={setNewAddress}
+              />
 
-            <View style={styles.modalActions}>
-              <Pressable
-                style={styles.cancelBtn}
-                onPress={() => setIsAddModalVisible(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </Pressable>
+              <View style={styles.modalActions}>
+                <Pressable
+                  style={styles.cancelBtn}
+                  onPress={() => setIsAddModalVisible(false)}>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </Pressable>
 
-              <Pressable
-                style={styles.saveBtn}
-                onPress={handleAddCustomer}>
-                <Text style={styles.saveBtnText}>Save Customer</Text>
-              </Pressable>
-            </View>
+                <Pressable
+                  style={styles.saveBtn}
+                  onPress={handleAddCustomer}>
+                  <Text style={styles.saveBtnText}>Save Customer</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -441,6 +452,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.5)',
     justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalCard: {
     backgroundColor: '#FFFFFF',

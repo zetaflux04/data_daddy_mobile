@@ -12,12 +12,13 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { api, resolveImageUrl } from '../../services/api';
+import { api, resolveImageUrls } from '../../services/api';
 import { JobCard, DashboardSummary } from '../../types';
 import { MetricCard } from '../../components/MetricCard';
 import { DashboardChartsSection } from '../../components/DashboardChartsSection';
 import { JobCardItem } from '../../components/JobCardItem';
 import { BannerCarousel } from '../../components/BannerCarousel';
+import { S3Image } from '../../components/S3Image';
 import { Colors } from '../../constants/Colors';
 
 export default function DashboardScreen() {
@@ -26,6 +27,7 @@ export default function DashboardScreen() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [recentJobs, setRecentJobs] = useState<JobCard[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   const loadData = async () => {
     try {
@@ -74,13 +76,18 @@ export default function DashboardScreen() {
         <Pressable
           style={styles.shopAvatarBtn}
           onPress={() => router.push('/(tabs)/profile')}>
-          {shop?.logoUrl ? (
-            <Image
-              source={{ uri: resolveImageUrl(shop.logoUrl) }}
-              style={styles.shopHeaderAvatarImg}
-              resizeMode="cover"
-            />
-          ) : (
+          {shop?.logoUrl && !avatarFailed ? (() => {
+            const urls = resolveImageUrls(shop.logoUrl);
+            return urls ? (
+              <S3Image
+                uri={urls.uri}
+                proxyUri={urls.proxyUri}
+                style={styles.shopHeaderAvatarImg}
+                resizeMode="cover"
+                onAllFailed={() => setAvatarFailed(true)}
+              />
+            ) : null;
+          })() : (
             <View style={styles.shopHeaderAvatarFallback}>
               <Text style={styles.shopHeaderAvatarLetter}>
                 {shop?.name ? shop.name.charAt(0).toUpperCase() : 'C'}

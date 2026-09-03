@@ -41,39 +41,107 @@ const getBackendBaseUrl = (): string => {
   return url;
 };
 
+// Direct public S3 base URL for the bucket
+const S3_BUCKET_NAME = 'datadaddy2026';
+const S3_REGION = 'ap-south-1';
+const S3_PUBLIC_BASE = `https://${S3_BUCKET_NAME}.s3.${S3_REGION}.amazonaws.com`;
+
 /**
- * Resolve direct S3 URLs, relative upload paths, or S3 keys to the accessible backend media streaming URL
+ * Resolve image URLs for display in React Native Image components.
+ *
+ * Strategy:
+ *  - Full S3 amazonaws.com URLs → served DIRECTLY from S3 (fastest, no proxy, works in APK)
+ *  - Raw S3 keys (profiles/, repairs/, general/, banners/) → direct S3 URL
+ *  - Relative API paths (/api/uploads/ or /uploads/) → routed through backend proxy
+ *  - Any other http/https URL → returned as-is
+ *
+ * Why direct S3 and not the backend proxy?
+ * The backend proxy uses Node.js stream piping (s3Response.Body.pipe(res)) which
+ * produces chunked transfer-encoded responses. Android's native Image component
+ * does not reliably handle chunked responses from a Node server, causing blank
+ * images in production APK builds (while Expo Go works fine because it uses a
+ * different network layer internally).
  */
 export const resolveImageUrl = (url?: string | null): string | undefined => {
   if (!url) return undefined;
 
-  // If already a full http/https url (non-S3)
+  // Already a full S3 URL — serve directly, no proxy
   if (url.includes('.amazonaws.com/')) {
-    const key = url.split('.amazonaws.com/')[1];
-    const baseUrl = getBackendBaseUrl();
-    return `${baseUrl}/uploads/media/${key}`;
+    return url;
   }
 
-  // If it's a relative URL starting with /api/uploads/
+  // Raw S3 key (e.g. "profiles/shopId/timestamp.jpg", "repairs/...", "general/...")
+  if (
+    url.startsWith('profiles/') ||
+    url.startsWith('repairs/') ||
+    url.startsWith('general/') ||
+    url.startsWith('banners/')
+  ) {
+    return `${S3_PUBLIC_BASE}/${url}`;
+  }
+
+  // Relative URL starting with /api/uploads/ — route through backend
   if (url.startsWith('/api/uploads/')) {
     const base = getBackendBaseUrl().replace(/\/api\/?$/, '');
     return `${base}${url}`;
   }
 
-  // If relative URL starting with /uploads/
+  // Relative URL starting with /uploads/ — route through backend
   if (url.startsWith('/uploads/')) {
     const base = getBackendBaseUrl();
     return `${base}${url}`;
   }
 
-  // If it's a raw S3 key
-  if (url.startsWith('profiles/') || url.startsWith('general/') || url.startsWith('banners/')) {
-    const base = getBackendBaseUrl();
-    return `${base}/uploads/media/${url}`;
-  }
-
   return url;
 };
+
+/**
+ * Returns both the direct S3 URL (primary) and backend proxy URL (fallback).
+ * Used with S3Image component which transparently handles old private + new public objects.
+ */
+export const resolveImageUrls = (url?: string | null): { uri: string; proxyUri: string } | undefined => {
+  if (!url) return undefined;
+
+  let s3Key: string | null = null;
+
+  if (url.includes('.amazonaws.com/')) {
+    s3Key = url.split('.amazonaws.com/')[1];
+  } else if (
+    url.startsWith('profiles/') ||
+    url.startsWith('repairs/') ||
+    url.startsWith('general/') ||
+    url.startsWith('banners/')
+  ) {
+    s3Key = url;
+  }
+
+  if (s3Key) {
+    return {
+      uri: `${S3_PUBLIC_BASE}/${s3Key}`,
+      proxyUri: `${getBackendBaseUrl()}/uploads/media/${s3Key}`,
+    };
+  }
+
+  const resolved = resolveImageUrl(url);
+  if (!resolved) return undefined;
+  return { uri: resolved, proxyUri: resolved };
+};
+
+
+/**
+ * Detect MIME type from file URI extension (fallback for Android where asset.mimeType can be undefined)
+ */
+const getMimeTypeFromUri = (uri: string): string => {
+  const lower = uri.toLowerCase();
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  return 'image/jpeg';
+};
+
 
 let onUnauthorizedCallback: (() => void) | null = null;
 
@@ -170,68 +238,105 @@ export const api = {
 
   /**
    * Upload Profile Photo / Shop Logo to AWS S3
+   * Uses native fetch() instead of Axios — required for correct binary file handling
+   * on Android APK. Axios's default Content-Type: application/json header and its
+   * transformRequest pipeline interfere with FormData binary reading on native Android.
    */
   async uploadProfilePhoto(
     fileUri: string,
     mimeType: string = 'image/jpeg',
     fileName: string = 'profile.jpg'
   ): Promise<{ success: boolean; url: string; key?: string; message?: string }> {
+    const resolvedMime = mimeType || getMimeTypeFromUri(fileUri) || 'image/jpeg';
     const formData = new FormData();
 
     if (Platform.OS === 'web') {
-      // In Web mode, fetch blob from uri and append
-      const res = await fetch(fileUri);
-      const blob = await res.blob();
+      // Web: fetch the blob from the data URI first
+      const blobRes = await fetch(fileUri);
+      const blob = await blobRes.blob();
       formData.append('image', blob, fileName);
     } else {
-      // In native iOS / Android
-      formData.append('image', {
+      // Native Android/iOS: pass the file object — React Native's native
+      // networking resolves file:// and content:// URIs at the OS level
+      (formData as any).append('image', {
         uri: fileUri,
         name: fileName,
-        type: mimeType,
-      } as any);
+        type: resolvedMime,
+      });
     }
 
-    const res = await apiClient.post('/uploads/profile', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    // Read auth token to pass as Bearer header
+    const token = await AsyncStorage.getItem('@repairshop_token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    // IMPORTANT: Do NOT set Content-Type manually.
+    // Native fetch automatically sets: Content-Type: multipart/form-data; boundary=...
+    // Setting it manually removes the boundary and breaks multipart parsing on the server.
+
+    const fetchRes = await fetch(`${getBackendBaseUrl()}/uploads/profile`, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
 
-    return res.data;
+    if (!fetchRes.ok) {
+      const errData = await fetchRes.json().catch(() => ({}));
+      throw new Error((errData as any).message || `Upload failed: HTTP ${fetchRes.status}`);
+    }
+
+    return fetchRes.json();
   },
+
 
   /**
    * Upload Device / Product Photo to AWS S3 (for repair job cards)
+   * Uses native fetch() instead of Axios — same reason as uploadProfilePhoto.
    */
   async uploadDevicePhoto(
     fileUri: string,
     mimeType: string = 'image/jpeg',
     fileName: string = 'device.jpg'
   ): Promise<{ success: boolean; url: string; key?: string; message?: string }> {
+    const resolvedMime = mimeType || getMimeTypeFromUri(fileUri) || 'image/jpeg';
     const formData = new FormData();
 
     if (Platform.OS === 'web') {
-      const res = await fetch(fileUri);
-      const blob = await res.blob();
+      const blobRes = await fetch(fileUri);
+      const blob = await blobRes.blob();
       formData.append('image', blob, fileName);
     } else {
-      formData.append('image', {
+      (formData as any).append('image', {
         uri: fileUri,
         name: fileName,
-        type: mimeType,
-      } as any);
+        type: resolvedMime,
+      });
     }
+    // Append folder for repair photos
     formData.append('folder', 'repairs');
 
-    const res = await apiClient.post('/uploads/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const token = await AsyncStorage.getItem('@repairshop_token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    // Do NOT set Content-Type — native fetch sets multipart/form-data with boundary
+
+    const fetchRes = await fetch(`${getBackendBaseUrl()}/uploads/image`, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
 
-    return res.data;
+    if (!fetchRes.ok) {
+      const errData = await fetchRes.json().catch(() => ({}));
+      throw new Error((errData as any).message || `Upload failed: HTTP ${fetchRes.status}`);
+    }
+
+    return fetchRes.json();
   },
+
 
   // Staff Management
   async getStaff(): Promise<any[]> {

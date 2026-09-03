@@ -17,12 +17,14 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { api, resolveImageUrl } from '../../services/api';
+import { api, resolveImageUrls } from '../../services/api';
 import { JobCard, JobStatus } from '../../types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { DeviceIcon } from '../../components/DeviceIcon';
 import { Colors } from '../../constants/Colors';
 import { AppHeader } from '../../components/AppHeader';
+import { S3Image } from '../../components/S3Image';
+import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 
 const statusFlow: JobStatus[] = ['pending', 'in_progress', 'parts_delayed', 'repaired', 'delivered'];
 
@@ -143,13 +145,22 @@ export default function JobDetailScreen() {
   };
 
   const handleRecordPayment = async () => {
-    if (!job || !payAmount || Number(payAmount) <= 0) {
+    const entered = Number(payAmount);
+    if (!job || !payAmount || isNaN(entered) || entered <= 0) {
       Alert.alert('Invalid Amount', 'Please enter a valid amount.');
       return;
     }
 
+    if (entered > job.cost.due) {
+      Alert.alert(
+        'Payment Exceeds Estimate',
+        `Payment amount cannot exceed the remaining balance of ₹${job.cost.due} (Estimate Price: ₹${job.cost.final}).`
+      );
+      return;
+    }
+
     try {
-      const updated = await api.addPayment(job._id, Number(payAmount), payMode);
+      const updated = await api.addPayment(job._id, entered, payMode);
       if (updated) {
         setJob({ ...updated });
         setIsPayModalOpen(false);
@@ -295,10 +306,16 @@ export default function JobDetailScreen() {
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
               {job.photos.map((photoUrl, idx) => {
-                const displayUrl = resolveImageUrl(photoUrl) || photoUrl;
+                const urls = resolveImageUrls(photoUrl);
+                if (!urls) return null;
                 return (
                   <View key={idx} style={{ position: 'relative', marginRight: 10, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' }}>
-                    <Image source={{ uri: displayUrl }} style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: '#F1F5F9' }} />
+                    <S3Image
+                      uri={urls.uri}
+                      proxyUri={urls.proxyUri}
+                      style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: '#F1F5F9' }}
+                      resizeMode="cover"
+                    />
                     <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: 'rgba(15, 23, 42, 0.75)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
                       <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>#{idx + 1}</Text>
                     </View>
@@ -433,10 +450,13 @@ export default function JobDetailScreen() {
           visible={isDeliveryModalOpen}
           transparent
           animationType="slide"
+          statusBarTranslucent
           onRequestClose={() => setIsDeliveryModalOpen(false)}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
             style={styles.modalOverlay}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setIsDeliveryModalOpen(false)} />
+            <FloatingCloseButton onPress={() => setIsDeliveryModalOpen(false)} />
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
                 <View style={styles.modalHeaderTitleRow}>
@@ -448,9 +468,6 @@ export default function JobDetailScreen() {
                     <Text style={styles.modalHeaderSub}>Confirm IMEI and repair guarantee</Text>
                   </View>
                 </View>
-                <Pressable onPress={() => setIsDeliveryModalOpen(false)}>
-                  <Ionicons name="close" size={24} color="#64748B" />
-                </Pressable>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -589,48 +606,70 @@ export default function JobDetailScreen() {
           visible={isPayModalOpen}
           transparent
           animationType="slide"
+          statusBarTranslucent
           onRequestClose={() => setIsPayModalOpen(false)}>
-          <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+            style={styles.modalOverlay}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setIsPayModalOpen(false)} />
+            <FloatingCloseButton onPress={() => setIsPayModalOpen(false)} />
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Record Payment</Text>
-                <Pressable onPress={() => setIsPayModalOpen(false)}>
-                  <Ionicons name="close" size={24} color="#64748B" />
+              </View>
+
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
+                <Text style={styles.modalSub}>
+                  Remaining balance due:{' '}
+                  <Text style={{ color: Colors.rose, fontWeight: '800' }}>₹{job.cost.due}</Text>
+                  <Text style={{ color: '#64748B', fontWeight: '500' }}> (Estimate: ₹{job.cost.final})</Text>
+                </Text>
+
+                <Text style={styles.inputLabel}>Amount Received (₹)</Text>
+                <TextInput
+                  style={[
+                    styles.modalInput,
+                    Number(payAmount) > job.cost.due && { borderColor: Colors.rose, borderWidth: 1.5 },
+                  ]}
+                  placeholder={`Max ₹${job.cost.due}`}
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  value={payAmount}
+                  onChangeText={setPayAmount}
+                />
+
+                {Number(payAmount) > job.cost.due && (
+                  <Text style={{ color: Colors.rose, fontSize: 12, marginTop: -6, marginBottom: 10, fontWeight: '600' }}>
+                    Payment cannot exceed remaining due ₹{job.cost.due} (Estimate: ₹{job.cost.final})
+                  </Text>
+                )}
+
+                <Text style={styles.inputLabel}>Payment Mode</Text>
+                <View style={styles.modeRow}>
+                  {(['upi', 'cash', 'card'] as const).map((m) => (
+                    <Pressable
+                      key={m}
+                      style={[styles.modeChip, payMode === m && styles.modeChipActive]}
+                      onPress={() => setPayMode(m)}>
+                      <Text style={[styles.modeText, payMode === m && styles.modeTextActive]}>
+                        {m.toUpperCase()}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Pressable
+                  style={[
+                    styles.submitPayBtn,
+                    Number(payAmount) > job.cost.due && { backgroundColor: '#94A3B8' },
+                  ]}
+                  disabled={Number(payAmount) > job.cost.due}
+                  onPress={handleRecordPayment}>
+                  <Text style={styles.submitPayBtnText}>Confirm Payment</Text>
                 </Pressable>
-              </View>
-
-              <Text style={styles.modalSub}>
-                Remaining balance due: <Text style={{ color: Colors.rose, fontWeight: '800' }}>₹{job.cost.due}</Text>
-              </Text>
-
-              <Text style={styles.inputLabel}>Amount Received (₹)</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder={String(job.cost.due)}
-                keyboardType="numeric"
-                value={payAmount}
-                onChangeText={setPayAmount}
-              />
-
-              <Text style={styles.inputLabel}>Payment Mode</Text>
-              <View style={styles.modeRow}>
-                {(['upi', 'cash', 'card'] as const).map((m) => (
-                  <Pressable
-                    key={m}
-                    style={[styles.modeChip, payMode === m && styles.modeChipActive]}
-                    onPress={() => setPayMode(m)}>
-                    <Text style={[styles.modeText, payMode === m && styles.modeTextActive]}>
-                      {m.toUpperCase()}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <Pressable style={styles.submitPayBtn} onPress={handleRecordPayment}>
-                <Text style={styles.submitPayBtnText}>Confirm Payment</Text>
-              </Pressable>
+              </ScrollView>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* Digital Invoice Preview Modal */}
@@ -638,14 +677,14 @@ export default function JobDetailScreen() {
           visible={isInvoiceOpen}
           transparent
           animationType="slide"
+          statusBarTranslucent
           onRequestClose={() => setIsInvoiceOpen(false)}>
           <View style={styles.modalOverlay}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setIsInvoiceOpen(false)} />
+            <FloatingCloseButton onPress={() => setIsInvoiceOpen(false)} />
             <View style={styles.invoiceSheet}>
               <View style={styles.invoiceSheetHeader}>
                 <Text style={styles.invoiceSheetTitle}>Digital Invoice Receipt</Text>
-                <Pressable onPress={() => setIsInvoiceOpen(false)}>
-                  <Ionicons name="close" size={24} color="#64748B" />
-                </Pressable>
               </View>
 
               <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -1061,6 +1100,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalCard: {
     backgroundColor: '#FFFFFF',

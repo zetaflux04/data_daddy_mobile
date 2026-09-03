@@ -153,7 +153,7 @@ export default function LoginScreen() {
                 <TextInput
                   style={styles.otpInput}
                   placeholder="• • • • • •"
-                  placeholderTextColor="#CBD5E1"
+                  placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
                   maxLength={6}
                   value={otp}

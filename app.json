@@ -14,6 +14,13 @@
     },
     "android": {
       "package": "com.datadaddy.app",
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#2563EB",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -35,6 +42,14 @@
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DataDaddy needs access to your photos to upload device and profile images.",
+          "cameraPermission": "DataDaddy needs camera access to take photos of devices for repair records.",
+          "microphonePermission": false
         }
       ]
     ],

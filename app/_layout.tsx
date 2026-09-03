@@ -10,6 +10,14 @@ import { SplashScreenView } from '../components/SplashScreenView';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 import React from 'react';
+import { TextInput } from 'react-native';
+import { CustomAlertProvider } from '../components/CustomAlert';
+
+// Ensure default placeholder text color is never overridden to white in dark mode
+if ((TextInput as any).defaultProps == null) {
+  (TextInput as any).defaultProps = {};
+}
+(TextInput as any).defaultProps.placeholderTextColor = '#94A3B8';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -152,9 +160,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <RootNavigation />
-      </AuthProvider>
+      <CustomAlertProvider>
+        <AuthProvider>
+          <RootNavigation />
+        </AuthProvider>
+      </CustomAlertProvider>
     </SafeAreaProvider>
   );
 }

@@ -61,7 +61,8 @@ export default function RegisterShopScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 16) }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"

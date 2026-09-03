@@ -16,10 +16,11 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { api, resolveImageUrl } from '../../services/api';
+import { api, resolveImageUrls } from '../../services/api';
 import { DeviceType } from '../../types';
 import { Colors } from '../../constants/Colors';
 import { AppHeader } from '../../components/AppHeader';
+import { S3Image } from '../../components/S3Image';
 
 const deviceTypes: Array<{ type: DeviceType; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
   { type: 'mobile', label: 'Mobile', icon: 'phone-portrait-outline' },
@@ -160,6 +161,15 @@ export default function NewJobScreen() {
         Alert.alert('Missing Device Info', 'Please enter Brand, Model, and Problem Description.');
         return;
       }
+      const est = Number(estimatedCost) || 0;
+      const adv = Number(advancePaid) || 0;
+      if (adv > est && est > 0) {
+        Alert.alert(
+          'Invalid Advance Payment',
+          `Advance payment (₹${adv}) cannot exceed the estimated price (₹${est}).`
+        );
+        return;
+      }
     } else {
       if (!productName.trim() || !productPrice.trim()) {
         Alert.alert('Missing Product Info', 'Please enter Product Name and Selling Price.');
@@ -254,6 +264,7 @@ export default function NewJobScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="e.g. Ramesh Kumar"
+              placeholderTextColor="#94A3B8"
               value={customerName}
               onChangeText={setCustomerName}
             />
@@ -262,6 +273,7 @@ export default function NewJobScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="10-digit number (e.g. 9876543210)"
+              placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
               maxLength={10}
               value={customerPhone}
@@ -334,6 +346,7 @@ export default function NewJobScreen() {
                     <TextInput
                       style={styles.textInput}
                       placeholder="e.g. Apple"
+                      placeholderTextColor="#94A3B8"
                       value={brand}
                       onChangeText={setBrand}
                     />
@@ -344,6 +357,7 @@ export default function NewJobScreen() {
                     <TextInput
                       style={styles.textInput}
                       placeholder="e.g. iPhone 13"
+                      placeholderTextColor="#94A3B8"
                       value={model}
                       onChangeText={setModel}
                     />
@@ -356,6 +370,7 @@ export default function NewJobScreen() {
                     <TextInput
                       style={styles.textInput}
                       placeholder="Optional"
+                      placeholderTextColor="#94A3B8"
                       value={serialOrImei}
                       onChangeText={setSerialOrImei}
                     />
@@ -366,6 +381,7 @@ export default function NewJobScreen() {
                     <TextInput
                       style={styles.textInput}
                       placeholder="e.g. 1234"
+                      placeholderTextColor="#94A3B8"
                       value={passcode}
                       onChangeText={setPasscode}
                     />
@@ -376,6 +392,7 @@ export default function NewJobScreen() {
                 <TextInput
                   style={[styles.textInput, styles.textArea]}
                   placeholder="Describe broken screen, water damage, battery drain, no display, etc."
+                  placeholderTextColor="#94A3B8"
                   multiline
                   numberOfLines={3}
                   value={problem}
@@ -393,10 +410,19 @@ export default function NewJobScreen() {
 
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
                     {photos.map((photoUrl, idx) => {
-                      const displayUrl = resolveImageUrl(photoUrl) || photoUrl;
+                      const urls = resolveImageUrls(photoUrl);
                       return (
                         <View key={idx} style={styles.photoThumbWrapper}>
-                          <Image source={{ uri: displayUrl }} style={styles.photoThumb} />
+                          {urls ? (
+                            <S3Image
+                              uri={urls.uri}
+                              proxyUri={urls.proxyUri}
+                              style={styles.photoThumb}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <View style={[styles.photoThumb, { backgroundColor: '#F1F5F9' }]} />
+                          )}
                           <Pressable
                             style={styles.photoDeleteBtn}
                             onPress={() => handleRemovePhoto(idx)}>
@@ -438,6 +464,7 @@ export default function NewJobScreen() {
                     <TextInput
                       style={styles.textInput}
                       placeholder="e.g. 2500"
+                      placeholderTextColor="#94A3B8"
                       keyboardType="numeric"
                       value={estimatedCost}
                       onChangeText={setEstimatedCost}
@@ -447,14 +474,25 @@ export default function NewJobScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.fieldLabel}>Advance Paid (₹)</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={[
+                        styles.textInput,
+                        Number(advancePaid) > Number(estimatedCost) &&
+                          Number(estimatedCost) > 0 && { borderColor: Colors.rose, borderWidth: 1.5 },
+                      ]}
                       placeholder="e.g. 500"
+                      placeholderTextColor="#94A3B8"
                       keyboardType="numeric"
                       value={advancePaid}
                       onChangeText={setAdvancePaid}
                     />
                   </View>
                 </View>
+
+                {Number(advancePaid) > Number(estimatedCost) && Number(estimatedCost) > 0 && (
+                  <Text style={{ color: Colors.rose, fontSize: 12, marginTop: 4, fontWeight: '600' }}>
+                    Advance payment cannot exceed estimated cost ₹{estimatedCost}
+                  </Text>
+                )}
 
                 {Number(advancePaid) > 0 && (
                   <View style={{ marginTop: 10 }}>
@@ -490,6 +528,7 @@ export default function NewJobScreen() {
               <TextInput
                 style={styles.textInput}
                 placeholder="e.g. Tempered Glass, Phone Cover, 65W Fast Charger"
+                placeholderTextColor="#94A3B8"
                 value={productName}
                 onChangeText={setProductName}
               />
@@ -498,6 +537,7 @@ export default function NewJobScreen() {
               <TextInput
                 style={styles.textInput}
                 placeholder="e.g. 299"
+                placeholderTextColor="#94A3B8"
                 keyboardType="numeric"
                 value={productPrice}
                 onChangeText={setProductPrice}

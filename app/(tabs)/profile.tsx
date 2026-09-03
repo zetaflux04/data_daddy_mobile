@@ -14,7 +14,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
-import { resolveImageUrl } from '../../services/api';
+import { resolveImageUrls } from '../../services/api';
+import { S3Image } from '../../components/S3Image';
 import { Colors } from '../../constants/Colors';
 
 interface MenuItemProps {
@@ -78,6 +79,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { shop, user, logout, uploadShopLogo, refreshShopProfile } = useAuth();
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   React.useEffect(() => {
     refreshShopProfile().catch(() => {});
@@ -177,15 +179,20 @@ export default function ProfileScreen() {
       <View style={styles.shopCard}>
         <View style={styles.shopAvatarWrapper}>
           <View style={styles.shopAvatar}>
-            {isUploadingPhoto ? (
+          {isUploadingPhoto ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : shop?.logoUrl ? (
-              <Image
-                source={{ uri: resolveImageUrl(shop.logoUrl) }}
-                style={styles.shopAvatarImage}
-                resizeMode="cover"
-              />
-            ) : (
+            ) : shop?.logoUrl && !avatarFailed ? (() => {
+              const urls = resolveImageUrls(shop.logoUrl);
+              return urls ? (
+                <S3Image
+                  uri={urls.uri}
+                  proxyUri={urls.proxyUri}
+                  style={styles.shopAvatarImage}
+                  resizeMode="cover"
+                  onAllFailed={() => setAvatarFailed(true)}
+                />
+              ) : null;
+            })() : (
               <Text style={styles.shopAvatarText}>
                 {shop?.name ? shop.name.charAt(0).toUpperCase() : 'D'}
               </Text>

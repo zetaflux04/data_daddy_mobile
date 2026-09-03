@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import { FloatingCloseButton } from './FloatingCloseButton';
 
 export type DateRangeKey = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
 
@@ -103,15 +104,14 @@ export const DateFilterBar: React.FC<DateFilterBarProps> = ({
         animationType="fade"
         onRequestClose={() => setIsCustomModalOpen(false)}>
         <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setIsCustomModalOpen(false)} />
+          <FloatingCloseButton onPress={() => setIsCustomModalOpen(false)} />
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
                 <Ionicons name="calendar" size={20} color={Colors.primary} />
                 <Text style={styles.modalTitle}>Custom Date Range</Text>
               </View>
-              <TouchableOpacity onPress={() => setIsCustomModalOpen(false)}>
-                <Ionicons name="close" size={22} color="#64748B" />
-              </TouchableOpacity>
             </View>
 
             <Text style={styles.inputLabel}>Start Date (YYYY-MM-DD)</Text>
@@ -215,6 +215,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
     width: '100%',

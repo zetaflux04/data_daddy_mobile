@@ -17,6 +17,7 @@ import { api } from '../services/api';
 import { ExpenseItem, DashboardSummary } from '../types';
 import { Colors } from '../constants/Colors';
 import { AppHeader } from '../components/AppHeader';
+import { FloatingCloseButton } from '../components/FloatingCloseButton';
 
 const categories = [
   { key: 'spare_part', label: 'Spare Part', icon: 'hardware-chip-outline' },
@@ -193,18 +194,16 @@ export default function AnalyticsScreen() {
         visible={isAddExpenseOpen}
         transparent
         animationType="slide"
+        statusBarTranslucent
         onRequestClose={() => setIsAddExpenseOpen(false)}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
           style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setIsAddExpenseOpen(false)} />
+          <FloatingCloseButton onPress={() => setIsAddExpenseOpen(false)} />
           <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Record Expense / Part Cost</Text>
-              <Pressable
-                onPress={() => setIsAddExpenseOpen(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name="close" size={24} color="#64748B" />
-              </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
@@ -459,6 +458,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.5)',
     justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalCard: {
     backgroundColor: '#FFFFFF',

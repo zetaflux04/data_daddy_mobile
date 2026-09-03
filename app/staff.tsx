@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
 import { AppHeader } from '../components/AppHeader';
+import { FloatingCloseButton } from '../components/FloatingCloseButton';
 
 interface StaffMember {
   _id?: string;
@@ -188,16 +189,16 @@ export default function StaffScreen() {
         visible={isModalOpen}
         transparent
         animationType="slide"
+        statusBarTranslucent
         onRequestClose={() => setIsModalOpen(false)}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
           style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setIsModalOpen(false)} />
+          <FloatingCloseButton onPress={() => setIsModalOpen(false)} />
           <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Staff Member</Text>
-              <Pressable onPress={() => setIsModalOpen(false)}>
-                <Ionicons name="close" size={24} color="#64748B" />
-              </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -416,6 +417,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.5)',
     justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
