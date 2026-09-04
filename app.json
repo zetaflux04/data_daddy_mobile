@@ -51,11 +51,11 @@
           "cameraPermission": "DataDaddy needs camera access to take photos of devices for repair records.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-font",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
     "extra": {
       "router": {},
       "eas": {
