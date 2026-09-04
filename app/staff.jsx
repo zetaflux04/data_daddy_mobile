@@ -87,7 +87,13 @@ export default function StaffScreen() {
                             Alert.alert('Success', `${member.name} has been deleted.`);
                             fetchStaff();
                         } catch (e) {
-                            Alert.alert('Error', e.response?.data?.message || 'Failed to delete technician.');
+                            let msg = e.response?.data?.message;
+                            if (!msg && e.response?.status === 404) {
+                                msg = 'Delete endpoint not found on server (404). Please ensure the backend is deployed with the latest updates.';
+                            } else if (!msg) {
+                                msg = e.message || 'Failed to delete technician.';
+                            }
+                            Alert.alert('Error', msg);
                         }
                     },
                 },

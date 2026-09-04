@@ -142,7 +142,33 @@ apiClient.interceptors.request.use(async (config) => {
     }
     return config;
 });
+const getLocalBackendUrl = () => {
+    let host = 'localhost';
+    const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+        const hostIp = hostUri.split(':')[0];
+        if (hostIp) host = hostIp;
+    } else if (Platform.OS === 'android') {
+        host = '10.0.2.2';
+    }
+    return `http://${host}:5000/api`;
+};
+
 apiClient.interceptors.response.use((response) => response, async (error) => {
+    // If route returned 404 from remote server while in development, try local dev backend
+    if (error.response?.status === 404 && !error.config?._retriedLocal && typeof __DEV__ !== 'undefined' && __DEV__) {
+        try {
+            const localConfig = {
+                ...error.config,
+                _retriedLocal: true,
+                baseURL: getLocalBackendUrl(),
+            };
+            return await axios(localConfig);
+        } catch {
+            // Fall back to original error
+        }
+    }
+
     if (error.response?.status === 401) {
         try {
             await AsyncStorage.multiRemove([
