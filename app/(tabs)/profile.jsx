@@ -165,7 +165,7 @@ export default function ProfileScreen() {
           <View style={styles.divider}/>
           <MenuItem icon="construct" iconBg="rgba(245, 158, 11, 0.12)" iconColor={Colors.amber} title="Technician Guides" subtitle="Schematics, boardviews & fix videos" badge="PRO" badgeColor={Colors.amber} onPress={() => router.push('/guides')}/>
           <View style={styles.divider}/>
-          <MenuItem icon="people" iconBg="rgba(139, 92, 246, 0.12)" iconColor={Colors.purple} title="Staff & Technicians" subtitle="Manage technician logins and permissions" onPress={() => router.push('/staff')}/>
+          <MenuItem icon="people" iconBg="rgba(139, 92, 246, 0.12)" iconColor={Colors.purple} title="Technicians" subtitle="Manage technician logins and permissions" onPress={() => router.push('/staff')}/>
         </View>
       </View>
 

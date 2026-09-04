@@ -27,8 +27,6 @@ export default function JobDetailScreen() {
     const [isPayModalOpen, setIsPayModalOpen] = useState(false);
     const [payAmount, setPayAmount] = useState('');
     const [payMode, setPayMode] = useState('upi');
-    // Invoice Modal
-    const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
     // Delivered Confirmation Modal State
     const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
     const [deliveryImei, setDeliveryImei] = useState('');
@@ -282,6 +280,16 @@ export default function JobDetailScreen() {
                   <Text style={styles.metaVal}>{job.passcodePattern}</Text>
                 </View>)}
             </View>) : null}
+
+          <View style={styles.topCardActionRow}>
+            <Pressable
+              style={styles.viewInvoiceHeaderBtn}
+              onPress={() => router.push(`/invoice/${job._id || job.id || id}`)}
+            >
+              <Ionicons name="receipt-outline" size={14} color={Colors.primary} />
+              <Text style={styles.viewInvoiceHeaderBtnText}>Tax Invoice</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Warranty Active Card (if applicable) */}
@@ -415,7 +423,7 @@ export default function JobDetailScreen() {
         {job.status === 'delivered' && (<View style={styles.card}>
             <View style={styles.cardHeaderBetween}>
               <Text style={styles.cardTitle}>Billing & Payments</Text>
-              <Pressable style={styles.invoiceBtn} onPress={() => setIsInvoiceOpen(true)}>
+              <Pressable style={styles.invoiceBtn} onPress={() => router.push(`/invoice/${job._id || job.id || id}`)}>
                 <Ionicons name="document-text" size={14} color={Colors.primary}/>
                 <Text style={styles.invoiceBtnText}>View Invoice</Text>
               </Pressable>
@@ -743,80 +751,7 @@ export default function JobDetailScreen() {
           </KeyboardAvoidingView>
         </Modal>
 
-        {/* Digital Invoice Preview Modal */}
-        <Modal visible={isInvoiceOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setIsInvoiceOpen(false)}>
-          <View style={styles.modalOverlay}>
-            <Pressable style={styles.modalBackdrop} onPress={() => setIsInvoiceOpen(false)}/>
-            <FloatingCloseButton onPress={() => setIsInvoiceOpen(false)}/>
-            <View style={styles.invoiceSheet}>
-              <View style={styles.invoiceSheetHeader}>
-                <Text style={styles.invoiceSheetTitle}>Digital Invoice Receipt</Text>
-              </View>
 
-              <ScrollView contentContainerStyle={{ padding: 20 }}>
-                <View style={styles.invoiceBox}>
-                  <Text style={styles.invShopName}>DataDaddy Repair Solutions</Text>
-                  <Text style={styles.invSub}>Invoice #: {job.invoice?.invoiceNumber || `INV-${job.jobId}`}</Text>
-                  <Text style={styles.invSub}>Date: {new Date().toLocaleDateString('en-IN')}</Text>
-
-                  <View style={styles.invDivider}/>
-
-                  <Text style={styles.invSection}>Billed To:</Text>
-                  <Text style={styles.invCust}>
-                    {job.customerSnapshot.name} ({job.customerSnapshot.phone})
-                  </Text>
-
-                  <View style={styles.invDivider}/>
-
-                  <Text style={styles.invSection}>Device & Service:</Text>
-                  <Text style={styles.invDevice}>
-                    {job.brand} {job.model} ({job.deviceType})
-                  </Text>
-                  {job.serialOrImei && (<Text style={styles.invProblem}>IMEI / Serial: {job.serialOrImei}</Text>)}
-                  <Text style={styles.invProblem}>Issue: {job.problemDescription}</Text>
-                  {(job.repairedBy?.name || (typeof job.assignedTechnicianId === 'object' && job.assignedTechnicianId?.name)) && (<Text style={styles.invProblem}>
-                      Repaired By: {job.repairedBy?.name || (typeof job.assignedTechnicianId === 'object' ? job.assignedTechnicianId?.name : '')}
-                    </Text>)}
-
-                  {job.warranty?.hasWarranty && (<View style={styles.invWarrantyBox}>
-                      <Ionicons name="shield-checkmark" size={15} color={Colors.emerald}/>
-                      <Text style={styles.invWarrantyText}>
-                        Warranty: {job.warranty.period} {job.warranty.unit}
-                        {job.warranty.expiresAt
-                ? ` (Until ${new Date(job.warranty.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })})`
-                : ''}
-                      </Text>
-                    </View>)}
-
-                  <View style={styles.invDivider}/>
-
-                  <View style={styles.invRow}>
-                    <Text style={styles.invLabel}>Repair Charges</Text>
-                    <Text style={styles.invValue}>₹{job.cost.final}</Text>
-                  </View>
-                  <View style={styles.invRow}>
-                    <Text style={styles.invLabel}>Total Paid</Text>
-                    <Text style={[styles.invValue, { color: Colors.emerald }]}>₹{job.cost.advancePaid}</Text>
-                  </View>
-                  <View style={styles.invRow}>
-                    <Text style={styles.invLabel}>Balance Due</Text>
-                    <Text style={[styles.invValue, { color: hasDue ? Colors.rose : Colors.emerald }]}>
-                      ₹{job.cost.due}
-                    </Text>
-                  </View>
-
-                  <View style={styles.invDivider}/>
-                  <Text style={styles.invFooter}>Thank you for choosing our repair service!</Text>
-                </View>
-
-                <Pressable style={styles.shareInvoiceBtn} onPress={() => Alert.alert('Share Invoice', `Sharing invoice for ${job.jobId} via WhatsApp / PDF.`)}>
-                  <Ionicons name="share-social" size={18} color="#FFFFFF"/>
-                  <Text style={styles.shareInvoiceText}>Share Invoice with Customer</Text>
-                </Pressable>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
 
         <View style={{ height: 40 }}/>
       </ScrollView>
@@ -892,6 +827,30 @@ const styles = StyleSheet.create({
         paddingTop: 10,
         borderTopWidth: 1,
         borderTopColor: '#F1F5F9',
+    },
+    topCardActionRow: {
+        marginTop: 12,
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: '#F1F5F9',
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+    },
+    viewInvoiceHeaderBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: '#EFF6FF',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+    },
+    viewInvoiceHeaderBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.primary,
     },
     metaItem: {
         flexDirection: 'row',

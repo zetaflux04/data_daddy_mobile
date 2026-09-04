@@ -290,6 +290,10 @@ export const api = {
         const res = await apiClient.post('/shops/staff', data);
         return res.data?.staff;
     },
+    async deleteStaff(id) {
+        const res = await apiClient.delete(`/shops/staff/${id}`);
+        return res.data;
+    },
     // Dashboard
     async getDashboardSummary() {
         try {

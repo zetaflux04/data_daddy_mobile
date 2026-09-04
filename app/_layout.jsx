@@ -52,6 +52,9 @@ function RootNavigation() {
         <Stack.Screen name="job/[id]" options={{
             headerShown: false,
         }}/>
+        <Stack.Screen name="invoice/[id]" options={{
+            headerShown: false,
+        }}/>
         <Stack.Screen name="job/new" options={{
             headerShown: false,
             presentation: 'modal',

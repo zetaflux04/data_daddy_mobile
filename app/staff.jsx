@@ -54,22 +54,49 @@ export default function StaffScreen() {
                 setIsModalOpen(false);
                 setName('');
                 setPhone('');
-                Alert.alert('Staff Added', `${name} has been added as a ${role}.`);
+                Alert.alert('Technician Added', `${name} has been added as a ${role}.`);
                 fetchStaff();
             }
             else {
-                Alert.alert('Error', 'Could not add staff member. Check connection or if phone number already exists.');
+                Alert.alert('Error', 'Could not add technician. Check connection or if phone number already exists.');
             }
         }
         catch (e) {
-            Alert.alert('Error', e.response?.data?.message || 'Failed to add staff member.');
+            Alert.alert('Error', e.response?.data?.message || 'Failed to add technician.');
         }
         finally {
             setIsSaving(false);
         }
     };
+
+    const handleDeleteStaff = (member) => {
+        const memberId = member._id || member.id;
+        if (!memberId) return;
+
+        Alert.alert(
+            'Delete Technician',
+            `Are you sure you want to remove ${member.name}? This technician will no longer have access to this shop.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await api.deleteStaff(memberId);
+                            Alert.alert('Success', `${member.name} has been deleted.`);
+                            fetchStaff();
+                        } catch (e) {
+                            Alert.alert('Error', e.response?.data?.message || 'Failed to delete technician.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     return (<View style={styles.container}>
-      <AppHeader title="Staff & Technicians"/>
+      <AppHeader title="Technicians"/>
 
       <View style={styles.topNotice}>
         <Ionicons name="information-circle-outline" size={18} color={Colors.primary}/>
@@ -80,18 +107,18 @@ export default function StaffScreen() {
 
       <FlatList data={staff} keyExtractor={(item) => item._id || item.id || `${item.phone}_${Math.random()}`} contentContainerStyle={styles.listContent} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary}/>} ListEmptyComponent={isLoading ? (<View style={styles.emptyState}>
               <ActivityIndicator size="large" color={Colors.primary}/>
-              <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>Loading staff directory...</Text>
+              <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>Loading technicians directory...</Text>
             </View>) : (<View style={styles.emptyState}>
               <View style={styles.emptyIconBox}>
                 <Ionicons name="people-outline" size={32} color="#94A3B8"/>
               </View>
-              <Text style={styles.emptyTitle}>No Staff Members Found</Text>
+              <Text style={styles.emptyTitle}>No Technicians Found</Text>
               <Text style={styles.emptySubtitle}>
-                Tap the button below to add your technicians and front-desk staff.
+                Tap the button below to add your technicians.
               </Text>
             </View>)} renderItem={({ item }) => (<View style={styles.staffCard}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{item.name ? item.name.charAt(0).toUpperCase() : 'U'}</Text>
+              <Text style={styles.avatarText}>{item.name ? item.name.charAt(0).toUpperCase() : 'T'}</Text>
             </View>
 
             <View style={styles.info}>
@@ -115,7 +142,7 @@ export default function StaffScreen() {
                         ? { color: Colors.primary }
                         : { color: '#475569' },
             ]}>
-                    {(item.role || 'staff').toUpperCase()}
+                    {(item.role || 'technician').toUpperCase()}
                   </Text>
                 </View>
               </View>
@@ -123,25 +150,36 @@ export default function StaffScreen() {
               <Text style={styles.phone}>+91 {item.phone}</Text>
             </View>
 
-            <View style={[styles.statusDot, { backgroundColor: item.isActive !== false ? '#10B981' : '#94A3B8' }]}/>
+            <View style={styles.cardActions}>
+              <View style={[styles.statusDot, { backgroundColor: item.isActive !== false ? '#10B981' : '#94A3B8' }]}/>
+              {item.role !== 'owner' && (
+                <Pressable
+                  hitSlop={10}
+                  style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.6 }]}
+                  onPress={() => handleDeleteStaff(item)}
+                >
+                  <Ionicons name="trash-outline" size={19} color="#EF4444"/>
+                </Pressable>
+              )}
+            </View>
           </View>)}/>
 
-      {/* Add Staff Button */}
+      {/* Add Technician Button */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable style={({ pressed }) => [styles.addStaffBtn, { opacity: pressed ? 0.88 : 1 }]} onPress={() => setIsModalOpen(true)}>
           <Ionicons name="person-add" size={18} color="#FFFFFF"/>
-          <Text style={styles.addStaffBtnText}>Add Technician / Staff</Text>
+          <Text style={styles.addStaffBtnText}>Add Technician</Text>
         </Pressable>
       </View>
 
-      {/* Add Staff Modal */}
+      {/* Add Technician Modal */}
       <Modal visible={isModalOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setIsModalOpen(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setIsModalOpen(false)}/>
           <FloatingCloseButton onPress={() => setIsModalOpen(false)}/>
           <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Staff Member</Text>
+              <Text style={styles.modalTitle}>Add Technician</Text>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -151,7 +189,7 @@ export default function StaffScreen() {
               <Text style={styles.inputLabel}>Mobile Phone (10 digits) *</Text>
               <TextInput style={styles.input} placeholder="e.g. 9811223344" placeholderTextColor="#94A3B8" keyboardType="phone-pad" maxLength={10} value={phone} onChangeText={setPhone}/>
 
-              <Text style={styles.inputLabel}>Staff Role *</Text>
+              <Text style={styles.inputLabel}>Role *</Text>
               <View style={styles.roleSelectionRow}>
                 <Pressable style={[styles.roleSelectBtn, role === 'technician' && styles.roleSelectBtnActive]} onPress={() => setRole('technician')}>
                   <Ionicons name="build-outline" size={16} color={role === 'technician' ? Colors.primary : '#64748B'}/>
@@ -175,7 +213,7 @@ export default function StaffScreen() {
               </View>
 
               <Pressable disabled={isSaving} style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isSaving ? 0.88 : 1 }]} onPress={handleAddStaff}>
-                {isSaving ? (<ActivityIndicator size="small" color="#FFFFFF"/>) : (<Text style={styles.submitBtnText}>Save Staff Member</Text>)}
+                {isSaving ? (<ActivityIndicator size="small" color="#FFFFFF"/>) : (<Text style={styles.submitBtnText}>Add Technician</Text>)}
               </Pressable>
             </ScrollView>
           </View>
@@ -291,7 +329,19 @@ const styles = StyleSheet.create({
         height: 8,
         borderRadius: 4,
         backgroundColor: '#10B981',
+    },
+    cardActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
         marginLeft: 8,
+    },
+    deleteBtn: {
+        padding: 6,
+        borderRadius: 8,
+        backgroundColor: '#FEE2E2',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     bottomBar: {
         position: 'absolute',
