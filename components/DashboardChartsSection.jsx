@@ -13,8 +13,8 @@ export const DashboardChartsSection = ({ summary, onPressJobs, onPressRevenue, }
     const [selectedTimeFilter, setSelectedTimeFilter] = useState('week');
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     // Live Revenue Data
-    const totalRevenue = summary?.financials.totalRevenue ?? 0;
-    const growthPct = summary?.financials.revenueGrowthPct ?? 0;
+    const totalRevenue = summary?.financials?.totalRevenue ?? 0;
+    const growthPct = summary?.financials?.revenueGrowthPct ?? 0;
     const weeklyRevenue = summary?.charts?.weeklyRevenue || [
         { day: 'Mon', amount: 0 },
         { day: 'Tue', amount: 0 },
@@ -25,12 +25,12 @@ export const DashboardChartsSection = ({ summary, onPressJobs, onPressRevenue, }
         { day: 'Sun', amount: 0 },
     ];
     // Live Job Status Data
-    const pendingCount = summary?.jobs.pending ?? 0;
-    const inProgressCount = (summary?.jobs.inProgress ?? 0) + (summary?.jobs.partsDelayed ?? 0);
-    const readyCount = summary?.jobs.readyForPickup ?? 0;
-    const deliveredCount = summary?.jobs.delivered ?? 0;
+    const pendingCount = summary?.jobs?.pending ?? 0;
+    const inProgressCount = (summary?.jobs?.inProgress ?? 0) + (summary?.jobs?.partsDelayed ?? 0);
+    const readyCount = summary?.jobs?.readyForPickup ?? 0;
+    const deliveredCount = summary?.jobs?.delivered ?? 0;
     const totalCalculated = pendingCount + inProgressCount + readyCount + deliveredCount;
-    const totalJobs = summary?.jobs.total ?? totalCalculated;
+    const totalJobs = summary?.jobs?.total ?? totalCalculated;
     const getPercentage = (count) => {
         if (totalCalculated === 0)
             return 0;
@@ -212,14 +212,12 @@ export const DashboardChartsSection = ({ summary, onPressJobs, onPressRevenue, }
         <View style={styles.donutContainer}>
           {/* Donut Chart with Center Text */}
           <View style={styles.donutSvgWrapper}>
-            <Svg width={donutSize} height={donutSize} viewBox={`0 0 ${donutSize} ${donutSize}`}>
-              <G rotation="-90" originX={donutSize / 2} originY={donutSize / 2}>
-                {/* Background Track */}
-                <Circle cx={donutSize / 2} cy={donutSize / 2} r={radius} stroke="#F1F5F9" strokeWidth={strokeWidth} fill="none"/>
-                {/* Real Live Segments */}
-                {totalCalculated > 0 &&
+            <Svg width={donutSize} height={donutSize} viewBox={`0 0 ${donutSize} ${donutSize}`} style={styles.donutSvg}>
+              {/* Background Track */}
+              <Circle cx={donutSize / 2} cy={donutSize / 2} r={radius} stroke="#F1F5F9" strokeWidth={strokeWidth} fill="none"/>
+              {/* Real Live Segments */}
+              {totalCalculated > 0 &&
             donutSlices.map((slice, i) => slice.count > 0 ? (<Circle key={i} cx={donutSize / 2} cy={donutSize / 2} r={radius} stroke={slice.color} strokeWidth={strokeWidth} strokeDasharray={slice.strokeDasharray} strokeDashoffset={slice.strokeDashoffset} strokeLinecap="round" fill="none"/>) : null)}
-              </G>
             </Svg>
 
             {/* Centered Total Jobs Count */}
@@ -399,6 +397,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         width: 124,
         height: 124,
+    },
+    donutSvg: {
+        transform: [{ rotate: '-90deg' }],
     },
     donutCenterTextContainer: {
         position: 'absolute',

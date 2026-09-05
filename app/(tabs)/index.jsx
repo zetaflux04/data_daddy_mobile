@@ -89,15 +89,15 @@ export default function DashboardScreen() {
       {/* 4 Primary KPI Metric Cards (2x2 Grid) */}
       <View style={styles.metricsGrid}>
         <View style={styles.metricsRow}>
-          <MetricCard title="Pending Jobs" value={summary?.jobs.pending ?? 2} subtitle={`${summary?.jobs.todayNew ?? 1} booked today`} icon="gift-outline" accentColor="#3B82F6" onPress={() => router.push('/(tabs)/jobs')}/>
+          <MetricCard title="Pending Jobs" value={summary?.jobs?.pending ?? 2} subtitle={`${summary?.jobs?.todayNew ?? 1} booked today`} icon="gift-outline" accentColor="#3B82F6" onPress={() => router.push('/(tabs)/jobs')}/>
           <View style={{ width: 12 }}/>
-          <MetricCard title="Ready for Pickup" value={summary?.jobs.readyForPickup ?? 1} subtitle="SMS sent to customer" icon="checkmark-circle-outline" accentColor="#10B981" onPress={() => router.push('/(tabs)/jobs')}/>
+          <MetricCard title="Ready for Pickup" value={summary?.jobs?.readyForPickup ?? 1} subtitle="SMS sent to customer" icon="checkmark-circle-outline" accentColor="#10B981" onPress={() => router.push('/(tabs)/jobs')}/>
         </View>
 
         <View style={[styles.metricsRow, { marginTop: 12 }]}>
-          <MetricCard title="Total Revenue" value={`₹${(summary?.financials.totalRevenue ?? 18000).toLocaleString('en-IN')}`} subtitle={`Net: ₹${(summary?.financials.netProfit ?? 18000).toLocaleString('en-IN')}`} icon="wallet-outline" accentColor="#8B5CF6" onPress={() => router.push('/analytics')}/>
+          <MetricCard title="Total Revenue" value={`₹${(summary?.financials?.totalRevenue ?? 18000).toLocaleString('en-IN')}`} subtitle={`Net: ₹${(summary?.financials?.netProfit ?? 18000).toLocaleString('en-IN')}`} icon="wallet-outline" accentColor="#8B5CF6" onPress={() => router.push('/analytics')}/>
           <View style={{ width: 12 }}/>
-          <MetricCard title="Pending Dues" value={`₹${(summary?.financials.totalDuesPending ?? 4000).toLocaleString('en-IN')}`} subtitle="Uncollected balance" icon="alert-circle-outline" accentColor="#EF4444" onPress={() => router.push('/(tabs)/jobs')}/>
+          <MetricCard title="Pending Dues" value={`₹${(summary?.financials?.totalDuesPending ?? 4000).toLocaleString('en-IN')}`} subtitle="Uncollected balance" icon="alert-circle-outline" accentColor="#EF4444" onPress={() => router.push('/(tabs)/jobs')}/>
         </View>
       </View>
 
