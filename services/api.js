@@ -2,6 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import * as FileSystem from 'expo-file-system/legacy';
 // Base URL for backend API (Live Render deployment with local/env fallback)
 const LIVE_API_BASE_URL = 'https://data-daddy-backend.onrender.com/api';
 const getBackendBaseUrl = () => {
@@ -48,27 +49,54 @@ const S3_PUBLIC_BASE = `https://${S3_BUCKET_NAME}.s3.${S3_REGION}.amazonaws.com`
 export const resolveImageUrl = (url) => {
     if (!url)
         return undefined;
+
+    if (typeof url === 'object') {
+        url = url.localUri || url.uri || url.url || '';
+    }
+
+    if (typeof url !== 'string' || !url.trim()) return undefined;
+    url = url.trim();
+
+    // Local device URIs or data URIs
+    if (url.startsWith('file://') || url.startsWith('content://') || url.startsWith('data:') || url.startsWith('blob:')) {
+        return url;
+    }
+
     // Already a full S3 URL — serve directly, no proxy
     if (url.includes('.amazonaws.com/')) {
         return url;
     }
-    // Raw S3 key (e.g. "profiles/shopId/timestamp.jpg", "repairs/...", "general/...")
-    if (url.startsWith('profiles/') ||
-        url.startsWith('repairs/') ||
-        url.startsWith('general/') ||
-        url.startsWith('banners/')) {
-        return `${S3_PUBLIC_BASE}/${url}`;
+
+    let s3Key = null;
+    const cleanUrl = url.replace(/^\/+/, '');
+    if (
+        cleanUrl.startsWith('profiles/') ||
+        cleanUrl.startsWith('repairs/') ||
+        cleanUrl.startsWith('general/') ||
+        cleanUrl.startsWith('banners/')
+    ) {
+        s3Key = cleanUrl;
     }
-    // Relative URL starting with /api/uploads/ — route through backend
+
+    if (s3Key) {
+        s3Key = s3Key.replace(/^\/+/, '');
+        return `${S3_PUBLIC_BASE}/${s3Key}`;
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+
     if (url.startsWith('/api/uploads/')) {
         const base = getBackendBaseUrl().replace(/\/api\/?$/, '');
         return `${base}${url}`;
     }
-    // Relative URL starting with /uploads/ — route through backend
+
     if (url.startsWith('/uploads/')) {
         const base = getBackendBaseUrl();
         return `${base}${url}`;
     }
+
     return url;
 };
 /**
@@ -78,6 +106,26 @@ export const resolveImageUrl = (url) => {
 export const resolveImageUrls = (url) => {
     if (!url)
         return undefined;
+
+    if (typeof url === 'object') {
+        const local = url.localUri || url.uri;
+        const remote = url.url || url.key;
+        if (local) {
+            return {
+                uri: local,
+                proxyUri: remote ? resolveImageUrl(remote) : local,
+            };
+        }
+        url = remote || '';
+    }
+
+    if (typeof url !== 'string' || !url.trim()) return undefined;
+    url = url.trim();
+
+    if (url.startsWith('file://') || url.startsWith('content://') || url.startsWith('data:') || url.startsWith('blob:')) {
+        return { uri: url, proxyUri: url };
+    }
+
     let s3Key = null;
     if (url.includes('.amazonaws.com/')) {
         s3Key = url.split('.amazonaws.com/')[1];
@@ -89,6 +137,7 @@ export const resolveImageUrls = (url) => {
         s3Key = url;
     }
     if (s3Key) {
+        s3Key = s3Key.replace(/^\/+/, '');
         return {
             uri: `${S3_PUBLIC_BASE}/${s3Key}`,
             proxyUri: `${getBackendBaseUrl()}/uploads/media/${s3Key}`,
@@ -186,6 +235,114 @@ apiClient.interceptors.response.use((response) => response, async (error) => {
     }
     return Promise.reject(error);
 });
+
+/**
+ * Generic Media Upload to Backend -> AWS S3.
+ *
+ * In modern Expo SDK versions (SDK 52+), Expo replaces global fetch with
+ * a WinterCG-compliant fetch that throws "Unsupported FormDataPart implementation"
+ * when passing React Native's legacy { uri, name, type } object in FormData.
+ *
+ * Solution:
+ *  - Native (Android & iOS): Use FileSystem.uploadAsync from 'expo-file-system/legacy',
+ *    which performs streaming native multipart uploads directly via OkHttp / URLSession
+ *    without high JS heap memory consumption.
+ *  - Fallback / Web: Use standard fetch with Blob/File object.
+ */
+async function uploadMediaFile({ endpoint, fileUri, mimeType, fileName, parameters = {} }) {
+    const resolvedMime = mimeType || getMimeTypeFromUri(fileUri) || 'image/jpeg';
+    const cleanFileName = fileName || fileUri.split('/').pop() || 'upload.jpg';
+    const token = await AsyncStorage.getItem('@repairshop_token');
+
+    // On Web: use standard web FormData and fetch with Blob
+    if (Platform.OS === 'web') {
+        const blobRes = await fetch(fileUri);
+        const blob = await blobRes.blob();
+        const formData = new FormData();
+        formData.append('image', blob, cleanFileName);
+        Object.entries(parameters).forEach(([key, val]) => {
+            formData.append(key, String(val));
+        });
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const fetchRes = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+        if (!fetchRes.ok) {
+            const errData = await fetchRes.json().catch(() => ({}));
+            throw new Error(errData.message || `Upload failed: HTTP ${fetchRes.status}`);
+        }
+        return fetchRes.json();
+    }
+
+    // On Native (Android / iOS): Use FileSystem.uploadAsync
+    try {
+        const headers = {
+            Accept: 'application/json',
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const uploadResult = await FileSystem.uploadAsync(endpoint, fileUri, {
+            httpMethod: 'POST',
+            uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+            fieldName: 'image',
+            mimeType: resolvedMime,
+            parameters,
+            headers,
+        });
+
+        let data = {};
+        try {
+            data = typeof uploadResult.body === 'string' ? JSON.parse(uploadResult.body) : uploadResult.body;
+        } catch {
+            data = {};
+        }
+
+        if (uploadResult.status < 200 || uploadResult.status >= 300) {
+            throw new Error(data.message || `Upload failed: HTTP ${uploadResult.status}`);
+        }
+        return data;
+    } catch (nativeErr) {
+        // If HTTP returned 4xx/5xx from backend, don't retry with blob — rethrow the exact server message
+        if (nativeErr.message && (nativeErr.message.startsWith('Upload failed: HTTP') || nativeErr.message.includes('AWS S3'))) {
+            throw nativeErr;
+        }
+        console.warn('[uploadMediaFile] Native FileSystem.uploadAsync failed, attempting Blob fallback:', nativeErr);
+
+        // Fallback using Blob / File for WinterCG fetch compliance
+        const blobRes = await fetch(fileUri);
+        const blob = await blobRes.blob();
+        const formData = new FormData();
+        const fileObj = typeof File !== 'undefined'
+            ? new File([blob], cleanFileName, { type: resolvedMime })
+            : blob;
+        formData.append('image', fileObj, cleanFileName);
+        Object.entries(parameters).forEach(([key, val]) => {
+            formData.append(key, String(val));
+        });
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const fetchRes = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+        if (!fetchRes.ok) {
+            const errData = await fetchRes.json().catch(() => ({}));
+            throw new Error(errData.message || `Upload failed: HTTP ${fetchRes.status}`);
+        }
+        return fetchRes.json();
+    }
+}
+
 export const api = {
     // Auth
     async requestOtp(phone) {
@@ -222,85 +379,28 @@ export const api = {
     },
     /**
      * Upload Profile Photo / Shop Logo to AWS S3
-     * Uses native fetch() instead of Axios — required for correct binary file handling
-     * on Android APK. Axios's default Content-Type: application/json header and its
-     * transformRequest pipeline interfere with FormData binary reading on native Android.
      */
     async uploadProfilePhoto(fileUri, mimeType = 'image/jpeg', fileName = 'profile.jpg') {
         const resolvedMime = mimeType || getMimeTypeFromUri(fileUri) || 'image/jpeg';
-        const formData = new FormData();
-        if (Platform.OS === 'web') {
-            // Web: fetch the blob from the data URI first
-            const blobRes = await fetch(fileUri);
-            const blob = await blobRes.blob();
-            formData.append('image', blob, fileName);
-        }
-        else {
-            // Native Android/iOS: pass the file object — React Native's native
-            // networking resolves file:// and content:// URIs at the OS level
-            formData.append('image', {
-                uri: fileUri,
-                name: fileName,
-                type: resolvedMime,
-            });
-        }
-        // Read auth token to pass as Bearer header
-        const token = await AsyncStorage.getItem('@repairshop_token');
-        const headers = {};
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        // IMPORTANT: Do NOT set Content-Type manually.
-        // Native fetch automatically sets: Content-Type: multipart/form-data; boundary=...
-        // Setting it manually removes the boundary and breaks multipart parsing on the server.
-        const fetchRes = await fetch(`${getBackendBaseUrl()}/uploads/profile`, {
-            method: 'POST',
-            headers,
-            body: formData,
+        return uploadMediaFile({
+            endpoint: `${getBackendBaseUrl()}/uploads/profile`,
+            fileUri,
+            mimeType: resolvedMime,
+            fileName,
         });
-        if (!fetchRes.ok) {
-            const errData = await fetchRes.json().catch(() => ({}));
-            throw new Error(errData.message || `Upload failed: HTTP ${fetchRes.status}`);
-        }
-        return fetchRes.json();
     },
     /**
      * Upload Device / Product Photo to AWS S3 (for repair job cards)
-     * Uses native fetch() instead of Axios — same reason as uploadProfilePhoto.
      */
     async uploadDevicePhoto(fileUri, mimeType = 'image/jpeg', fileName = 'device.jpg') {
         const resolvedMime = mimeType || getMimeTypeFromUri(fileUri) || 'image/jpeg';
-        const formData = new FormData();
-        if (Platform.OS === 'web') {
-            const blobRes = await fetch(fileUri);
-            const blob = await blobRes.blob();
-            formData.append('image', blob, fileName);
-        }
-        else {
-            formData.append('image', {
-                uri: fileUri,
-                name: fileName,
-                type: resolvedMime,
-            });
-        }
-        // Append folder for repair photos
-        formData.append('folder', 'repairs');
-        const token = await AsyncStorage.getItem('@repairshop_token');
-        const headers = {};
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        // Do NOT set Content-Type — native fetch sets multipart/form-data with boundary
-        const fetchRes = await fetch(`${getBackendBaseUrl()}/uploads/image`, {
-            method: 'POST',
-            headers,
-            body: formData,
+        return uploadMediaFile({
+            endpoint: `${getBackendBaseUrl()}/uploads/image`,
+            fileUri,
+            mimeType: resolvedMime,
+            fileName,
+            parameters: { folder: 'repairs' },
         });
-        if (!fetchRes.ok) {
-            const errData = await fetchRes.json().catch(() => ({}));
-            throw new Error(errData.message || `Upload failed: HTTP ${fetchRes.status}`);
-        }
-        return fetchRes.json();
     },
     // Staff Management
     async getStaff() {

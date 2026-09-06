@@ -94,7 +94,7 @@ export default function ProfileScreen() {
     const processImageUpload = async (asset) => {
         setIsUploadingPhoto(true);
         try {
-            const fileName = asset.fileName || `photo_${Date.now()}.jpg`;
+            const fileName = asset.fileName || asset.uri?.split('/').pop() || `photo_${Date.now()}.jpg`;
             const mimeType = asset.mimeType || 'image/jpeg';
             const s3Url = await uploadShopLogo(asset.uri, mimeType, fileName);
             if (s3Url) {

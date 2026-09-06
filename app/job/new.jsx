@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,7 @@ export default function NewJobScreen() {
     const [passcode, setPasscode] = useState('');
     const [problem, setProblem] = useState('');
     const [photos, setPhotos] = useState([]);
+    const [previewImage, setPreviewImage] = useState(null);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     // Accessory Fields
     const [productName, setProductName] = useState('');
@@ -40,10 +41,10 @@ export default function NewJobScreen() {
     const [advancePaid, setAdvancePaid] = useState('');
     const [paymentMode, setPaymentMode] = useState('cash');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // Photo Picking Logic for Repairs (Max 5 photos)
+    // Photo Picking Logic for Repairs (Max 3 photos)
     const handlePickPhoto = () => {
-        if (photos.length >= 5) {
-            Alert.alert('Limit Reached', 'You can upload a maximum of 5 photos per device.');
+        if (photos.length >= 3) {
+            Alert.alert('Limit Reached', 'You can upload a maximum of 3 photos per device.');
             return;
         }
         Alert.alert('Upload Device Photo', 'Choose an option to capture or select a photo of the product to be repaired', [
@@ -58,7 +59,7 @@ export default function NewJobScreen() {
                         }
                         const result = await ImagePicker.launchCameraAsync({
                             allowsEditing: true,
-                            quality: 0.8,
+                            quality: 0.9, // Compress 10% of the image (90% quality)
                         });
                         if (!result.canceled && result.assets?.[0]) {
                             await uploadSelectedPhoto(result.assets[0]);
@@ -78,12 +79,12 @@ export default function NewJobScreen() {
                             Alert.alert('Permission Required', 'Photo library access is needed to select images.');
                             return;
                         }
-                        const remainingCount = 5 - photos.length;
+                        const remainingCount = 3 - photos.length;
                         const result = await ImagePicker.launchImageLibraryAsync({
                             mediaTypes: ['images'],
                             allowsMultipleSelection: true,
                             selectionLimit: remainingCount,
-                            quality: 0.8,
+                            quality: 0.9, // Compress 10% of the image (90% quality)
                         });
                         if (!result.canceled && result.assets && result.assets.length > 0) {
                             for (const asset of result.assets) {
@@ -102,14 +103,14 @@ export default function NewJobScreen() {
     const uploadSelectedPhoto = async (asset) => {
         setIsUploadingPhoto(true);
         try {
-            const fileName = asset.fileName || `device_${Date.now()}.jpg`;
+            const fileName = asset.fileName || asset.uri?.split('/').pop() || `device_${Date.now()}.jpg`;
             const mimeType = asset.mimeType || 'image/jpeg';
             const res = await api.uploadDevicePhoto(asset.uri, mimeType, fileName);
             if (res && res.url) {
                 setPhotos((prev) => {
-                    if (prev.length >= 5)
+                    if (prev.length >= 3)
                         return prev;
-                    return [...prev, res.url];
+                    return [...prev, { url: res.url, localUri: asset.uri }];
                 });
             }
         }
@@ -162,7 +163,7 @@ export default function NewJobScreen() {
                 payload.serialOrImei = serialOrImei.trim();
                 payload.passcodePattern = passcode.trim();
                 payload.problemDescription = problem.trim();
-                payload.photos = photos;
+                payload.photos = photos.map((p) => (typeof p === 'string' ? p : p.url));
                 payload.estimatedCost = Number(estimatedCost) || 0;
                 payload.advancePaid = Number(advancePaid) || 0;
             }
@@ -287,30 +288,34 @@ export default function NewJobScreen() {
                 <Text style={styles.fieldLabel}>Problem Description *</Text>
                 <TextInput style={[styles.textInput, styles.textArea]} placeholder="Describe broken screen, water damage, battery drain, no display, etc." placeholderTextColor="#94A3B8" multiline numberOfLines={3} value={problem} onChangeText={setProblem}/>
 
-                {/* Device Photos (Max 5 photos) */}
+                {/* Device Photos (Max 3 photos) */}
                 <View style={{ marginTop: 14 }}>
                   <View style={styles.photoHeaderRow}>
                     <Text style={[styles.fieldLabel, { marginTop: 0, marginBottom: 0 }]}>
-                      Product Photos ({photos.length}/5)
+                      Product Photos ({photos.length}/3)
                     </Text>
-                    <Text style={styles.photoSubLabel}>Max 5 photos for repair records</Text>
+                    <Text style={styles.photoSubLabel}>Max 3 photos for repair records</Text>
                   </View>
 
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
-                    {photos.map((photoUrl, idx) => {
+                    {photos.map((item, idx) => {
+                const photoUrl = typeof item === 'string' ? item : item.url;
+                const localUri = typeof item === 'object' ? item.localUri : null;
                 const urls = resolveImageUrls(photoUrl);
-                return (<View key={idx} style={styles.photoThumbWrapper}>
-                          {urls ? (<S3Image uri={urls.uri} proxyUri={urls.proxyUri} style={styles.photoThumb} resizeMode="cover"/>) : (<View style={[styles.photoThumb, { backgroundColor: '#F1F5F9' }]}/>)}
-                          <Pressable style={styles.photoDeleteBtn} onPress={() => handleRemovePhoto(idx)}>
+                const displayUri = localUri || urls?.uri || photoUrl;
+                const proxyFallback = urls?.proxyUri;
+                return (<Pressable key={idx} style={styles.photoThumbWrapper} onPress={() => setPreviewImage(displayUri)}>
+                          <S3Image uri={displayUri} proxyUri={proxyFallback} style={styles.photoThumb} resizeMode="cover"/>
+                          <Pressable style={styles.photoDeleteBtn} onPress={(e) => { e.stopPropagation?.(); handleRemovePhoto(idx); }}>
                             <Ionicons name="close" size={14} color="#FFFFFF"/>
                           </Pressable>
                           <View style={styles.photoIndexBadge}>
                             <Text style={styles.photoIndexText}>{idx + 1}</Text>
                           </View>
-                        </View>);
+                        </Pressable>);
             })}
 
-                    {photos.length < 5 && (<Pressable style={[styles.addPhotoBtn, isUploadingPhoto && styles.addPhotoBtnDisabled]} disabled={isUploadingPhoto} onPress={handlePickPhoto}>
+                    {photos.length < 3 && (<Pressable style={[styles.addPhotoBtn, isUploadingPhoto && styles.addPhotoBtnDisabled]} disabled={isUploadingPhoto} onPress={handlePickPhoto}>
                         {isUploadingPhoto ? (<ActivityIndicator size="small" color={Colors.primary}/>) : (<>
                             <Ionicons name="camera" size={24} color={Colors.primary}/>
                             <Text style={styles.addPhotoText}>+ Add Photo</Text>
@@ -400,6 +405,51 @@ export default function NewJobScreen() {
           <View style={{ height: 40 }}/>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Fullscreen Photo Viewer Modal */}
+      <Modal
+        visible={!!previewImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPreviewImage(null)}
+      >
+        <View style={styles.imageModalBackdrop}>
+          {/* Top Bar with Title and Close Button */}
+          <View style={[styles.imageModalTopBar, { paddingTop: Math.max(insets.top + 10, 24) }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="image-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.imageModalTitle}>Product Photo</Text>
+            </View>
+            <Pressable
+              onPress={() => setPreviewImage(null)}
+              style={styles.imageModalCloseBtn}
+              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+            >
+              <Ionicons name="close" size={24} color="#FFFFFF" />
+            </Pressable>
+          </View>
+
+          {/* Centered Image Container */}
+          <Pressable
+            style={styles.imageModalContent}
+            onPress={() => setPreviewImage(null)}
+          >
+            {previewImage && (() => {
+              const urls = resolveImageUrls(previewImage);
+              const targetUri = urls?.uri || (typeof previewImage === 'string' ? previewImage : previewImage?.localUri || previewImage?.url);
+              const targetProxy = urls?.proxyUri || targetUri;
+              return (
+                <S3Image
+                  uri={targetUri}
+                  proxyUri={targetProxy}
+                  style={styles.fullScreenImage}
+                  resizeMode="contain"
+                />
+              );
+            })()}
+          </Pressable>
+        </View>
+      </Modal>
     </View>);
 }
 const styles = StyleSheet.create({
@@ -635,4 +685,46 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '700',
     },
+    imageModalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.94)',
+        justifyContent: 'center',
+    },
+    imageModalTopBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingBottom: 14,
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    },
+    imageModalTitle: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    imageModalCloseBtn: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: 'rgba(255, 255, 255, 0.22)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    imageModalContent: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+    },
+    fullScreenImage: {
+        width: '100%',
+        height: '80%',
+    },
 });
+

@@ -34,6 +34,7 @@ export default function JobDetailScreen() {
     const [warrantyUnit, setWarrantyUnit] = useState('months');
     const [warrantyPeriod, setWarrantyPeriod] = useState('3');
     const [isDelivering, setIsDelivering] = useState(false);
+    const [previewImage, setPreviewImage] = useState(null);
     const loadJob = async () => {
         if (!id)
             return;
@@ -376,19 +377,28 @@ export default function JobDetailScreen() {
         {job.photos && job.photos.length > 0 && (<View style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <Text style={styles.cardTitle}>Product Photos ({job.photos.length})</Text>
-              <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>Inspection records</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
               {job.photos.map((photoUrl, idx) => {
                 const urls = resolveImageUrls(photoUrl);
                 if (!urls)
                     return null;
-                return (<View key={idx} style={{ position: 'relative', marginRight: 10, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' }}>
+                return (<Pressable
+                    key={idx}
+                    onPress={() => setPreviewImage(photoUrl)}
+                    style={({ pressed }) => [
+                      { position: 'relative', marginRight: 10, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' },
+                      pressed && { opacity: 0.82 }
+                    ]}
+                  >
                     <S3Image uri={urls.uri} proxyUri={urls.proxyUri} style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: '#F1F5F9' }} resizeMode="cover"/>
                     <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: 'rgba(15, 23, 42, 0.75)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
                       <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>#{idx + 1}</Text>
                     </View>
-                  </View>);
+                    <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(15, 23, 42, 0.6)', borderRadius: 10, width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="expand" size={12} color="#FFFFFF" />
+                    </View>
+                  </Pressable>);
             })}
             </ScrollView>
           </View>)}
@@ -751,7 +761,49 @@ export default function JobDetailScreen() {
           </KeyboardAvoidingView>
         </Modal>
 
+        {/* Fullscreen Photo Viewer Modal */}
+        <Modal
+          visible={!!previewImage}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setPreviewImage(null)}
+        >
+          <View style={styles.imageModalBackdrop}>
+            {/* Top Bar with Title and Close Button */}
+            <View style={[styles.imageModalTopBar, { paddingTop: Math.max(insets.top + 10, 24) }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="image-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.imageModalTitle}>Product Photo</Text>
+              </View>
+              <Pressable
+                onPress={() => setPreviewImage(null)}
+                style={styles.imageModalCloseBtn}
+                hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+              >
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </Pressable>
+            </View>
 
+            {/* Centered Image Container */}
+            <Pressable
+              style={styles.imageModalContent}
+              onPress={() => setPreviewImage(null)}
+            >
+              {previewImage && (() => {
+                const urls = resolveImageUrls(previewImage);
+                if (!urls) return null;
+                return (
+                  <S3Image
+                    uri={urls.uri}
+                    proxyUri={urls.proxyUri}
+                    style={styles.fullScreenImage}
+                    resizeMode="contain"
+                  />
+                );
+              })()}
+            </Pressable>
+          </View>
+        </Modal>
 
         <View style={{ height: 40 }}/>
       </ScrollView>
@@ -1650,5 +1702,46 @@ const styles = StyleSheet.create({
         color: '#64748B',
         marginTop: 4,
         fontStyle: 'italic',
+    },
+    imageModalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.94)',
+        justifyContent: 'center',
+    },
+    imageModalTopBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingBottom: 14,
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    },
+    imageModalTitle: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    imageModalCloseBtn: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: 'rgba(255, 255, 255, 0.22)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    imageModalContent: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+    },
+    fullScreenImage: {
+        width: '100%',
+        height: '80%',
     },
 });
