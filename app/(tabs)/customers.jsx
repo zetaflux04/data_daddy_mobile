@@ -1,162 +1,475 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, Pressable, Linking, Modal, Alert, KeyboardAvoidingView, Platform, ScrollView, } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  Pressable,
+  Linking,
+  Modal,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { DateFilterBar } from '../../components/DateFilterBar';
+import { StatusBadge } from '../../components/StatusBadge';
 import { Colors } from '../../constants/Colors';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
+
 export default function CustomersScreen() {
-    const router = useRouter();
-    const [customers, setCustomers] = useState([]);
-    const [search, setSearch] = useState('');
-    const [selectedDateRange, setSelectedDateRange] = useState('all');
-    const [customStartDate, setCustomStartDate] = useState(undefined);
-    const [customEndDate, setCustomEndDate] = useState(undefined);
-    const [isLoading, setIsLoading] = useState(false);
-    // Add Customer Modal State
-    const [isAddModalVisible, setIsAddModalVisible] = useState(false);
-    const [newName, setNewName] = useState('');
-    const [newPhone, setNewPhone] = useState('');
-    const [newAddress, setNewAddress] = useState('');
-    const fetchCustomers = async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getCustomers({
-                search,
-                dateRange: selectedDateRange,
-                startDate: customStartDate,
-                endDate: customEndDate,
-            });
-            setCustomers(data);
-        }
-        finally {
-            setIsLoading(false);
-        }
-    };
-    useEffect(() => {
+  const router = useRouter();
+  const [customers, setCustomers] = useState([]);
+  const [search, setSearch] = useState('');
+  const [selectedDateRange, setSelectedDateRange] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState(undefined);
+  const [customEndDate, setCustomEndDate] = useState(undefined);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Add Customer Modal State
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [newAddress, setNewAddress] = useState('');
+
+  // Customer Jobs Modal State
+  const [fetchingCustomerId, setFetchingCustomerId] = useState(null);
+  const [isJobsModalVisible, setIsJobsModalVisible] = useState(false);
+  const [selectedCustomerForJobs, setSelectedCustomerForJobs] = useState(null);
+  const [customerJobsList, setCustomerJobsList] = useState([]);
+
+  const fetchCustomers = async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.getCustomers({
+        search,
+        dateRange: selectedDateRange,
+        startDate: customStartDate,
+        endDate: customEndDate,
+      });
+      setCustomers(data);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [search, selectedDateRange, customStartDate, customEndDate]);
+
+  const handleDateRangeChange = (range, startDate, endDate) => {
+    setSelectedDateRange(range);
+    setCustomStartDate(startDate);
+    setCustomEndDate(endDate);
+  };
+
+  const handleAddCustomer = async () => {
+    if (!newName.trim() || !newPhone.trim()) {
+      Alert.alert('Missing Details', 'Please provide at least a customer name and phone number.');
+      return;
+    }
+    try {
+      const created = await api.addCustomer({
+        name: newName.trim(),
+        phone: newPhone.trim(),
+        address: newAddress.trim(),
+      });
+      if (created) {
+        setIsAddModalVisible(false);
+        setNewName('');
+        setNewPhone('');
+        setNewAddress('');
         fetchCustomers();
-    }, [search, selectedDateRange, customStartDate, customEndDate]);
-    const handleDateRangeChange = (range, startDate, endDate) => {
-        setSelectedDateRange(range);
-        setCustomStartDate(startDate);
-        setCustomEndDate(endDate);
-    };
-    const handleAddCustomer = async () => {
-        if (!newName.trim() || !newPhone.trim()) {
-            Alert.alert('Missing Details', 'Please provide at least a customer name and phone number.');
-            return;
-        }
-        try {
-            const created = await api.addCustomer({
-                name: newName.trim(),
-                phone: newPhone.trim(),
-                address: newAddress.trim(),
-            });
-            if (created) {
-                setIsAddModalVisible(false);
-                setNewName('');
-                setNewPhone('');
-                setNewAddress('');
-                fetchCustomers();
-            }
-        }
-        catch (error) {
-            const msg = error.response?.data?.message || error.message || 'Failed to add customer.';
-            Alert.alert('Customer Error', msg);
-        }
-    };
-    const openCall = (phone) => {
-        Linking.openURL(`tel:${phone}`);
-    };
-    const openWhatsApp = (phone) => {
-        const clean = phone.replace(/\D/g, '').slice(-10);
-        Linking.openURL(`https://wa.me/91${clean}?text=Hello%20from%20Repair%20Shop!`);
-    };
-    return (<View style={styles.container}>
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || error.message || 'Failed to add customer.';
+      Alert.alert('Customer Error', msg);
+    }
+  };
+
+  const openCall = (phone) => {
+    Linking.openURL(`tel:${phone}`);
+  };
+
+  const openWhatsApp = (phone) => {
+    const clean = phone.replace(/\D/g, '').slice(-10);
+    Linking.openURL(`https://wa.me/91${clean}?text=Hello%20from%20Repair%20Shop!`);
+  };
+
+  // Handler when clicking on a customer's job badge or customer card
+  const handleCustomerJobPress = async (customer) => {
+    if (fetchingCustomerId) return;
+    setFetchingCustomerId(customer._id);
+    try {
+      const jobs = await api.getCustomerJobs(customer._id, customer.phone);
+      if (!jobs || jobs.length === 0) {
+        Alert.alert(
+          'No Jobs Found',
+          `No repair jobs found for ${customer.name}. Would you like to create a new job card?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Create Job',
+              onPress: () =>
+                router.push({
+                  pathname: '/job/new',
+                  params: { customerId: customer._id, name: customer.name, phone: customer.phone },
+                }),
+            },
+          ]
+        );
+        return;
+      }
+
+      if (jobs.length === 1) {
+        // If single job: redirect directly to the job card
+        router.push(`/job/${jobs[0]._id}`);
+      } else {
+        // If multiple jobs: show pop-up to choose which job to open
+        setSelectedCustomerForJobs(customer);
+        setCustomerJobsList(jobs);
+        setIsJobsModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Failed to load customer jobs:', error);
+      Alert.alert('Error', 'Unable to fetch jobs for this customer.');
+    } finally {
+      setFetchingCustomerId(null);
+    }
+  };
+
+  const handleOpenJob = (jobId) => {
+    setIsJobsModalVisible(false);
+    router.push(`/job/${jobId}`);
+  };
+
+  return (
+    <View style={styles.container}>
       {/* Search & Add Header */}
       <View style={styles.searchHeader}>
         <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }}/>
-          <TextInput style={styles.searchInput} placeholder="Search by customer name or phone..." placeholderTextColor="#94A3B8" value={search} onChangeText={setSearch}/>
-          {search.length > 0 && (<Pressable onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={18} color="#94A3B8"/>
-            </Pressable>)}
+          <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by customer name or phone..."
+            placeholderTextColor="#94A3B8"
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={18} color="#94A3B8" />
+            </Pressable>
+          )}
         </View>
 
-        <Pressable style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.88 : 1 }]} onPress={() => setIsAddModalVisible(true)}>
-          <Ionicons name="person-add" size={18} color="#FFFFFF"/>
+        <Pressable
+          style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.88 : 1 }]}
+          onPress={() => setIsAddModalVisible(true)}
+        >
+          <Ionicons name="person-add" size={18} color="#FFFFFF" />
           <Text style={styles.addBtnText}>Add</Text>
         </Pressable>
       </View>
 
       {/* Date Filter Bar (Day, Week, Month, Year, Custom) */}
-      <DateFilterBar selectedRange={selectedDateRange} onRangeChange={handleDateRangeChange} customStartDate={customStartDate} customEndDate={customEndDate}/>
+      <DateFilterBar
+        selectedRange={selectedDateRange}
+        onRangeChange={handleDateRangeChange}
+        customStartDate={customStartDate}
+        customEndDate={customEndDate}
+      />
 
       {/* Customer List */}
-      <FlatList data={customers} keyExtractor={(item) => item._id} contentContainerStyle={styles.listContent} refreshing={isLoading} onRefresh={fetchCustomers} renderItem={({ item }) => (<View style={styles.customerCard}>
-            <View style={styles.cardHeader}>
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitial}>
-                  {item.name.charAt(0).toUpperCase()}
-                </Text>
-              </View>
+      <FlatList
+        data={customers}
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={styles.listContent}
+        refreshing={isLoading}
+        onRefresh={fetchCustomers}
+        renderItem={({ item }) => {
+          const isFetchingThis = fetchingCustomerId === item._id;
+          return (
+            <View style={styles.customerCard}>
+              <Pressable
+                style={({ pressed }) => [styles.cardHeader, pressed && styles.cardHeaderPressed]}
+                onPress={() => handleCustomerJobPress(item)}
+              >
+                <View style={styles.avatarCircle}>
+                  <Text style={styles.avatarInitial}>
+                    {item.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
 
-              <View style={styles.customerDetails}>
-                <Text style={styles.customerName}>{item.name}</Text>
-                <Text style={styles.customerPhone}>+91 {item.phone}</Text>
-                {item.address ? (<Text style={styles.customerAddress} numberOfLines={1}>
-                    📍 {item.address}
-                  </Text>) : null}
-              </View>
+                <View style={styles.customerDetails}>
+                  <Text style={styles.customerName}>{item.name}</Text>
+                  <Text style={styles.customerPhone}>+91 {item.phone}</Text>
+                  {item.address ? (
+                    <Text style={styles.customerAddress} numberOfLines={1}>
+                      📍 {item.address}
+                    </Text>
+                  ) : null}
+                </View>
 
-              <View style={styles.orderCountBadge}>
-                <Text style={styles.orderCountText}>
-                  {item.totalOrdersCount} {item.totalOrdersCount === 1 ? 'Job' : 'Jobs'}
-                </Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.orderCountBadge,
+                    pressed && styles.orderCountBadgePressed,
+                  ]}
+                  onPress={() => handleCustomerJobPress(item)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  {isFetchingThis ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="clipboard-outline" size={13} color={Colors.primary} />
+                      <Text style={styles.orderCountText}>
+                        {item.totalOrdersCount || 0} {item.totalOrdersCount === 1 ? 'Job' : 'Jobs'}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={12} color={Colors.primary} />
+                    </>
+                  )}
+                </Pressable>
+              </Pressable>
+
+              <View style={styles.cardFooter}>
+                <Pressable style={styles.actionButton} onPress={() => openCall(item.phone)}>
+                  <Ionicons name="call" size={14} color="#0284C7" />
+                  <Text style={styles.actionButtonText}>Call</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.actionButton, styles.whatsappButton]}
+                  onPress={() => openWhatsApp(item.phone)}
+                >
+                  <Ionicons name="logo-whatsapp" size={14} color="#16A34A" />
+                  <Text style={[styles.actionButtonText, { color: '#16A34A' }]}>WhatsApp</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.actionButton, styles.newJobForCustButton]}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/job/new',
+                      params: { customerId: item._id, name: item.name, phone: item.phone },
+                    })
+                  }
+                >
+                  <Ionicons name="add-circle" size={14} color={Colors.primary} />
+                  <Text style={[styles.actionButtonText, { color: Colors.primary }]}>New Job</Text>
+                </Pressable>
               </View>
             </View>
-
-            <View style={styles.cardFooter}>
-              <Pressable style={styles.actionButton} onPress={() => openCall(item.phone)}>
-                <Ionicons name="call" size={14} color="#0284C7"/>
-                <Text style={styles.actionButtonText}>Call</Text>
-              </Pressable>
-
-              <Pressable style={[styles.actionButton, styles.whatsappButton]} onPress={() => openWhatsApp(item.phone)}>
-                <Ionicons name="logo-whatsapp" size={14} color="#16A34A"/>
-                <Text style={[styles.actionButtonText, { color: '#16A34A' }]}>WhatsApp</Text>
-              </Pressable>
-
-              <Pressable style={[styles.actionButton, styles.newJobForCustButton]} onPress={() => router.push({
-                pathname: '/job/new',
-                params: { customerId: item._id, name: item.name, phone: item.phone },
-            })}>
-                <Ionicons name="add-circle" size={14} color={Colors.primary}/>
-                <Text style={[styles.actionButtonText, { color: Colors.primary }]}>New Job</Text>
-              </Pressable>
-            </View>
-          </View>)} ListEmptyComponent={<View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={48} color="#CBD5E1"/>
+          );
+        }}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="people-outline" size={48} color="#CBD5E1" />
             <Text style={styles.emptyTitle}>No customers found</Text>
             <Text style={styles.emptySubtitle}>
-              {search ? `No results matching "${search}"` : 'No customers found for the selected date filter'}
+              {search
+                ? `No results matching "${search}"`
+                : 'No customers found for the selected date filter'}
             </Text>
-            <Pressable style={styles.resetBtn} onPress={() => {
+            <Pressable
+              style={styles.resetBtn}
+              onPress={() => {
                 setSearch('');
                 setSelectedDateRange('all');
                 setCustomStartDate(undefined);
                 setCustomEndDate(undefined);
-            }}>
+              }}
+            >
               <Text style={styles.resetBtnText}>Clear Filters</Text>
             </Pressable>
-          </View>}/>
+          </View>
+        }
+      />
+
+      {/* Multiple Jobs Selection Pop-up Modal */}
+      <Modal
+        visible={isJobsModalVisible}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setIsJobsModalVisible(false)}
+      >
+        <View style={styles.jobsModalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setIsJobsModalVisible(false)} />
+          <FloatingCloseButton onPress={() => setIsJobsModalVisible(false)} />
+
+          <View style={styles.jobsModalCard}>
+            {/* Modal Header */}
+            <View style={styles.jobsModalHeader}>
+              <View style={styles.jobsModalHeaderIcon}>
+                <Ionicons name="layers-outline" size={22} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.jobsModalTitle}>Select Job to Open</Text>
+                <Text style={styles.jobsModalSubtitle} numberOfLines={1}>
+                  {selectedCustomerForJobs?.name} • {customerJobsList.length} Jobs
+                </Text>
+              </View>
+              <Pressable
+                style={({ pressed }) => [styles.jobsModalCloseBtn, pressed && { opacity: 0.7 }]}
+                onPress={() => setIsJobsModalVisible(false)}
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.jobsSelectInstruction}>
+              Select which repair job card you want to view:
+            </Text>
+
+            {/* List of Jobs */}
+            <ScrollView
+              style={styles.jobsListScroll}
+              contentContainerStyle={styles.jobsListContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {customerJobsList.map((job) => {
+                const hasDue = (job.cost?.due ?? 0) > 0;
+                const formattedDate = job.createdAt
+                  ? new Date(job.createdAt).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })
+                  : 'Recent';
+
+                const deviceName =
+                  job.orderType === 'accessory'
+                    ? job.productName || 'Accessory Order'
+                    : `${job.brand || ''} ${job.model || ''}`.trim() || 'Device Repair';
+
+                const iconName =
+                  job.deviceType === 'laptop'
+                    ? 'laptop-outline'
+                    : job.deviceType === 'tablet'
+                    ? 'tablet-portrait-outline'
+                    : job.deviceType === 'smartwatch'
+                    ? 'watch-outline'
+                    : job.orderType === 'accessory'
+                    ? 'cube-outline'
+                    : 'phone-portrait-outline';
+
+                return (
+                  <Pressable
+                    key={job._id}
+                    style={({ pressed }) => [
+                      styles.jobItemCard,
+                      pressed && styles.jobItemCardPressed,
+                    ]}
+                    onPress={() => handleOpenJob(job._id)}
+                  >
+                    <View style={styles.jobItemTopRow}>
+                      <View style={styles.jobItemIdentity}>
+                        <View style={styles.jobItemIconCircle}>
+                          <Ionicons name={iconName} size={18} color={Colors.primary} />
+                        </View>
+                        <View style={styles.jobIdPill}>
+                          <Text style={styles.jobIdText}>{job.jobId || 'JOB'}</Text>
+                        </View>
+                      </View>
+
+                      <StatusBadge status={job.status} size="sm" />
+                    </View>
+
+                    <Text style={styles.jobItemDeviceName} numberOfLines={1}>
+                      {deviceName}
+                    </Text>
+
+                    {job.problemDescription ? (
+                      <Text style={styles.jobItemProblem} numberOfLines={2}>
+                        {job.problemDescription}
+                      </Text>
+                    ) : null}
+
+                    <View style={styles.jobItemDivider} />
+
+                    <View style={styles.jobItemBottomRow}>
+                      <View style={styles.jobItemMetaDate}>
+                        <Ionicons name="calendar-outline" size={13} color="#64748B" />
+                        <Text style={styles.jobItemDateText}>{formattedDate}</Text>
+                      </View>
+
+                      <View style={styles.jobItemMetaRight}>
+                        {hasDue ? (
+                          <View style={styles.duePill}>
+                            <Text style={styles.duePillText}>
+                              Due: ₹{(job.cost?.due ?? 0).toLocaleString('en-IN')}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={styles.paidPill}>
+                            <Ionicons name="checkmark-circle" size={11} color="#059669" />
+                            <Text style={styles.paidPillText}>
+                              Paid ₹{(job.cost?.final ?? 0).toLocaleString('en-IN')}
+                            </Text>
+                          </View>
+                        )}
+
+                        <View style={styles.openBtnPill}>
+                          <Text style={styles.openBtnText}>Open</Text>
+                          <Ionicons name="chevron-forward" size={12} color="#FFFFFF" />
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {/* Modal Bottom Action */}
+            <View style={styles.jobsModalFooter}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.newJobInModalBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
+                onPress={() => {
+                  setIsJobsModalVisible(false);
+                  router.push({
+                    pathname: '/job/new',
+                    params: {
+                      customerId: selectedCustomerForJobs?._id,
+                      name: selectedCustomerForJobs?.name,
+                      phone: selectedCustomerForJobs?.phone,
+                    },
+                  });
+                }}
+              >
+                <Ionicons name="add-circle" size={18} color={Colors.primary} />
+                <Text style={styles.newJobInModalBtnText}>
+                  Create New Job for {selectedCustomerForJobs?.name || 'Customer'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Add Customer Modal */}
-      <Modal visible={isAddModalVisible} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setIsAddModalVisible(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setIsAddModalVisible(false)}/>
-          <FloatingCloseButton onPress={() => setIsAddModalVisible(false)}/>
+      <Modal
+        visible={isAddModalVisible}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setIsAddModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setIsAddModalVisible(false)} />
+          <FloatingCloseButton onPress={() => setIsAddModalVisible(false)} />
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add New Customer</Text>
@@ -164,13 +477,33 @@ export default function CustomersScreen() {
 
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
               <Text style={styles.inputLabel}>Customer Name *</Text>
-              <TextInput style={styles.modalInput} placeholder="e.g. Ramesh Kumar" placeholderTextColor="#94A3B8" value={newName} onChangeText={setNewName}/>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Ramesh Kumar"
+                placeholderTextColor="#94A3B8"
+                value={newName}
+                onChangeText={setNewName}
+              />
 
               <Text style={styles.inputLabel}>Mobile Phone Number *</Text>
-              <TextInput style={styles.modalInput} placeholder="10-digit number (e.g. 9876543210)" placeholderTextColor="#94A3B8" keyboardType="phone-pad" maxLength={10} value={newPhone} onChangeText={setNewPhone}/>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="10-digit number (e.g. 9876543210)"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={newPhone}
+                onChangeText={setNewPhone}
+              />
 
               <Text style={styles.inputLabel}>Address / Area (Optional)</Text>
-              <TextInput style={styles.modalInput} placeholder="e.g. Main Market, Shop #4" placeholderTextColor="#94A3B8" value={newAddress} onChangeText={setNewAddress}/>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Main Market, Shop #4"
+                placeholderTextColor="#94A3B8"
+                value={newAddress}
+                onChangeText={setNewAddress}
+              />
 
               <View style={styles.modalActions}>
                 <Pressable style={styles.cancelBtn} onPress={() => setIsAddModalVisible(false)}>
@@ -185,242 +518,467 @@ export default function CustomersScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>);
+    </View>
+  );
 }
+
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F8FAFC',
-    },
-    searchHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
-        gap: 10,
-    },
-    searchBox: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F1F5F9',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        height: 42,
-    },
-    searchInput: {
-        flex: 1,
-        fontSize: 14,
-        color: '#0F172A',
-    },
-    addBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.primary,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 12,
-        gap: 4,
-    },
-    addBtnText: {
-        color: '#FFFFFF',
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    listContent: {
-        padding: 16,
-    },
-    customerCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 18,
-        padding: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 6,
-        elevation: 2,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 14,
-    },
-    avatarCircle: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#EEF2FF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
-    },
-    avatarInitial: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: Colors.primary,
-    },
-    customerDetails: {
-        flex: 1,
-    },
-    customerName: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#0F172A',
-        marginBottom: 2,
-    },
-    customerPhone: {
-        fontSize: 13,
-        color: '#64748B',
-        fontWeight: '500',
-    },
-    customerAddress: {
-        fontSize: 12,
-        color: '#94A3B8',
-        marginTop: 2,
-    },
-    orderCountBadge: {
-        backgroundColor: '#F1F5F9',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 10,
-    },
-    orderCountText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#475569',
-    },
-    cardFooter: {
-        flexDirection: 'row',
-        gap: 8,
-        borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
-        paddingTop: 12,
-    },
-    actionButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: '#F0F9FF',
-        gap: 4,
-    },
-    whatsappButton: {
-        backgroundColor: '#F0FDF4',
-    },
-    newJobForCustButton: {
-        backgroundColor: Colors.primaryGlow,
-    },
-    actionButtonText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#0284C7',
-    },
-    emptyState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 48,
-    },
-    emptyTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#334155',
-        marginTop: 12,
-        marginBottom: 4,
-    },
-    emptySubtitle: {
-        fontSize: 13,
-        color: '#94A3B8',
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    resetBtn: {
-        backgroundColor: '#E2E8F0',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 8,
-    },
-    resetBtnText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#475569',
-    },
-    // Modal
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(15, 23, 42, 0.5)',
-        justifyContent: 'flex-end',
-    },
-    modalBackdrop: {
-        ...StyleSheet.absoluteFill,
-    },
-    modalCard: {
-        backgroundColor: '#FFFFFF',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        padding: 24,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#0F172A',
-    },
-    inputLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#475569',
-        marginBottom: 6,
-        marginTop: 8,
-    },
-    modalInput: {
-        backgroundColor: '#F8FAFC',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        fontSize: 14,
-        color: '#0F172A',
-    },
-    modalActions: {
-        flexDirection: 'row',
-        marginTop: 24,
-        gap: 12,
-    },
-    cancelBtn: {
-        flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
-        backgroundColor: '#F1F5F9',
-        alignItems: 'center',
-    },
-    cancelBtnText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#64748B',
-    },
-    saveBtn: {
-        flex: 2,
-        paddingVertical: 14,
-        borderRadius: 12,
-        backgroundColor: Colors.primary,
-        alignItems: 'center',
-    },
-    saveBtnText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    gap: 10,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 4,
+  },
+  addBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  listContent: {
+    padding: 16,
+  },
+  customerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  cardHeaderPressed: {
+    opacity: 0.85,
+  },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarInitial: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  customerDetails: {
+    flex: 1,
+  },
+  customerName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  customerPhone: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  customerAddress: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  orderCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    gap: 4,
+  },
+  orderCountBadgePressed: {
+    backgroundColor: '#E0E7FF',
+    opacity: 0.8,
+  },
+  orderCountText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#F0F9FF',
+    gap: 4,
+  },
+  whatsappButton: {
+    backgroundColor: '#F0FDF4',
+  },
+  newJobForCustButton: {
+    backgroundColor: Colors.primaryGlow,
+  },
+  actionButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#334155',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  resetBtn: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  resetBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+
+  // Multiple Jobs Selection Pop-up Modal
+  jobsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  jobsModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: '82%',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  jobsModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  jobsModalHeaderIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  jobsModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  jobsModalSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  jobsModalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  jobsSelectInstruction: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    marginBottom: 14,
+    marginTop: 4,
+  },
+  jobsListScroll: {
+    maxHeight: 380,
+  },
+  jobsListContent: {
+    paddingBottom: 8,
+    gap: 10,
+  },
+  jobItemCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  jobItemCardPressed: {
+    backgroundColor: '#EEF2FF',
+    borderColor: Colors.primary,
+    transform: [{ scale: 0.99 }],
+  },
+  jobItemTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  jobItemIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  jobItemIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  jobIdPill: {
+    backgroundColor: Colors.primaryGlow,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  jobIdText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  jobItemDeviceName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  jobItemProblem: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+  },
+  jobItemDivider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 10,
+  },
+  jobItemBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  jobItemMetaDate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  jobItemDateText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  jobItemMetaRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  duePill: {
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  duePillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  paidPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  paidPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  openBtnPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  openBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  jobsModalFooter: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  newJobInModalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.primaryGlow,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  newJobInModalBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+
+  // Add Customer Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFill,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  modalInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    marginTop: 24,
+    gap: 12,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  saveBtn: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+  },
+  saveBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
 });

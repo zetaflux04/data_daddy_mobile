@@ -488,6 +488,57 @@ export const api = {
             return [];
         }
     },
+    async getCustomerDetails(id) {
+        try {
+            const res = await apiClient.get(`/customers/${id}`);
+            return res.data || null;
+        }
+        catch {
+            return null;
+        }
+    },
+    async getCustomerJobs(customerId, phone) {
+        try {
+            // First try getCustomerDetails which fetches the customer & their orders
+            if (customerId) {
+                const detailsRes = await apiClient.get(`/customers/${customerId}`);
+                if (detailsRes.data?.orders && detailsRes.data.orders.length > 0) {
+                    return detailsRes.data.orders;
+                }
+            }
+            // Fallback: search orders by customer phone
+            const cleanPhone = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
+            if (cleanPhone) {
+                const ordersRes = await apiClient.get('/orders', { params: { search: cleanPhone, limit: 50 } });
+                const orders = ordersRes.data?.orders || [];
+                // Filter specifically for this customer
+                const filtered = orders.filter((o) => {
+                    const oCustId = typeof o.customerId === 'object' ? o.customerId?._id : o.customerId;
+                    if (customerId && oCustId && String(oCustId) === String(customerId)) return true;
+                    const oPhone = (o.customerSnapshot?.phone || '').replace(/\D/g, '').slice(-10);
+                    return oPhone && oPhone === cleanPhone;
+                });
+                if (filtered.length > 0) return filtered;
+                return orders;
+            }
+            return [];
+        }
+        catch (e) {
+            console.warn('[getCustomerJobs] error:', e);
+            // Fallback: query orders with phone
+            try {
+                if (phone) {
+                    const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+                    const ordersRes = await apiClient.get('/orders', { params: { search: cleanPhone, limit: 50 } });
+                    return ordersRes.data?.orders || [];
+                }
+            }
+            catch {
+                return [];
+            }
+            return [];
+        }
+    },
     async addCustomer(data) {
         const res = await apiClient.post('/customers', data);
         return res.data?.customer;
