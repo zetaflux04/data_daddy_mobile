@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Keyboard, } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +41,68 @@ export default function NewJobScreen() {
     const [advancePaid, setAdvancePaid] = useState('');
     const [paymentMode, setPaymentMode] = useState('cash');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Keyboard & Auto-Scroll Helpers for Cost Section & Accessory
+    const scrollViewRef = useRef(null);
+    const advancePaidInputRef = useRef(null);
+    const costSectionY = useRef(0);
+    const accessorySectionY = useRef(0);
+    const focusedFieldRef = useRef(null);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+    const scrollToCostSection = () => {
+        setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+    };
+
+    const scrollToAccessorySection = () => {
+        setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+    };
+
+    useEffect(() => {
+        const onShow = (e) => {
+            const height = e?.endCoordinates?.height || 300;
+            setKeyboardHeight(height);
+            if (focusedFieldRef.current === 'cost' || focusedFieldRef.current === 'accessory') {
+                setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+            }
+        };
+
+        const onHide = () => {
+            setKeyboardHeight(0);
+            focusedFieldRef.current = null;
+        };
+
+        const showSub = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            onShow
+        );
+        const hideSub = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            onHide
+        );
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
+
+    const handleCostFocus = () => {
+        focusedFieldRef.current = 'cost';
+        scrollToCostSection();
+    };
+
+    const handleAccessoryFocus = () => {
+        focusedFieldRef.current = 'accessory';
+        scrollToAccessorySection();
+    };
+
     // Photo Picking Logic for Repairs (Max 3 photos)
     const handlePickPhoto = () => {
         if (photos.length >= 3) {
@@ -201,8 +263,25 @@ export default function NewJobScreen() {
     return (<View style={styles.container}>
       <AppHeader title="New Job Card"/>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flexOne}>
-        <ScrollView style={styles.flexOne} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 54 : 0}
+        style={styles.flexOne}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.flexOne}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingBottom:
+                keyboardHeight > 0 ? 16 : Math.max(insets.bottom, 16) + 20,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
           {/* SMS Notice Banner */}
           <View style={styles.smsNotice}>
             <Ionicons name="chatbox-ellipses" size={18} color="#0369A1"/>
@@ -326,22 +405,48 @@ export default function NewJobScreen() {
               </View>
 
               {/* Cost & Payment Section — Repair */}
-              <View style={styles.sectionCard}>
+              <View
+                style={styles.sectionCard}
+                onLayout={(e) => {
+                  costSectionY.current = e.nativeEvent.layout.y;
+                }}
+              >
                 <Text style={styles.sectionHeader}>4. Cost Estimation & Advance</Text>
 
                 <View style={styles.twoCol}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.fieldLabel}>Estimated Cost (₹)</Text>
-                    <TextInput style={styles.textInput} placeholder="e.g. 2500" placeholderTextColor="#94A3B8" keyboardType="numeric" value={estimatedCost} onChangeText={setEstimatedCost}/>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="e.g. 2500"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      returnKeyType="next"
+                      onSubmitEditing={() => advancePaidInputRef.current?.focus()}
+                      value={estimatedCost}
+                      onChangeText={setEstimatedCost}
+                      onFocus={handleCostFocus}
+                    />
                   </View>
                   <View style={{ width: 12 }}/>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.fieldLabel}>Advance Paid (₹)</Text>
-                    <TextInput style={[
-                styles.textInput,
-                Number(advancePaid) > Number(estimatedCost) &&
-                    Number(estimatedCost) > 0 && { borderColor: Colors.rose, borderWidth: 1.5 },
-            ]} placeholder="e.g. 500" placeholderTextColor="#94A3B8" keyboardType="numeric" value={advancePaid} onChangeText={setAdvancePaid}/>
+                    <TextInput
+                      ref={advancePaidInputRef}
+                      style={[
+                        styles.textInput,
+                        Number(advancePaid) > Number(estimatedCost) &&
+                          Number(estimatedCost) > 0 && { borderColor: Colors.rose, borderWidth: 1.5 },
+                      ]}
+                      placeholder="e.g. 500"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      returnKeyType="done"
+                      onSubmitEditing={() => Keyboard.dismiss()}
+                      value={advancePaid}
+                      onChangeText={setAdvancePaid}
+                      onFocus={handleCostFocus}
+                    />
                   </View>
                 </View>
 
@@ -366,14 +471,36 @@ export default function NewJobScreen() {
             </>)}
 
           {/* Accessory Form — Clean 2-Field Flow Without Advance Field */}
-          {orderType === 'accessory' && (<View style={styles.sectionCard}>
+          {orderType === 'accessory' && (
+            <View
+              style={styles.sectionCard}
+              onLayout={(e) => {
+                accessorySectionY.current = e.nativeEvent.layout.y;
+              }}
+            >
               <Text style={styles.sectionHeader}>3. Accessory Details</Text>
 
               <Text style={styles.fieldLabel}>Product / Accessory Name *</Text>
-              <TextInput style={styles.textInput} placeholder="e.g. Tempered Glass, Phone Cover, 65W Fast Charger" placeholderTextColor="#94A3B8" value={productName} onChangeText={setProductName}/>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Tempered Glass, Phone Cover, 65W Fast Charger"
+                placeholderTextColor="#94A3B8"
+                value={productName}
+                onChangeText={setProductName}
+              />
 
               <Text style={styles.fieldLabel}>Selling Price (₹) *</Text>
-              <TextInput style={styles.textInput} placeholder="e.g. 299" placeholderTextColor="#94A3B8" keyboardType="numeric" value={productPrice} onChangeText={setProductPrice}/>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. 299"
+                placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                value={productPrice}
+                onChangeText={setProductPrice}
+                onFocus={handleAccessoryFocus}
+              />
 
               <View style={{ marginTop: 12 }}>
                 <Text style={styles.fieldLabel}>Payment Mode *</Text>
@@ -402,7 +529,6 @@ export default function NewJobScreen() {
             </Text>
           </Pressable>
 
-          <View style={{ height: 40 }}/>
         </ScrollView>
       </KeyboardAvoidingView>
 
