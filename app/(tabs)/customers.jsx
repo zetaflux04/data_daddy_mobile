@@ -17,19 +17,32 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
-import { DateFilterBar } from '../../components/DateFilterBar';
+import { HeaderFilterBar } from '../../components/HeaderFilterBar';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Colors } from '../../constants/Colors';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
+
+const customerStatusTabs = [
+  { key: 'all', label: 'All' },
+  { key: 'dues', label: 'Has Dues' },
+  { key: 'active', label: 'Active Jobs' },
+  { key: 'repeat', label: 'Repeat Clients' },
+];
 
 export default function CustomersScreen() {
   const router = useRouter();
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedDateRange, setSelectedDateRange] = useState('all');
   const [customStartDate, setCustomStartDate] = useState(undefined);
   const [customEndDate, setCustomEndDate] = useState(undefined);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Advanced Filter Modal State
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [customerFilterType, setCustomerFilterType] = useState('all');
+  const [customerSortBy, setCustomerSortBy] = useState('recent');
 
   // Add Customer Modal State
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -66,6 +79,47 @@ export default function CustomersScreen() {
     setSelectedDateRange(range);
     setCustomStartDate(startDate);
     setCustomEndDate(endDate);
+  };
+
+  // Client-side filtering & sorting for customers
+  const processedCustomers = React.useMemo(() => {
+    let list = [...customers];
+
+    // Status Tab or Filter Type
+    const activeFilter = selectedStatus !== 'all' ? selectedStatus : customerFilterType;
+    if (activeFilter === 'dues') {
+      list = list.filter((c) => (c.totalDuesPending || 0) > 0);
+    } else if (activeFilter === 'active') {
+      list = list.filter((c) => (c.activeOrdersCount || 0) > 0 || (c.totalOrdersCount || 0) > 0);
+    } else if (activeFilter === 'repeat') {
+      list = list.filter((c) => (c.totalOrdersCount || 0) >= 2);
+    } else if (activeFilter === 'single') {
+      list = list.filter((c) => (c.totalOrdersCount || 0) === 1);
+    }
+
+    // Sort By
+    if (customerSortBy === 'name_asc') {
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (customerSortBy === 'name_desc') {
+      list.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+    } else if (customerSortBy === 'most_jobs') {
+      list.sort((a, b) => (b.totalOrdersCount || 0) - (a.totalOrdersCount || 0));
+    } else {
+      // recent
+      list.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+    }
+
+    return list;
+  }, [customers, selectedStatus, customerFilterType, customerSortBy]);
+
+  const hasActiveFilters = customerFilterType !== 'all' || customerSortBy !== 'recent';
+  const activeFilterCount =
+    (customerFilterType !== 'all' ? 1 : 0) + (customerSortBy !== 'recent' ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setCustomerFilterType('all');
+    setCustomerSortBy('recent');
+    setSelectedStatus('all');
   };
 
   const handleAddCustomer = async () => {
@@ -177,17 +231,52 @@ export default function CustomersScreen() {
         </Pressable>
       </View>
 
-      {/* Date Filter Bar (Day, Week, Month, Year, Custom) */}
-      <DateFilterBar
-        selectedRange={selectedDateRange}
-        onRangeChange={handleDateRangeChange}
+      {/* Date Range Dropdown & Filter Button Bar */}
+      <HeaderFilterBar
+        selectedDateRange={selectedDateRange}
+        onDateRangeChange={handleDateRangeChange}
         customStartDate={customStartDate}
         customEndDate={customEndDate}
+        onPressFilter={() => setIsFilterModalOpen(true)}
+        hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
       />
+
+      {/* Customer Status Filter Chips (Solid blue active pill, gray inactive) */}
+      <View style={styles.filterScrollWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}
+        >
+          {customerStatusTabs.map((tab) => {
+            const isSelected = selectedStatus === tab.key;
+            return (
+              <Pressable
+                key={tab.key}
+                onPress={() => setSelectedStatus(tab.key)}
+                style={[
+                  styles.filterChip,
+                  isSelected && styles.filterChipSelected,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    isSelected && styles.filterChipTextSelected,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Customer List */}
       <FlatList
-        data={customers}
+        data={processedCustomers}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
         refreshing={isLoading}
@@ -281,9 +370,11 @@ export default function CustomersScreen() {
               style={styles.resetBtn}
               onPress={() => {
                 setSearch('');
+                setSelectedStatus('all');
                 setSelectedDateRange('all');
                 setCustomStartDate(undefined);
                 setCustomEndDate(undefined);
+                handleResetFilters();
               }}
             >
               <Text style={styles.resetBtnText}>Clear Filters</Text>
@@ -291,6 +382,107 @@ export default function CustomersScreen() {
           </View>
         }
       />
+
+      {/* Advanced Filter Modal for Customers */}
+      <Modal
+        visible={isFilterModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsFilterModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setIsFilterModalOpen(false)}
+          />
+          <FloatingCloseButton onPress={() => setIsFilterModalOpen(false)} />
+
+          <View style={styles.filterModalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleRow}>
+                <Ionicons name="options" size={20} color={Colors.primary} />
+                <Text style={styles.modalTitle}>Filter Customers</Text>
+              </View>
+              {hasActiveFilters && (
+                <Pressable onPress={handleResetFilters}>
+                  <Text style={styles.resetModalText}>Reset All</Text>
+                </Pressable>
+              )}
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Filter By */}
+              <Text style={styles.filterSectionTitle}>Customer Type</Text>
+              <View style={styles.modalChipRow}>
+                {[
+                  { key: 'all', label: 'All Customers' },
+                  { key: 'dues', label: 'With Pending Dues' },
+                  { key: 'repeat', label: 'Repeat (2+ Jobs)' },
+                  { key: 'single', label: 'First-time (1 Job)' },
+                ].map((item) => (
+                  <Pressable
+                    key={item.key}
+                    style={[
+                      styles.modalChip,
+                      customerFilterType === item.key && styles.modalChipActive,
+                    ]}
+                    onPress={() => setCustomerFilterType(item.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.modalChipText,
+                        customerFilterType === item.key &&
+                          styles.modalChipTextActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {/* Sort By */}
+              <Text style={styles.filterSectionTitle}>Sort By</Text>
+              <View style={styles.modalChipRow}>
+                {[
+                  { key: 'recent', label: 'Recently Active' },
+                  { key: 'name_asc', label: 'Name (A to Z)' },
+                  { key: 'name_desc', label: 'Name (Z to A)' },
+                  { key: 'most_jobs', label: 'Most Jobs' },
+                ].map((item) => (
+                  <Pressable
+                    key={item.key}
+                    style={[
+                      styles.modalChip,
+                      customerSortBy === item.key && styles.modalChipActive,
+                    ]}
+                    onPress={() => setCustomerSortBy(item.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.modalChipText,
+                        customerSortBy === item.key &&
+                          styles.modalChipTextActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Pressable
+                style={styles.modalApplyBtn}
+                onPress={() => setIsFilterModalOpen(false)}
+              >
+                <Text style={styles.modalApplyBtnText}>Apply Filters</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Multiple Jobs Selection Pop-up Modal */}
       <Modal
@@ -977,6 +1169,106 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  filterScrollWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  filterChipSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  filterChipTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  filterModalContent: {
+    width: '100%',
+    maxWidth: 380,
+    maxHeight: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  resetModalText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.rose,
+  },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  modalChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  modalChipActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: Colors.primary,
+  },
+  modalChipText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  modalChipTextActive: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  modalFooter: {
+    marginTop: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  modalApplyBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalApplyBtnText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',

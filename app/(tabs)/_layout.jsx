@@ -56,6 +56,14 @@ export default function TabLayout() {
             title: 'Jobs',
             headerTitle: 'Repair Job Cards',
             tabBarIcon: ({ color, focused }) => (<Ionicons name={focused ? 'clipboard' : 'clipboard-outline'} size={22} color={color}/>),
+            headerRight: () => (
+              <Pressable
+                onPress={() => router.push('/job/new')}
+                style={({ pressed }) => [{ marginRight: 16, padding: 4, opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Ionicons name="add-circle" size={28} color={Colors.primary} />
+              </Pressable>
+            ),
         }}/>
       <Tabs.Screen name="customers" options={{
             title: 'Customers',
