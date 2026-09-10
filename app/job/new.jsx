@@ -14,6 +14,35 @@ const deviceTypes = [
     { type: 'tablet', label: 'Tablet', icon: 'tablet-portrait-outline' },
     { type: 'smartwatch', label: 'Watch', icon: 'watch-outline' },
 ];
+
+export const PROBLEM_OPTIONS = [
+    'Display Broken',
+    'Charging Problem',
+    'Water Damage/ Dead',
+    'Battery Issue',
+    'Network Problem',
+    'No Power On',
+    'Touch Not Working',
+    'Insert Sim Problem',
+    'Camera Problem',
+    'Others',
+];
+
+export const ACCESSORY_OPTIONS = [
+    'Charging Cable',
+    'Charger',
+    'Tempered Glass',
+    'Phone Cover',
+    'Neck Band',
+    'Buds',
+    'Handfree',
+    'Wireless Charger',
+    'Lamination',
+    'Speaker',
+    'Watch',
+    'Others',
+];
+
 export default function NewJobScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -32,12 +61,17 @@ export default function NewJobScreen() {
     const [model, setModel] = useState('');
     const [serialOrImei, setSerialOrImei] = useState('');
     const [passcode, setPasscode] = useState('');
-    const [problem, setProblem] = useState('');
+    // Problem selection
+    const [selectedProblem, setSelectedProblem] = useState('');
+    const [customProblem, setCustomProblem] = useState('');
+    const [isProblemModalOpen, setIsProblemModalOpen] = useState(false);
     const [photos, setPhotos] = useState([]);
     const [previewImage, setPreviewImage] = useState(null);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-    // Accessory Fields
-    const [productName, setProductName] = useState('');
+    // Accessory selection
+    const [selectedAccessory, setSelectedAccessory] = useState('');
+    const [customAccessory, setCustomAccessory] = useState('');
+    const [isAccessoryModalOpen, setIsAccessoryModalOpen] = useState(false);
     const [productPrice, setProductPrice] = useState('');
     // Cost & Advance for Repair
     const [estimatedCost, setEstimatedCost] = useState('');
@@ -57,7 +91,17 @@ export default function NewJobScreen() {
                     setCustomerName(existing.customerSnapshot?.name || '');
                     setCustomerPhone(existing.customerSnapshot?.phone || '');
                     if (existing.orderType === 'accessory') {
-                        setProductName(existing.productName || '');
+                        const existingProd = existing.productName || '';
+                        if (ACCESSORY_OPTIONS.filter((o) => o !== 'Others').includes(existingProd)) {
+                            setSelectedAccessory(existingProd);
+                            setCustomAccessory('');
+                        } else if (existingProd) {
+                            setSelectedAccessory('Others');
+                            setCustomAccessory(existingProd);
+                        } else {
+                            setSelectedAccessory('');
+                            setCustomAccessory('');
+                        }
                         setProductPrice(String(existing.cost?.final || existing.productPrice || ''));
                     } else {
                         setDeviceType(existing.deviceType || 'mobile');
@@ -65,7 +109,17 @@ export default function NewJobScreen() {
                         setModel(existing.model || '');
                         setSerialOrImei(existing.serialOrImei || '');
                         setPasscode(existing.passcodePattern || '');
-                        setProblem(existing.problemDescription || '');
+                        const existingProb = existing.problemDescription || '';
+                        if (PROBLEM_OPTIONS.filter((o) => o !== 'Others').includes(existingProb)) {
+                            setSelectedProblem(existingProb);
+                            setCustomProblem('');
+                        } else if (existingProb) {
+                            setSelectedProblem('Others');
+                            setCustomProblem(existingProb);
+                        } else {
+                            setSelectedProblem('');
+                            setCustomProblem('');
+                        }
                         setPhotos((existing.photos || []).map(p => (typeof p === 'string' ? { url: p } : p)));
                         setEstimatedCost(String(existing.cost?.estimated || existing.cost?.final || ''));
                         setAdvancePaid(String(existing.cost?.advancePaid || ''));
@@ -228,12 +282,15 @@ export default function NewJobScreen() {
         setPhotos((prev) => prev.filter((_, idx) => idx !== indexToRemove));
     };
     const handleSubmit = async () => {
+        const finalProblem = selectedProblem === 'Others' ? customProblem.trim() : selectedProblem.trim();
+        const finalProduct = selectedAccessory === 'Others' ? customAccessory.trim() : selectedAccessory.trim();
+
         if (!customerName.trim() || !customerPhone.trim()) {
             Alert.alert('Missing Customer', 'Please enter customer name and phone number.');
             return;
         }
         if (orderType === 'repair') {
-            if (!brand.trim() || !model.trim() || !problem.trim()) {
+            if (!brand.trim() || !model.trim() || !finalProblem) {
                 Alert.alert('Missing Device Info', 'Please enter Brand, Model, and Problem Description.');
                 return;
             }
@@ -245,8 +302,8 @@ export default function NewJobScreen() {
             }
         }
         else {
-            if (!productName.trim() || !productPrice.trim()) {
-                Alert.alert('Missing Product Info', 'Please enter Product Name and Selling Price.');
+            if (!finalProduct || !productPrice.trim()) {
+                Alert.alert('Missing Product Info', 'Please select or enter Product Name and Selling Price.');
                 return;
             }
         }
@@ -265,13 +322,13 @@ export default function NewJobScreen() {
                 payload.model = model.trim();
                 payload.serialOrImei = serialOrImei.trim();
                 payload.passcodePattern = passcode.trim();
-                payload.problemDescription = problem.trim();
+                payload.problemDescription = finalProblem;
                 payload.photos = photos.map((p) => (typeof p === 'string' ? p : p.url));
                 payload.estimatedCost = Number(estimatedCost) || 0;
                 payload.advancePaid = Number(advancePaid) || 0;
             }
             else {
-                payload.productName = productName.trim();
+                payload.productName = finalProduct;
                 payload.productPrice = Number(productPrice) || 0;
             }
             if (isEditing) {
@@ -441,7 +498,30 @@ export default function NewJobScreen() {
                 </View>
 
                 <Text style={styles.fieldLabel}>Problem Description *</Text>
-                <TextInput style={[styles.textInput, styles.textArea]} placeholder="Describe broken screen, water damage, battery drain, no display, etc." placeholderTextColor="#94A3B8" multiline numberOfLines={3} value={problem} onChangeText={setProblem}/>
+                <Pressable
+                  style={[styles.dropdownSelector, !selectedProblem && styles.dropdownSelectorPlaceholder]}
+                  onPress={() => setIsProblemModalOpen(true)}
+                >
+                  <Text style={[styles.dropdownSelectorText, !selectedProblem && styles.placeholderText]}>
+                    {selectedProblem || 'Select problem description...'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color="#64748B" />
+                </Pressable>
+
+                {selectedProblem === 'Others' && (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={styles.fieldLabel}>Describe Problem / Fault *</Text>
+                    <TextInput
+                      style={[styles.textInput, styles.textArea]}
+                      placeholder="Describe broken screen, water damage, battery drain, no display, etc."
+                      placeholderTextColor="#94A3B8"
+                      multiline
+                      numberOfLines={3}
+                      value={customProblem}
+                      onChangeText={setCustomProblem}
+                    />
+                  </View>
+                )}
 
                 {/* Device Photos (Max 3 photos) */}
                 <View style={{ marginTop: 14 }}>
@@ -557,13 +637,28 @@ export default function NewJobScreen() {
               <Text style={styles.sectionHeader}>3. Accessory Details</Text>
 
               <Text style={styles.fieldLabel}>Product / Accessory Name *</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g. Tempered Glass, Phone Cover, 65W Fast Charger"
-                placeholderTextColor="#94A3B8"
-                value={productName}
-                onChangeText={setProductName}
-              />
+              <Pressable
+                style={[styles.dropdownSelector, !selectedAccessory && styles.dropdownSelectorPlaceholder]}
+                onPress={() => setIsAccessoryModalOpen(true)}
+              >
+                <Text style={[styles.dropdownSelectorText, !selectedAccessory && styles.placeholderText]}>
+                  {selectedAccessory || 'Select accessory product...'}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color="#64748B" />
+              </Pressable>
+
+              {selectedAccessory === 'Others' && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={styles.fieldLabel}>Enter Custom Accessory Name *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="e.g. OTG Adapter, Car Mount, Power Bank"
+                    placeholderTextColor="#94A3B8"
+                    value={customAccessory}
+                    onChangeText={setCustomAccessory}
+                  />
+                </View>
+              )}
 
               <Text style={styles.fieldLabel}>Selling Price (₹) *</Text>
               <TextInput
@@ -652,6 +747,118 @@ export default function NewJobScreen() {
               );
             })()}
           </Pressable>
+        </View>
+      </Modal>
+
+      {/* Problem Selection Modal */}
+      <Modal
+        visible={isProblemModalOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsProblemModalOpen(false)}
+      >
+        <View style={styles.pickerModalOverlay}>
+          <Pressable
+            style={styles.pickerModalBackdrop}
+            onPress={() => setIsProblemModalOpen(false)}
+          />
+          <View style={styles.pickerModalCard}>
+            <View style={styles.pickerModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="construct-outline" size={20} color={Colors.primary} />
+                <Text style={styles.pickerModalTitle}>Select Problem Description</Text>
+              </View>
+              <Pressable
+                style={styles.pickerModalCloseBtn}
+                onPress={() => setIsProblemModalOpen(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.pickerModalScroll} showsVerticalScrollIndicator={false}>
+              {PROBLEM_OPTIONS.map((item) => {
+                const isSelected = selectedProblem === item;
+                return (
+                  <Pressable
+                    key={item}
+                    style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
+                    onPress={() => {
+                      setSelectedProblem(item);
+                      if (item !== 'Others') {
+                        setCustomProblem('');
+                      }
+                      setIsProblemModalOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextSelected]}>
+                      {item}
+                    </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Accessory Selection Modal */}
+      <Modal
+        visible={isAccessoryModalOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsAccessoryModalOpen(false)}
+      >
+        <View style={styles.pickerModalOverlay}>
+          <Pressable
+            style={styles.pickerModalBackdrop}
+            onPress={() => setIsAccessoryModalOpen(false)}
+          />
+          <View style={styles.pickerModalCard}>
+            <View style={styles.pickerModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="bag-handle-outline" size={20} color={Colors.primary} />
+                <Text style={styles.pickerModalTitle}>Select Accessory Product</Text>
+              </View>
+              <Pressable
+                style={styles.pickerModalCloseBtn}
+                onPress={() => setIsAccessoryModalOpen(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.pickerModalScroll} showsVerticalScrollIndicator={false}>
+              {ACCESSORY_OPTIONS.map((item) => {
+                const isSelected = selectedAccessory === item;
+                return (
+                  <Pressable
+                    key={item}
+                    style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
+                    onPress={() => {
+                      setSelectedAccessory(item);
+                      if (item !== 'Others') {
+                        setCustomAccessory('');
+                      }
+                      setIsAccessoryModalOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextSelected]}>
+                      {item}
+                    </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
         </View>
       </Modal>
     </View>);
@@ -929,6 +1136,100 @@ const styles = StyleSheet.create({
     fullScreenImage: {
         width: '100%',
         height: '80%',
+    },
+    dropdownSelector: {
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#CBD5E1',
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        minHeight: 48,
+    },
+    dropdownSelectorPlaceholder: {
+        borderColor: '#E2E8F0',
+    },
+    dropdownSelectorText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#0F172A',
+        flex: 1,
+        marginRight: 8,
+    },
+    placeholderText: {
+        color: '#94A3B8',
+        fontWeight: '400',
+    },
+    pickerModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        justifyContent: 'flex-end',
+    },
+    pickerModalBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    pickerModalCard: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingTop: 16,
+        paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+        paddingHorizontal: 20,
+        maxHeight: '75%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 10,
+    },
+    pickerModalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingBottom: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+        marginBottom: 8,
+    },
+    pickerModalTitle: {
+        fontSize: 17,
+        fontWeight: '700',
+        color: '#0F172A',
+    },
+    pickerModalCloseBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F1F5F9',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    pickerModalScroll: {
+        maxHeight: 380,
+    },
+    pickerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 13,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+        marginVertical: 2,
+    },
+    pickerItemSelected: {
+        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+    },
+    pickerItemText: {
+        fontSize: 15,
+        color: '#334155',
+        fontWeight: '500',
+    },
+    pickerItemTextSelected: {
+        color: Colors.primary,
+        fontWeight: '700',
     },
 });
 
