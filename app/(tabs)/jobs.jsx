@@ -18,7 +18,7 @@ import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { Colors } from '../../constants/Colors';
 
 const statusOptions = [
-  { key: 'all', label: 'All Statuses', dot: '#2563EB' },
+  { key: 'all', label: 'All Status', dot: '#2563EB' },
   { key: 'pending', label: 'Pending', dot: '#F59E0B' },
   { key: 'in_progress', label: 'In Progress', dot: '#2563EB' },
   { key: 'parts_delayed', label: 'Parts Delayed', dot: '#EF4444' },
@@ -153,7 +153,7 @@ export default function JobsScreen() {
 
   const getSelectedStatusLabel = () => {
     const found = statusOptions.find((s) => s.key === selectedStatus);
-    return found ? found.label : 'All Statuses';
+    return found ? found.label : 'All Status';
   };
 
   const getSelectedDateLabel = () => {
@@ -249,7 +249,7 @@ export default function JobsScreen() {
           onPress={() => setIsStatusMenuOpen(true)}
         >
           <Ionicons
-            name="options-outline"
+            name="flag-outline"
             size={15}
             color={selectedStatus !== 'all' ? Colors.primary : '#0F172A'}
           />
@@ -310,8 +310,8 @@ export default function JobsScreen() {
           onPress={() => setIsFilterModalOpen(true)}
         >
           <Ionicons
-            name="options-outline"
-            size={15}
+            name="funnel-outline"
+            size={14}
             color={hasActiveFilters ? Colors.primary : '#0F172A'}
           />
           <Text

@@ -78,6 +78,12 @@ export const JobCardItem = ({ job, onPress }) => {
             ? 'Direct Sale'
             : job.problemDescription || 'General Repair';
 
+    const isDelivered = job.status === 'delivered' || job.orderType === 'accessory';
+    const dueAmount = job.cost?.due ?? 0;
+    const isFullyPaid = isDelivered && dueAmount <= 0;
+    const hasDue = dueAmount > 0;
+    const totalPaidAmount = job.cost?.final || job.cost?.advancePaid || job.productPrice || 0;
+
     return (
         <Pressable
             onPress={onPress}
@@ -104,14 +110,16 @@ export const JobCardItem = ({ job, onPress }) => {
 
                     <View style={styles.actionDivider} />
 
-                    {/* Edit Icon Button (No circular background) */}
-                    <Pressable
-                        hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-                        onPress={handleEditPress}
-                        style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
-                    >
-                        <Ionicons name="create-outline" size={18} color="#2563EB" />
-                    </Pressable>
+                    {/* Edit Icon Button (Only if not delivered) */}
+                    {job.status !== 'delivered' && (
+                        <Pressable
+                            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                            onPress={handleEditPress}
+                            style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
+                        >
+                            <Ionicons name="create-outline" size={18} color="#2563EB" />
+                        </Pressable>
+                    )}
 
                     {/* WhatsApp Icon Button (No circular background) */}
                     <Pressable
@@ -204,19 +212,37 @@ export const JobCardItem = ({ job, onPress }) => {
 
             {/* 3. Bottom Footer Row: Sized According to Space Occupied (Due Amount | Job Date | Service Type) */}
             <View style={styles.bottomFooterRow}>
-                {/* 1. Due Amount (Takes space occupied) */}
+                {/* 1. Due Amount / Fully Paid (Takes space occupied) */}
                 <View style={styles.footerDueBlock}>
-                    <View style={styles.dueCircleIcon}>
-                        <Text style={styles.dueCircleText}>₹</Text>
-                    </View>
-                    <View style={styles.footerTextColAuto}>
-                        <Text style={styles.footerLabel} numberOfLines={1}>
-                            Due Amount
-                        </Text>
-                        <Text style={styles.footerValDue} numberOfLines={1}>
-                            ₹{(job.cost?.due ?? 0).toLocaleString('en-IN')}
-                        </Text>
-                    </View>
+                    {isFullyPaid ? (
+                        <>
+                            <View style={[styles.dueCircleIcon, { backgroundColor: '#16A34A' }]}>
+                                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                            </View>
+                            <View style={styles.footerTextColAuto}>
+                                <Text style={[styles.footerLabel, { color: '#16A34A', fontWeight: '700' }]} numberOfLines={1}>
+                                    Fully Paid
+                                </Text>
+                                <Text style={[styles.footerValDue, { color: '#16A34A' }]} numberOfLines={1}>
+                                    ₹{totalPaidAmount.toLocaleString('en-IN')}
+                                </Text>
+                            </View>
+                        </>
+                    ) : (
+                        <>
+                            <View style={[styles.dueCircleIcon, hasDue && { backgroundColor: '#EF4444' }]}>
+                                <Text style={styles.dueCircleText}>₹</Text>
+                            </View>
+                            <View style={styles.footerTextColAuto}>
+                                <Text style={styles.footerLabel} numberOfLines={1}>
+                                    Due Amount
+                                </Text>
+                                <Text style={[styles.footerValDue, hasDue && { color: '#EF4444' }]} numberOfLines={1}>
+                                    ₹{dueAmount.toLocaleString('en-IN')}
+                                </Text>
+                            </View>
+                        </>
+                    )}
                 </View>
 
                 <View style={styles.footerDivider} />

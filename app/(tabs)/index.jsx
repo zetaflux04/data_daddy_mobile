@@ -65,7 +65,7 @@ export default function DashboardScreen() {
         <View style={styles.shopTopInfo}>
           <Text style={styles.shopTopGreeting}>Welcome back, 👋</Text>
           <View style={styles.shopNameRow}>
-            <Text style={styles.shopTopName} numberOfLines={1}>
+            <Text style={styles.shopTopName} numberOfLines={2}>
               {shop?.name || 'Chipix'}
             </Text>
             <View style={styles.proPlanPill}>
@@ -188,6 +188,8 @@ const styles = StyleSheet.create({
     },
     shopTopInfo: {
         flex: 1,
+        minWidth: 0,
+        justifyContent: 'center',
     },
     shopTopGreeting: {
         fontSize: 12,
@@ -197,14 +199,16 @@ const styles = StyleSheet.create({
     shopNameRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        flexWrap: 'wrap',
         gap: 6,
         marginTop: 2,
     },
     shopTopName: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '900',
         color: '#0F172A',
         letterSpacing: -0.3,
+        flexShrink: 1,
     },
     proPlanPill: {
         flexDirection: 'row',
@@ -216,6 +220,7 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
         borderRadius: 6,
         gap: 3,
+        alignSelf: 'center',
     },
     proPlanPillText: {
         fontSize: 10,
@@ -223,6 +228,7 @@ const styles = StyleSheet.create({
         color: '#059669',
     },
     newJobBtnCompact: {
+        flexShrink: 0,
         borderRadius: 12,
         overflow: 'hidden',
         shadowColor: Colors.primary,

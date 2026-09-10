@@ -8,6 +8,7 @@ import { api, resolveImageUrls } from '../../services/api';
 import { Colors } from '../../constants/Colors';
 import { AppHeader } from '../../components/AppHeader';
 import { S3Image } from '../../components/S3Image';
+import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 const deviceTypes = [
     { type: 'mobile', label: 'Mobile', icon: 'phone-portrait-outline' },
     { type: 'laptop', label: 'Laptop', icon: 'laptop-outline' },
@@ -87,6 +88,14 @@ export default function NewJobScreen() {
                 setIsLoadingEdit(true);
                 const existing = await api.getJobById(params.editJobId);
                 if (existing) {
+                    if (existing.status === 'delivered') {
+                        Alert.alert(
+                            'Job Locked',
+                            'This job has already been delivered to the customer. All details are read-only and cannot be changed.',
+                            [{ text: 'OK', onPress: () => router.back() }]
+                        );
+                        return;
+                    }
                     setOrderType(existing.orderType || 'repair');
                     setCustomerName(existing.customerSnapshot?.name || '');
                     setCustomerPhone(existing.customerSnapshot?.phone || '');
@@ -762,19 +771,13 @@ export default function NewJobScreen() {
             style={styles.pickerModalBackdrop}
             onPress={() => setIsProblemModalOpen(false)}
           />
+          <FloatingCloseButton onPress={() => setIsProblemModalOpen(false)} />
           <View style={styles.pickerModalCard}>
             <View style={styles.pickerModalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="construct-outline" size={20} color={Colors.primary} />
                 <Text style={styles.pickerModalTitle}>Select Problem Description</Text>
               </View>
-              <Pressable
-                style={styles.pickerModalCloseBtn}
-                onPress={() => setIsProblemModalOpen(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close" size={20} color="#64748B" />
-              </Pressable>
             </View>
 
             <ScrollView style={styles.pickerModalScroll} showsVerticalScrollIndicator={false}>
@@ -818,19 +821,13 @@ export default function NewJobScreen() {
             style={styles.pickerModalBackdrop}
             onPress={() => setIsAccessoryModalOpen(false)}
           />
+          <FloatingCloseButton onPress={() => setIsAccessoryModalOpen(false)} />
           <View style={styles.pickerModalCard}>
             <View style={styles.pickerModalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="bag-handle-outline" size={20} color={Colors.primary} />
                 <Text style={styles.pickerModalTitle}>Select Accessory Product</Text>
               </View>
-              <Pressable
-                style={styles.pickerModalCloseBtn}
-                onPress={() => setIsAccessoryModalOpen(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close" size={20} color="#64748B" />
-              </Pressable>
             </View>
 
             <ScrollView style={styles.pickerModalScroll} showsVerticalScrollIndicator={false}>
@@ -1165,25 +1162,26 @@ const styles = StyleSheet.create({
     },
     pickerModalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(15, 23, 42, 0.6)',
-        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(15, 23, 42, 0.55)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
     },
     pickerModalBackdrop: {
         ...StyleSheet.absoluteFillObject,
     },
     pickerModalCard: {
-        backgroundColor: '#FFFFFF',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        paddingTop: 16,
-        paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-        paddingHorizontal: 20,
+        width: '100%',
+        maxWidth: 360,
         maxHeight: '75%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        padding: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
+        shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 10,
+        shadowRadius: 16,
+        elevation: 8,
     },
     pickerModalHeader: {
         flexDirection: 'row',

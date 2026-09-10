@@ -98,6 +98,10 @@ export default function JobDetailScreen() {
     const handleStatusClick = (newStatus) => {
         if (!job)
             return;
+        if (job.status === 'delivered') {
+            Alert.alert('Status Locked', 'This job has already been delivered to the customer and cannot be changed.');
+            return;
+        }
         if (newStatus === 'unrepairable') {
             setUnrepairableReason(job.unrepairableReason || '');
             setSelectedPresetReason('');
@@ -325,13 +329,15 @@ export default function JobDetailScreen() {
             </View>) : null}
 
           <View style={styles.topCardActionRow}>
-            <Pressable
-              style={styles.editCardHeaderBtn}
-              onPress={() => router.push({ pathname: '/job/new', params: { editJobId: job._id || job.id || id } })}
-            >
-              <Ionicons name="create-outline" size={14} color={Colors.primary} />
-              <Text style={styles.editCardHeaderBtnText}>Edit {job.orderType === 'accessory' ? 'Sale' : 'Job Card'}</Text>
-            </Pressable>
+            {job.status !== 'delivered' && (
+              <Pressable
+                style={styles.editCardHeaderBtn}
+                onPress={() => router.push({ pathname: '/job/new', params: { editJobId: job._id || job.id || id } })}
+              >
+                <Ionicons name="create-outline" size={14} color={Colors.primary} />
+                <Text style={styles.editCardHeaderBtnText}>Edit {job.orderType === 'accessory' ? 'Sale' : 'Job Card'}</Text>
+              </Pressable>
+            )}
 
             <Pressable
               style={styles.viewInvoiceHeaderBtn}
@@ -530,38 +536,52 @@ export default function JobDetailScreen() {
         {/* Pipeline Status Controller — ONLY for repairs! (No update status required for accessory direct sale) */}
         {job.orderType !== 'accessory' && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Update Job Status</Text>
-            <Text style={styles.pipelineHelp}>
-              Tap any status to update. Customer SMS is sent automatically on Repaired and Delivered.
-            </Text>
+            {job.status === 'delivered' ? (
+              <View style={styles.deliveredLockedBanner}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-done-circle" size={20} color="#059669" />
+                  <Text style={styles.deliveredLockedTitle}>Product Delivered</Text>
+                </View>
+                <Text style={styles.deliveredLockedDesc}>
+                  Device has been delivered to customer
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.cardTitle}>Update Job Status</Text>
+                <Text style={styles.pipelineHelp}>
+                  Tap any status to update. Customer SMS is sent automatically on Repaired and Delivered.
+                </Text>
 
-            <View style={styles.statusButtonsGrid}>
-              {statusFlow.map((st) => {
-                const isCurrent = job.status === st;
-                const isUnrepairable = st === 'unrepairable';
-                return (
-                  <Pressable
-                    key={st}
-                    style={[
-                      styles.statusSelectBtn,
-                      isCurrent && (isUnrepairable ? styles.statusSelectBtnUnrepairable : styles.statusSelectBtnCurrent),
-                    ]}
-                    onPress={() => handleStatusClick(st)}
-                  >
-                    <Text
-                      style={[
-                        styles.statusSelectText,
-                        isCurrent && styles.statusSelectTextCurrent,
-                        !isCurrent && isUnrepairable && { color: '#DC2626' },
-                      ]}
-                    >
-                      {st.replace('_', ' ').toUpperCase()}
-                    </Text>
-                    {isCurrent && <Ionicons name="checkmark-circle" size={16} color="#FFFFFF"/>}
-                  </Pressable>
-                );
-              })}
-            </View>
+                <View style={styles.statusButtonsGrid}>
+                  {statusFlow.map((st) => {
+                    const isCurrent = job.status === st;
+                    const isUnrepairable = st === 'unrepairable';
+                    return (
+                      <Pressable
+                        key={st}
+                        style={[
+                          styles.statusSelectBtn,
+                          isCurrent && (isUnrepairable ? styles.statusSelectBtnUnrepairable : styles.statusSelectBtnCurrent),
+                        ]}
+                        onPress={() => handleStatusClick(st)}
+                      >
+                        <Text
+                          style={[
+                            styles.statusSelectText,
+                            isCurrent && styles.statusSelectTextCurrent,
+                            !isCurrent && isUnrepairable && { color: '#DC2626' },
+                          ]}
+                        >
+                          {st.replace('_', ' ').toUpperCase()}
+                        </Text>
+                        {isCurrent && <Ionicons name="checkmark-circle" size={16} color="#FFFFFF"/>}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            )}
           </View>
         )}
 
@@ -1405,9 +1425,24 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: '#94A3B8',
     },
-    noSmsText: {
-        fontSize: 12,
-        color: '#94A3B8',
+    deliveredLockedBanner: {
+        backgroundColor: '#ECFDF5',
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+        borderRadius: 14,
+        padding: 14,
+    },
+    deliveredLockedTitle: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: '#065F46',
+    },
+    deliveredLockedDesc: {
+        fontSize: 13,
+        color: '#047857',
+        marginTop: 4,
+        marginLeft: 28,
+        lineHeight: 18,
     },
     // Modal Common
     modalOverlay: {

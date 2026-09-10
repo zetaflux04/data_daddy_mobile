@@ -390,7 +390,7 @@ export default function CustomersScreen() {
         animationType="fade"
         onRequestClose={() => setIsFilterModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.filterModalOverlay}>
           <Pressable
             style={styles.modalBackdrop}
             onPress={() => setIsFilterModalOpen(false)}
@@ -1204,6 +1204,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  filterModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
   filterModalContent: {
     width: '100%',
     maxWidth: 380,
@@ -1218,16 +1225,18 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   resetModalText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: Colors.rose,
   },
   filterSectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#334155',
-    marginTop: 12,
+    color: '#64748B',
+    marginTop: 14,
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   modalChipRow: {
     flexDirection: 'row',
@@ -1236,15 +1245,12 @@ const styles = StyleSheet.create({
   },
   modalChip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 10,
     backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   modalChipActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
   },
   modalChipText: {
     fontSize: 12.5,
@@ -1252,11 +1258,11 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   modalChipTextActive: {
-    color: Colors.primary,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   modalFooter: {
-    marginTop: 20,
+    marginTop: 18,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
