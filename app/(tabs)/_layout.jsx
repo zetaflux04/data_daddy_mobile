@@ -54,14 +54,38 @@ export default function TabLayout() {
         }}/>
       <Tabs.Screen name="jobs" options={{
             title: 'Jobs',
-            headerTitle: 'Repair Job Cards',
+            headerTitle: () => (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="build" size={17} color="#2563EB" />
+                </View>
+                <Text style={{ fontSize: 21, fontWeight: '900', color: '#0F172A', letterSpacing: -0.4 }}>
+                  Repair Job Cards
+                </Text>
+              </View>
+            ),
+            headerTitleAlign: 'left',
             tabBarIcon: ({ color, focused }) => (<Ionicons name={focused ? 'clipboard' : 'clipboard-outline'} size={22} color={color}/>),
             headerRight: () => (
               <Pressable
                 onPress={() => router.push('/job/new')}
-                style={({ pressed }) => [{ marginRight: 16, padding: 4, opacity: pressed ? 0.7 : 1 }]}
+                style={({ pressed }) => [{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: Colors.primary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 16,
+                  opacity: pressed ? 0.8 : 1,
+                  shadowColor: Colors.primary,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }]}
               >
-                <Ionicons name="add-circle" size={28} color={Colors.primary} />
+                <Ionicons name="add" size={22} color="#FFFFFF" />
               </Pressable>
             ),
         }}/>

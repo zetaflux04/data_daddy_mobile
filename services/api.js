@@ -459,6 +459,10 @@ export const api = {
         const res = await apiClient.post('/orders', data);
         return res.data?.order;
     },
+    async updateJob(id, data) {
+        const res = await apiClient.put(`/orders/${id}`, data);
+        return res.data?.order;
+    },
     async updateJobStatus(id, status, extraData) {
         try {
             const res = await apiClient.patch(`/orders/${id}/status`, { status, ...extraData });

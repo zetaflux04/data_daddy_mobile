@@ -18,6 +18,9 @@ export default function NewJobScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const params = useLocalSearchParams();
+    const isEditing = Boolean(params.editJobId);
+    const [isLoadingEdit, setIsLoadingEdit] = useState(isEditing);
+
     // Customer Details
     const [customerName, setCustomerName] = useState(params.name || '');
     const [customerPhone, setCustomerPhone] = useState(params.phone || '');
@@ -41,6 +44,44 @@ export default function NewJobScreen() {
     const [advancePaid, setAdvancePaid] = useState('');
     const [paymentMode, setPaymentMode] = useState('cash');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Load existing job details when in Edit mode
+    useEffect(() => {
+        if (!params.editJobId) return;
+        async function fetchExistingJob() {
+            try {
+                setIsLoadingEdit(true);
+                const existing = await api.getJobById(params.editJobId);
+                if (existing) {
+                    setOrderType(existing.orderType || 'repair');
+                    setCustomerName(existing.customerSnapshot?.name || '');
+                    setCustomerPhone(existing.customerSnapshot?.phone || '');
+                    if (existing.orderType === 'accessory') {
+                        setProductName(existing.productName || '');
+                        setProductPrice(String(existing.cost?.final || existing.productPrice || ''));
+                    } else {
+                        setDeviceType(existing.deviceType || 'mobile');
+                        setBrand(existing.brand || '');
+                        setModel(existing.model || '');
+                        setSerialOrImei(existing.serialOrImei || '');
+                        setPasscode(existing.passcodePattern || '');
+                        setProblem(existing.problemDescription || '');
+                        setPhotos((existing.photos || []).map(p => (typeof p === 'string' ? { url: p } : p)));
+                        setEstimatedCost(String(existing.cost?.estimated || existing.cost?.final || ''));
+                        setAdvancePaid(String(existing.cost?.advancePaid || ''));
+                    }
+                    if (existing.payments?.[0]?.mode) {
+                        setPaymentMode(existing.payments[0].mode);
+                    }
+                }
+            } catch {
+                Alert.alert('Load Error', 'Could not load existing job details.');
+            } finally {
+                setIsLoadingEdit(false);
+            }
+        }
+        fetchExistingJob();
+    }, [params.editJobId]);
 
     // Keyboard & Auto-Scroll Helpers for Cost Section & Accessory
     const scrollViewRef = useRef(null);
@@ -233,35 +274,70 @@ export default function NewJobScreen() {
                 payload.productName = productName.trim();
                 payload.productPrice = Number(productPrice) || 0;
             }
-            const newJob = await api.createJob(payload);
-            if (newJob) {
-                const message = orderType === 'accessory'
-                    ? `Accessory sale ${newJob.jobId} recorded successfully.`
-                    : `Job Card ${newJob.jobId} created successfully. Automated "Order Received" SMS sent to +91 ${customerPhone}.`;
-                Alert.alert(orderType === 'accessory' ? 'Sale Recorded!' : 'Job Created!', message, [
-                    {
-                        text: 'View Job Card',
-                        onPress: () => router.replace(`/job/${newJob._id}`),
-                    },
-                ]);
-            }
-            else {
-                Alert.alert('Error', 'Unable to create job card. Please try again.');
+            if (isEditing) {
+                const updated = await api.updateJob(params.editJobId, payload);
+                if (updated) {
+                    Alert.alert(
+                        orderType === 'accessory' ? 'Sale Updated!' : 'Job Card Updated!',
+                        `Successfully updated ${updated.jobId || 'job card'}.`,
+                        [
+                            {
+                                text: 'OK',
+                                onPress: () => router.back(),
+                            },
+                        ]
+                    );
+                } else {
+                    Alert.alert('Error', 'Unable to update job card. Please try again.');
+                }
+            } else {
+                const newJob = await api.createJob(payload);
+                if (newJob) {
+                    const message = orderType === 'accessory'
+                        ? `Accessory sale ${newJob.jobId} recorded successfully.`
+                        : `Job Card ${newJob.jobId} created successfully. Automated "Order Received" SMS sent to +91 ${customerPhone}.`;
+                    Alert.alert(orderType === 'accessory' ? 'Sale Recorded!' : 'Job Created!', message, [
+                        {
+                            text: 'View Job Card',
+                            onPress: () => router.replace(`/job/${newJob._id}`),
+                        },
+                    ]);
+                }
+                else {
+                    Alert.alert('Error', 'Unable to create job card. Please try again.');
+                }
             }
         }
         catch (error) {
             const msg = error.response?.data?.message ||
                 (error.response?.status === 401
                     ? 'Session expired. Please sign in again.'
-                    : error.message || 'Failed to create job card. Please try again.');
-            Alert.alert('Unable to Create Job', msg);
+                    : error.message || 'Failed to save job card. Please try again.');
+            Alert.alert(isEditing ? 'Unable to Update' : 'Unable to Create Job', msg);
         }
         finally {
             setIsSubmitting(false);
         }
     };
+
+    if (isLoadingEdit) {
+        return (
+            <View style={styles.container}>
+                <AppHeader title="Edit Job Card" />
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <Text style={{ marginTop: 12, color: '#64748B', fontWeight: '600' }}>Loading job details...</Text>
+                </View>
+            </View>
+        );
+    }
+
+    const headerTitle = isEditing
+        ? (orderType === 'accessory' ? 'Edit Accessory Sale' : 'Edit Job Card')
+        : (orderType === 'accessory' ? 'Record Accessory Sale' : 'New Job Card');
+
     return (<View style={styles.container}>
-      <AppHeader title="New Job Card"/>
+      <AppHeader title={headerTitle}/>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -523,9 +599,11 @@ export default function NewJobScreen() {
             <Text style={styles.submitBtnText}>
               {isSubmitting
             ? 'Saving...'
-            : orderType === 'accessory'
+            : isEditing
+            ? (orderType === 'accessory' ? 'Update Sale Details' : 'Update Job Card')
+            : (orderType === 'accessory'
                 ? 'Record Accessory Sale'
-                : 'Save Job Card & Send SMS'}
+                : 'Save Job Card & Send SMS')}
             </Text>
           </Pressable>
 

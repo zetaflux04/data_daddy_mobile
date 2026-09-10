@@ -66,9 +66,11 @@ export default function InvoiceScreen() {
   }, [id]);
 
   // Compute invoice fields
+  const isAccessory = job?.orderType === 'accessory';
+
   const invoiceNumber =
     job?.invoice?.invoiceNumber ||
-    (job?.jobId ? `INV-${job.jobId.replace('JOB-', '')}` : `INV-${Date.now().toString().slice(-6)}`);
+    (job?.jobId ? `INV-${job.jobId.replace('JOB-', '').replace('ACC-', '')}` : `INV-${Date.now().toString().slice(-6)}`);
 
   const rawDate = job?.invoice?.issuedAt || job?.createdAt || Date.now();
   const invoiceDateStr = new Date(rawDate).toLocaleDateString('en-US', {
@@ -115,11 +117,11 @@ export default function InvoiceScreen() {
           .filter(Boolean)
           .join(', ') || '45, Sunset Boulevard, Andheri West, Mumbai, MH 400053';
 
-  const ticketRef = job?.jobId || `REP-${Date.now().toString().slice(-4)}`;
+  const ticketRef = job?.jobId || (isAccessory ? `ACC-${Date.now().toString().slice(-4)}` : `REP-${Date.now().toString().slice(-4)}`);
 
-  const totalAmount = job?.cost?.final || job?.cost?.estimated || 13000;
-  const advancePaid = job?.cost?.advancePaid || 0;
-  const balanceDue = job?.cost?.due ?? Math.max(0, totalAmount - advancePaid);
+  const totalAmount = job?.cost?.final || job?.cost?.estimated || job?.productPrice || 13000;
+  const advancePaid = isAccessory ? (job?.cost?.advancePaid ?? totalAmount) : (job?.cost?.advancePaid || 0);
+  const balanceDue = isAccessory ? (job?.cost?.due ?? 0) : (job?.cost?.due ?? Math.max(0, totalAmount - advancePaid));
 
   const amountWords = numberToWordsINR(totalAmount);
 
@@ -364,23 +366,23 @@ export default function InvoiceScreen() {
           <table>
             <thead>
               <tr>
-                <th>DEVICE & ISSUE</th>
-                <th style="text-align: right;">DELIVERY DATE</th>
+                <th>${isAccessory ? 'PRODUCT & DESCRIPTION' : 'DEVICE & ISSUE'}</th>
+                <th style="text-align: right;">${isAccessory ? 'SALE DATE' : 'DELIVERY DATE'}</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>
-                  <div class="item-title">${job?.brand || 'Apple'} ${job?.model || 'iPhone 13 Pro'}</div>
-                  <div class="item-sub">${job?.problemDescription || 'Screen Replacement (OLED OEM) + Water Sealant'}</div>
-                  ${job?.serialOrImei ? `<div class="item-sub">IMEI: ${job.serialOrImei}</div>` : ''}
+                  <div class="item-title">${isAccessory ? (job?.productName || 'Accessory Item') : `${job?.brand || 'Apple'} ${job?.model || 'iPhone 13 Pro'}`}</div>
+                  <div class="item-sub">${isAccessory ? 'Retail Merchandise Sale • Direct Store Purchase' : (job?.problemDescription || 'Screen Replacement (OLED OEM) + Water Sealant')}</div>
+                  ${!isAccessory && job?.serialOrImei ? `<div class="item-sub">IMEI: ${job.serialOrImei}</div>` : ''}
                 </td>
                 <td style="text-align: right; color: #475569; font-weight: 600;">
                   ${deliveryDateStr}
                 </td>
               </tr>
               ${
-                job?.warranty?.hasWarranty
+                !isAccessory && job?.warranty?.hasWarranty
                   ? `<tr>
                       <td>
                         <div class="item-title">Warranty Coverage Guarantee</div>
@@ -407,7 +409,7 @@ export default function InvoiceScreen() {
               <span>₹${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
             <div class="calc-row advance">
-              <span>Amount Paid (Advance)</span>
+              <span>${isAccessory ? 'Amount Paid' : 'Amount Paid (Advance)'}</span>
               <span>- ₹${advancePaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
             <div class="calc-row balance">
@@ -421,10 +423,17 @@ export default function InvoiceScreen() {
 
           <div class="terms">
             <div class="terms-title">TERMS & CONDITIONS</div>
+            ${isAccessory ? `
+            1. All accessory products are sold in brand new, genuine condition.<br/>
+            2. Standard manufacturer warranty applies where indicated on packaging.<br/>
+            3. Consumable items and opened accessories are non-refundable unless defective on delivery.<br/>
+            4. This is a computer-generated invoice and does not require a physical signature.
+            ` : `
             1. All repairs come with a 30-day warranty on replaced parts unless specified otherwise.<br/>
             2. Physical or liquid damage after repair voids all warranty claims.<br/>
             3. Devices not collected within 45 days of repair completion may be recycled or sold to recover costs.<br/>
             4. This is a computer-generated invoice and does not require a physical signature.
+            `}
           </div>
 
           <div class="signatures">
@@ -580,7 +589,7 @@ export default function InvoiceScreen() {
             onPress={() => router.back()}
           >
             <Ionicons name="arrow-back" size={16} color="#334155" />
-            <Text style={styles.backLinkText}>BACK TO REPAIRS</Text>
+            <Text style={styles.backLinkText}>{isAccessory ? 'BACK TO ACCESSORIES' : 'BACK TO REPAIRS'}</Text>
           </Pressable>
 
           <Pressable
@@ -638,38 +647,48 @@ export default function InvoiceScreen() {
             </View>
           </View>
 
-          {/* Device & Issue Table Header */}
+          {/* Table Header */}
           <View style={styles.tableHeader}>
-            <Text style={styles.tableHeaderColLeft}>DEVICE & ISSUE</Text>
-            <Text style={styles.tableHeaderColRight}>DELIVERY DATE</Text>
+            <Text style={styles.tableHeaderColLeft}>
+              {isAccessory ? 'PRODUCT & DESCRIPTION' : 'DEVICE & ISSUE'}
+            </Text>
+            <Text style={styles.tableHeaderColRight}>
+              {isAccessory ? 'SALE DATE' : 'DELIVERY DATE'}
+            </Text>
           </View>
 
-          {/* Row 1: Device & Primary Issue */}
+          {/* Row 1: Product / Device & Issue */}
           <View style={styles.tableRow}>
             <View style={styles.tableRowLeft}>
               <Text style={styles.deviceTitle}>
-                {job?.brand || 'Apple'} {job?.model || 'iPhone 13 Pro'}
+                {isAccessory
+                  ? (job?.productName || 'Accessory Item')
+                  : `${job?.brand || 'Apple'} ${job?.model || 'iPhone 13 Pro'}`}
               </Text>
               <Text style={styles.issueSubtitle}>
-                {job?.problemDescription || 'Screen Replacement (OLED OEM) + Water Sealant'}
+                {isAccessory
+                  ? 'Retail Merchandise Sale • Direct Store Purchase'
+                  : (job?.problemDescription || 'Screen Replacement (OLED OEM) + Water Sealant')}
               </Text>
-              {job?.serialOrImei && (
+              {!isAccessory && job?.serialOrImei ? (
                 <Text style={styles.imeiText}>IMEI: {job.serialOrImei}</Text>
-              )}
+              ) : null}
             </View>
             <Text style={styles.deliveryDateText}>{deliveryDateStr}</Text>
           </View>
 
-          {/* Row 2: Secondary / Diagnostic Service */}
-          <View style={styles.tableRow}>
-            <View style={styles.tableRowLeft}>
-              <Text style={styles.deviceTitle}>Diagnostic & Inspection</Text>
-              <Text style={styles.issueSubtitle}>
-                Motherboard trace checking & component testing
-              </Text>
+          {/* Row 2: Secondary / Diagnostic Service (Only for repairs) */}
+          {!isAccessory && (
+            <View style={styles.tableRow}>
+              <View style={styles.tableRowLeft}>
+                <Text style={styles.deviceTitle}>Diagnostic & Inspection</Text>
+                <Text style={styles.issueSubtitle}>
+                  Motherboard trace checking & component testing
+                </Text>
+              </View>
+              <Text style={styles.deliveryDateText}>{deliveryDateStr}</Text>
             </View>
-            <Text style={styles.deliveryDateText}>{deliveryDateStr}</Text>
-          </View>
+          )}
 
           {/* Financial Breakdown */}
           <View style={styles.financialsContainer}>
@@ -695,7 +714,9 @@ export default function InvoiceScreen() {
             </View>
 
             <View style={styles.calcRow}>
-              <Text style={styles.advanceLabel}>Amount Paid (Advance)</Text>
+              <Text style={styles.advanceLabel}>
+                {isAccessory ? 'Amount Paid' : 'Amount Paid (Advance)'}
+              </Text>
               <Text style={styles.advanceValue}>
                 - ₹{advancePaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </Text>
@@ -720,18 +741,37 @@ export default function InvoiceScreen() {
           {/* Terms & Conditions */}
           <View style={styles.termsSection}>
             <Text style={styles.termsHeading}>TERMS & CONDITIONS</Text>
-            <Text style={styles.termItem}>
-              1. All repairs come with a 30-day warranty on replaced parts unless specified otherwise.
-            </Text>
-            <Text style={styles.termItem}>
-              2. Physical or liquid damage after repair voids all warranty claims.
-            </Text>
-            <Text style={styles.termItem}>
-              3. Devices not collected within 45 days of repair completion may be recycled or sold to recover costs.
-            </Text>
-            <Text style={styles.termItem}>
-              4. This is a computer-generated invoice and does not require a physical signature.
-            </Text>
+            {isAccessory ? (
+              <>
+                <Text style={styles.termItem}>
+                  1. All accessory products are sold in brand new, genuine condition.
+                </Text>
+                <Text style={styles.termItem}>
+                  2. Standard manufacturer warranty applies where indicated on packaging.
+                </Text>
+                <Text style={styles.termItem}>
+                  3. Consumable items and opened accessories are non-refundable unless defective on delivery.
+                </Text>
+                <Text style={styles.termItem}>
+                  4. This is a computer-generated invoice and does not require a physical signature.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.termItem}>
+                  1. All repairs come with a 30-day warranty on replaced parts unless specified otherwise.
+                </Text>
+                <Text style={styles.termItem}>
+                  2. Physical or liquid damage after repair voids all warranty claims.
+                </Text>
+                <Text style={styles.termItem}>
+                  3. Devices not collected within 45 days of repair completion may be recycled or sold to recover costs.
+                </Text>
+                <Text style={styles.termItem}>
+                  4. This is a computer-generated invoice and does not require a physical signature.
+                </Text>
+              </>
+            )}
           </View>
 
           {/* Signatures Section with Shop Owner Digital Signature */}

@@ -11,7 +11,7 @@ import { AppHeader } from '../../components/AppHeader';
 import { S3Image } from '../../components/S3Image';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { useAuth } from '../../context/AuthContext';
-const statusFlow = ['pending', 'in_progress', 'parts_delayed', 'repaired', 'delivered'];
+const statusFlow = ['pending', 'in_progress', 'parts_delayed', 'repaired', 'delivered', 'unrepairable'];
 export default function JobDetailScreen() {
     const insets = useSafeAreaInsets();
     const { id } = useLocalSearchParams();
@@ -34,6 +34,11 @@ export default function JobDetailScreen() {
     const [warrantyUnit, setWarrantyUnit] = useState('months');
     const [warrantyPeriod, setWarrantyPeriod] = useState('3');
     const [isDelivering, setIsDelivering] = useState(false);
+    // Unrepairable Modal State
+    const [isUnrepairableModalOpen, setIsUnrepairableModalOpen] = useState(false);
+    const [unrepairableReason, setUnrepairableReason] = useState('');
+    const [selectedPresetReason, setSelectedPresetReason] = useState('');
+    const [isSubmittingUnrepairable, setIsSubmittingUnrepairable] = useState(false);
     const [previewImage, setPreviewImage] = useState(null);
     const loadJob = async () => {
         if (!id)
@@ -93,6 +98,12 @@ export default function JobDetailScreen() {
     const handleStatusClick = (newStatus) => {
         if (!job)
             return;
+        if (newStatus === 'unrepairable') {
+            setUnrepairableReason(job.unrepairableReason || '');
+            setSelectedPresetReason('');
+            setIsUnrepairableModalOpen(true);
+            return;
+        }
         if (newStatus === 'delivered') {
             setDeliveryImei(job.serialOrImei || '');
             setHasWarranty(job.warranty?.hasWarranty ?? false);
@@ -123,6 +134,28 @@ export default function JobDetailScreen() {
         }
         else {
             handleUpdateStatus(newStatus);
+        }
+    };
+    const handleConfirmUnrepairable = async () => {
+        const finalReason = (selectedPresetReason || unrepairableReason || '').trim();
+        if (!finalReason) {
+            Alert.alert('Reason Required', 'Please choose or enter a reason why this device is unrepairable.');
+            return;
+        }
+        setIsSubmittingUnrepairable(true);
+        try {
+            const updated = await api.updateJobStatus(job._id, 'unrepairable', {
+                unrepairableReason: finalReason,
+            });
+            if (updated) {
+                setJob({ ...updated });
+                setIsUnrepairableModalOpen(false);
+                Alert.alert('Status Updated', 'Device has been marked as Unrepairable.');
+            }
+        } catch (e) {
+            Alert.alert('Update Failed', e.response?.data?.message || 'Failed to update status.');
+        } finally {
+            setIsSubmittingUnrepairable(false);
         }
     };
     const handleUpdateStatus = async (newStatus) => {
@@ -249,7 +282,7 @@ export default function JobDetailScreen() {
         {/* Top Banner Card */}
         <View style={styles.topCard}>
           <View style={styles.headerRow}>
-            <DeviceIcon type={job.deviceType} size={24}/>
+            <DeviceIcon type={job.orderType === 'accessory' ? 'accessory' : job.deviceType} size={24}/>
             <View style={styles.titleInfo}>
               <View style={styles.jobIdRow}>
                 <View style={styles.jobIdBadge}>
@@ -265,13 +298,22 @@ export default function JobDetailScreen() {
                 </Text>
               </View>
               <Text style={styles.deviceName}>
-                {job.brand} {job.model}
+                {job.orderType === 'accessory'
+                  ? (job.productName || 'Accessory Item')
+                  : `${job.brand || ''} ${job.model || ''}`}
               </Text>
             </View>
-            <StatusBadge status={job.status} size="md"/>
+            {job.orderType === 'accessory' ? (
+              <View style={styles.directSaleDetailBadge}>
+                <Ionicons name="checkmark-circle" size={13} color="#059669" />
+                <Text style={styles.directSaleDetailBadgeText}>Direct Sale</Text>
+              </View>
+            ) : (
+              <StatusBadge status={job.status} size="md"/>
+            )}
           </View>
 
-          {job.serialOrImei || job.passcodePattern ? (<View style={styles.deviceMetaRow}>
+          {job.orderType !== 'accessory' && (job.serialOrImei || job.passcodePattern) ? (<View style={styles.deviceMetaRow}>
               {job.serialOrImei && (<View style={styles.metaItem}>
                   <Text style={styles.metaLabel}>IMEI/Serial:</Text>
                   <Text style={styles.metaVal}>{job.serialOrImei}</Text>
@@ -284,6 +326,14 @@ export default function JobDetailScreen() {
 
           <View style={styles.topCardActionRow}>
             <Pressable
+              style={styles.editCardHeaderBtn}
+              onPress={() => router.push({ pathname: '/job/new', params: { editJobId: job._id || job.id || id } })}
+            >
+              <Ionicons name="create-outline" size={14} color={Colors.primary} />
+              <Text style={styles.editCardHeaderBtnText}>Edit {job.orderType === 'accessory' ? 'Sale' : 'Job Card'}</Text>
+            </Pressable>
+
+            <Pressable
               style={styles.viewInvoiceHeaderBtn}
               onPress={() => router.push(`/invoice/${job._id || job.id || id}`)}
             >
@@ -292,6 +342,26 @@ export default function JobDetailScreen() {
             </Pressable>
           </View>
         </View>
+
+        {/* Unrepairable Alert Card */}
+        {job.status === 'unrepairable' && (
+          <View style={styles.unrepairableCard}>
+            <View style={styles.unrepairableHeader}>
+              <View style={styles.unrepairableIconCircle}>
+                <Ionicons name="close-circle" size={20} color="#DC2626" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.unrepairableTitle}>Device Marked as Unrepairable</Text>
+                <Text style={styles.unrepairableReasonSub}>
+                  {job.unrepairableReason || 'Reason not specified'}
+                </Text>
+              </View>
+              <View style={styles.unrepairableStatusPill}>
+                <Text style={styles.unrepairableStatusPillText}>UNREPAIRABLE</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Warranty Active Card (if applicable) */}
         {job.warranty?.hasWarranty && (<View style={styles.warrantyCard}>
@@ -367,14 +437,68 @@ export default function JobDetailScreen() {
           </View>
         </View>
 
-        {/* Problem Description */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Reported Problem</Text>
-          <Text style={styles.problemDesc}>{job.problemDescription}</Text>
-        </View>
+        {/* Problem Description — ONLY for repairs */}
+        {job.orderType !== 'accessory' && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Reported Problem</Text>
+            <Text style={styles.problemDesc}>{job.problemDescription}</Text>
+          </View>
+        )}
 
-        {/* Device Photos if uploaded */}
-        {job.photos && job.photos.length > 0 && (<View style={styles.card}>
+        {/* Sold Product Details Card — ONLY for accessories */}
+        {job.orderType === 'accessory' && (
+          <View style={styles.card}>
+            <View style={styles.cardHeaderBetween}>
+              <Text style={styles.cardTitle}>Sold Product Details</Text>
+              <View style={styles.directSalePill}>
+                <Ionicons name="bag-check" size={13} color="#059669" />
+                <Text style={styles.directSalePillText}>Direct Sale</Text>
+              </View>
+            </View>
+
+            <View style={styles.productDetailsBox}>
+              <View style={styles.productDetailRow}>
+                <Text style={styles.productDetailLabel}>Product Name</Text>
+                <Text style={styles.productDetailValueBold}>{job.productName || 'Accessory Item'}</Text>
+              </View>
+
+              <View style={styles.productDetailRow}>
+                <Text style={styles.productDetailLabel}>Category / Type</Text>
+                <Text style={styles.productDetailValue}>Retail Merchandise</Text>
+              </View>
+
+              <View style={styles.productDetailRow}>
+                <Text style={styles.productDetailLabel}>Selling Price</Text>
+                <Text style={styles.productDetailPrice}>
+                  ₹{(job.cost?.final || job.productPrice || 0).toLocaleString('en-IN')}
+                </Text>
+              </View>
+
+              <View style={styles.productDetailRow}>
+                <Text style={styles.productDetailLabel}>Sale Date</Text>
+                <Text style={styles.productDetailValue}>
+                  {new Date(job.createdAt).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              </View>
+
+              <View style={styles.productDetailRow}>
+                <Text style={styles.productDetailLabel}>Payment Mode</Text>
+                <Text style={styles.productDetailValueBold}>
+                  {(job.payments?.[0]?.mode || 'cash').toUpperCase()}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Device Photos if uploaded (repair only) */}
+        {job.orderType !== 'accessory' && job.photos && job.photos.length > 0 && (<View style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <Text style={styles.cardTitle}>Product Photos ({job.photos.length})</Text>
             </View>
@@ -403,31 +527,43 @@ export default function JobDetailScreen() {
             </ScrollView>
           </View>)}
 
-        {/* Pipeline Status Controller */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Update Job Status</Text>
-          <Text style={styles.pipelineHelp}>
-            Tap any status to update. Customer SMS is sent automatically on Repaired and Delivered.
-          </Text>
+        {/* Pipeline Status Controller — ONLY for repairs! (No update status required for accessory direct sale) */}
+        {job.orderType !== 'accessory' && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Update Job Status</Text>
+            <Text style={styles.pipelineHelp}>
+              Tap any status to update. Customer SMS is sent automatically on Repaired and Delivered.
+            </Text>
 
-          <View style={styles.statusButtonsGrid}>
-            {statusFlow.map((st) => {
-            const isCurrent = job.status === st;
-            return (<Pressable key={st} style={[
-                    styles.statusSelectBtn,
-                    isCurrent && styles.statusSelectBtnCurrent,
-                ]} onPress={() => handleStatusClick(st)}>
-                  <Text style={[
-                    styles.statusSelectText,
-                    isCurrent && styles.statusSelectTextCurrent,
-                ]}>
-                    {st.replace('_', ' ').toUpperCase()}
-                  </Text>
-                  {isCurrent && <Ionicons name="checkmark-circle" size={16} color="#FFFFFF"/>}
-                </Pressable>);
-        })}
+            <View style={styles.statusButtonsGrid}>
+              {statusFlow.map((st) => {
+                const isCurrent = job.status === st;
+                const isUnrepairable = st === 'unrepairable';
+                return (
+                  <Pressable
+                    key={st}
+                    style={[
+                      styles.statusSelectBtn,
+                      isCurrent && (isUnrepairable ? styles.statusSelectBtnUnrepairable : styles.statusSelectBtnCurrent),
+                    ]}
+                    onPress={() => handleStatusClick(st)}
+                  >
+                    <Text
+                      style={[
+                        styles.statusSelectText,
+                        isCurrent && styles.statusSelectTextCurrent,
+                        !isCurrent && isUnrepairable && { color: '#DC2626' },
+                      ]}
+                    >
+                      {st.replace('_', ' ').toUpperCase()}
+                    </Text>
+                    {isCurrent && <Ionicons name="checkmark-circle" size={16} color="#FFFFFF"/>}
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Financials & Payments — Only shown when job status is delivered */}
         {job.status === 'delivered' && (<View style={styles.card}>
@@ -441,19 +577,19 @@ export default function JobDetailScreen() {
 
             <View style={styles.costSummaryRow}>
               <View style={styles.costBox}>
-                <Text style={styles.costBoxLabel}>Estimate</Text>
-                <Text style={styles.costBoxVal}>₹{job.cost.final.toLocaleString('en-IN')}</Text>
+                <Text style={styles.costBoxLabel}>{job.orderType === 'accessory' ? 'Selling Price' : 'Estimate'}</Text>
+                <Text style={styles.costBoxVal}>₹{(job.cost?.final || job.productPrice || 0).toLocaleString('en-IN')}</Text>
               </View>
               <View style={styles.costBox}>
                 <Text style={styles.costBoxLabel}>Paid</Text>
                 <Text style={[styles.costBoxVal, { color: Colors.emerald }]}>
-                  ₹{job.cost.advancePaid.toLocaleString('en-IN')}
+                  ₹{(job.cost?.advancePaid ?? job.cost?.final ?? 0).toLocaleString('en-IN')}
                 </Text>
               </View>
               <View style={styles.costBox}>
                 <Text style={styles.costBoxLabel}>Balance Due</Text>
                 <Text style={[styles.costBoxVal, { color: hasDue ? Colors.rose : Colors.emerald }]}>
-                  ₹{job.cost.due.toLocaleString('en-IN')}
+                  ₹{(job.cost?.due || 0).toLocaleString('en-IN')}
                 </Text>
               </View>
             </View>
@@ -756,6 +892,112 @@ export default function JobDetailScreen() {
             (job.cost.advancePaid + Number(payAmount)) > job.cost.final} onPress={handleRecordPayment}>
                   <Text style={styles.submitPayBtnText}>Confirm Payment</Text>
                 </Pressable>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Unrepairable Reason Modal */}
+        <Modal
+          visible={isUnrepairableModalOpen}
+          transparent
+          animationType="slide"
+          statusBarTranslucent
+          onRequestClose={() => setIsUnrepairableModalOpen(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+            style={styles.modalOverlay}
+          >
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => setIsUnrepairableModalOpen(false)}
+            />
+            <FloatingCloseButton onPress={() => setIsUnrepairableModalOpen(false)} />
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderTitleRow}>
+                  <View style={[styles.modalIconBox, { backgroundColor: '#FEE2E2' }]}>
+                    <Ionicons name="alert-circle" size={22} color="#DC2626" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalTitle}>Mark as Unrepairable</Text>
+                    <Text style={styles.modalHeaderSub}>Specify the reason for failure or cancellation</Text>
+                  </View>
+                </View>
+              </View>
+
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>Select Reason</Text>
+                <View style={styles.reasonChipsContainer}>
+                  {[
+                    'Motherboard / CPU Damaged',
+                    'Spare Parts Unavailable',
+                    'Severe Liquid Damage',
+                    'Beyond Economical Repair',
+                    'Customer Rejected Estimate',
+                  ].map((reason) => {
+                    const isSelected = selectedPresetReason === reason;
+                    return (
+                      <Pressable
+                        key={reason}
+                        style={[styles.reasonChip, isSelected && styles.reasonChipSelected]}
+                        onPress={() => {
+                          setSelectedPresetReason(reason);
+                          setUnrepairableReason(reason);
+                        }}
+                      >
+                        <Text style={[styles.reasonChipText, isSelected && styles.reasonChipTextSelected]}>
+                          {reason}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.inputLabel, { marginTop: 14 }]}>Or Enter Custom Reason / Notes</Text>
+                <TextInput
+                  style={[styles.modalInput, styles.reasonTextInput]}
+                  placeholder="Describe why device cannot be repaired..."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  numberOfLines={3}
+                  value={unrepairableReason}
+                  onChangeText={(val) => {
+                    setUnrepairableReason(val);
+                    if (selectedPresetReason && val !== selectedPresetReason) {
+                      setSelectedPresetReason('');
+                    }
+                  }}
+                />
+
+                <View style={styles.unrepairableModalActions}>
+                  <Pressable
+                    disabled={isSubmittingUnrepairable}
+                    style={styles.modalCancelBtn}
+                    onPress={() => setIsUnrepairableModalOpen(false)}
+                  >
+                    <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                  </Pressable>
+
+                  <Pressable
+                    disabled={isSubmittingUnrepairable}
+                    style={[
+                      styles.confirmUnrepairableBtn,
+                      isSubmittingUnrepairable && { opacity: 0.8 },
+                    ]}
+                    onPress={handleConfirmUnrepairable}
+                  >
+                    {isSubmittingUnrepairable ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="close-circle" size={18} color="#FFFFFF" />
+                        <Text style={styles.confirmUnrepairableBtnText}>Confirm Unrepairable</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </View>
               </ScrollView>
             </View>
           </KeyboardAvoidingView>
@@ -1743,5 +1985,184 @@ const styles = StyleSheet.create({
     fullScreenImage: {
         width: '100%',
         height: '80%',
+    },
+    editCardHeaderBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: '#EFF6FF',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+        marginRight: 8,
+    },
+    editCardHeaderBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.primary,
+    },
+    directSaleDetailBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+    },
+    directSaleDetailBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#059669',
+    },
+    unrepairableCard: {
+        backgroundColor: '#FEF2F2',
+        borderRadius: 16,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        marginBottom: 16,
+    },
+    unrepairableHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    unrepairableIconCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#FEE2E2',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    unrepairableTitle: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#991B1B',
+    },
+    unrepairableReasonSub: {
+        fontSize: 12,
+        color: '#B91C1C',
+        marginTop: 2,
+    },
+    unrepairableStatusPill: {
+        backgroundColor: '#DC2626',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    unrepairableStatusPillText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        letterSpacing: 0.5,
+    },
+    directSalePill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    directSalePillText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#059669',
+    },
+    productDetailsBox: {
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        gap: 10,
+    },
+    productDetailRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    productDetailLabel: {
+        fontSize: 13,
+        color: '#64748B',
+        fontWeight: '500',
+    },
+    productDetailValue: {
+        fontSize: 13,
+        color: '#334155',
+        fontWeight: '600',
+    },
+    productDetailValueBold: {
+        fontSize: 13,
+        color: '#0F172A',
+        fontWeight: '700',
+    },
+    productDetailPrice: {
+        fontSize: 16,
+        color: '#059669',
+        fontWeight: '800',
+    },
+    statusSelectBtnUnrepairable: {
+        backgroundColor: '#DC2626',
+    },
+    reasonChipsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 10,
+    },
+    reasonChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: 20,
+        backgroundColor: '#F1F5F9',
+        borderWidth: 1,
+        borderColor: '#CBD5E1',
+    },
+    reasonChipSelected: {
+        backgroundColor: '#FEE2E2',
+        borderColor: '#DC2626',
+    },
+    reasonChipText: {
+        fontSize: 12,
+        color: '#475569',
+        fontWeight: '600',
+    },
+    reasonChipTextSelected: {
+        color: '#DC2626',
+        fontWeight: '700',
+    },
+    reasonTextInput: {
+        height: 72,
+        textAlignVertical: 'top',
+        paddingTop: 10,
+    },
+    unrepairableModalActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginTop: 18,
+    },
+    confirmUnrepairableBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: '#DC2626',
+        paddingVertical: 13,
+        borderRadius: 12,
+    },
+    confirmUnrepairableBtnText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '700',
     },
 });
