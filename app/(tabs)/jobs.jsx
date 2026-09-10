@@ -40,7 +40,7 @@ export default function JobsScreen() {
   const router = useRouter();
   const [jobs, setJobs] = useState([]);
   const [activeTab, setActiveTab] = useState('repair'); // 'repair' | 'accessory'
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [selectedDateRange, setSelectedDateRange] = useState('all');
   const [customStartDate, setCustomStartDate] = useState(undefined);
   const [customEndDate, setCustomEndDate] = useState(undefined);
@@ -68,7 +68,7 @@ export default function JobsScreen() {
     setIsLoading(true);
     try {
       const data = await api.getJobs({
-        status: selectedStatus === 'all' ? undefined : selectedStatus,
+        status: selectedStatuses.length === 0 ? undefined : selectedStatuses.join(','),
         search: searchQuery,
         dateRange: selectedDateRange,
         startDate: customStartDate,
@@ -85,7 +85,7 @@ export default function JobsScreen() {
     fetchJobs();
   }, [
     activeTab,
-    selectedStatus,
+    selectedStatuses,
     selectedDateRange,
     customStartDate,
     customEndDate,
@@ -98,6 +98,11 @@ export default function JobsScreen() {
 
     // Filter by orderType tab
     list = list.filter((j) => (j.orderType || 'repair') === activeTab);
+
+    // Multi-select status filter
+    if (selectedStatuses.length > 0) {
+      list = list.filter((j) => selectedStatuses.includes(j.status));
+    }
 
     // Device Type filter (for repairs)
     if (activeTab === 'repair' && filterDeviceType !== 'all') {
@@ -124,7 +129,7 @@ export default function JobsScreen() {
     }
 
     return list;
-  }, [jobs, activeTab, filterDeviceType, filterPaymentStatus, filterSortBy]);
+  }, [jobs, activeTab, selectedStatuses, filterDeviceType, filterPaymentStatus, filterSortBy]);
 
   const hasActiveFilters =
     filterDeviceType !== 'all' ||
@@ -144,7 +149,7 @@ export default function JobsScreen() {
 
   const handleClearAll = () => {
     setSearchQuery('');
-    setSelectedStatus('all');
+    setSelectedStatuses([]);
     setSelectedDateRange('all');
     setCustomStartDate(undefined);
     setCustomEndDate(undefined);
@@ -152,8 +157,12 @@ export default function JobsScreen() {
   };
 
   const getSelectedStatusLabel = () => {
-    const found = statusOptions.find((s) => s.key === selectedStatus);
-    return found ? found.label : 'All Status';
+    if (!selectedStatuses || selectedStatuses.length === 0) return 'All Status';
+    if (selectedStatuses.length === 1) {
+      const found = statusOptions.find((s) => s.key === selectedStatuses[0]);
+      return found ? found.label : selectedStatuses[0];
+    }
+    return `${selectedStatuses.length} Statuses`;
   };
 
   const getSelectedDateLabel = () => {
@@ -244,19 +253,19 @@ export default function JobsScreen() {
         <Pressable
           style={[
             styles.filterRowBtn,
-            selectedStatus !== 'all' && styles.filterRowBtnActive,
+            selectedStatuses.length > 0 && styles.filterRowBtnActive,
           ]}
           onPress={() => setIsStatusMenuOpen(true)}
         >
           <Ionicons
             name="flag-outline"
             size={15}
-            color={selectedStatus !== 'all' ? Colors.primary : '#0F172A'}
+            color={selectedStatuses.length > 0 ? Colors.primary : '#0F172A'}
           />
           <Text
             style={[
               styles.filterRowBtnText,
-              selectedStatus !== 'all' && styles.filterRowBtnTextActive,
+              selectedStatuses.length > 0 && styles.filterRowBtnTextActive,
             ]}
             numberOfLines={1}
           >
@@ -265,7 +274,7 @@ export default function JobsScreen() {
           <Ionicons
             name="chevron-down"
             size={13}
-            color={selectedStatus !== 'all' ? Colors.primary : '#64748B'}
+            color={selectedStatuses.length > 0 ? Colors.primary : '#64748B'}
           />
         </Pressable>
 
@@ -356,8 +365,8 @@ export default function JobsScreen() {
             <Text style={styles.emptySubtitle}>
               {searchQuery
                 ? `No results match "${searchQuery}"`
-                : selectedStatus !== 'all'
-                ? `No orders with status "${getSelectedStatusLabel()}"`
+                : selectedStatuses.length > 0
+                ? `No orders matching the selected status filters`
                 : activeTab === 'accessory'
                 ? 'Record an accessory sale using the + button above'
                 : 'Create a repair job card using the + button above'}
@@ -369,7 +378,7 @@ export default function JobsScreen() {
         }
       />
 
-      {/* 1. Status Dropdown Popup Modal (as shown in mockup right preview) */}
+      {/* 1. Status Dropdown Popup Modal (Multiselect) */}
       <Modal
         visible={isStatusMenuOpen}
         transparent
@@ -380,16 +389,51 @@ export default function JobsScreen() {
           style={styles.dropdownModalOverlay}
           onPress={() => setIsStatusMenuOpen(false)}
         >
-          <View style={styles.statusDropdownCard}>
+          <Pressable style={styles.statusDropdownCard} onPress={(e) => e.stopPropagation?.()}>
             <View style={styles.statusDropdownHeader}>
               <Text style={styles.statusDropdownTitle}>Select Status</Text>
-              <Pressable onPress={() => setIsStatusMenuOpen(false)}>
-                <Ionicons name="close" size={18} color="#64748B" />
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                {selectedStatuses.length > 0 && (
+                  <Pressable onPress={() => setSelectedStatuses([])}>
+                    <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '700' }}>Reset</Text>
+                  </Pressable>
+                )}
+                <Pressable onPress={() => setIsStatusMenuOpen(false)}>
+                  <Ionicons name="close" size={18} color="#64748B" />
+                </Pressable>
+              </View>
             </View>
 
-            {statusOptions.map((opt) => {
-              const isSelected = selectedStatus === opt.key;
+            {/* All Status Option */}
+            <Pressable
+              style={[
+                styles.statusDropdownItem,
+                selectedStatuses.length === 0 && styles.statusDropdownItemActive,
+              ]}
+              onPress={() => {
+                setSelectedStatuses([]);
+              }}
+            >
+              <View style={styles.statusDropdownItemLeft}>
+                <Ionicons
+                  name={selectedStatuses.length === 0 ? 'checkbox' : 'square-outline'}
+                  size={18}
+                  color={selectedStatuses.length === 0 ? Colors.primary : '#94A3B8'}
+                />
+                <Text
+                  style={[
+                    styles.statusDropdownItemText,
+                    selectedStatuses.length === 0 && styles.statusDropdownItemTextActive,
+                  ]}
+                >
+                  All Status
+                </Text>
+              </View>
+            </Pressable>
+
+            {/* Specific Status Options */}
+            {statusOptions.filter((opt) => opt.key !== 'all').map((opt) => {
+              const isSelected = selectedStatuses.includes(opt.key);
               return (
                 <Pressable
                   key={opt.key}
@@ -398,25 +442,25 @@ export default function JobsScreen() {
                     isSelected && styles.statusDropdownItemActive,
                   ]}
                   onPress={() => {
-                    setSelectedStatus(opt.key);
-                    setIsStatusMenuOpen(false);
+                    if (isSelected) {
+                      setSelectedStatuses(selectedStatuses.filter((s) => s !== opt.key));
+                    } else {
+                      setSelectedStatuses([...selectedStatuses, opt.key]);
+                    }
                   }}
                 >
                   <View style={styles.statusDropdownItemLeft}>
-                    {opt.key === 'all' ? (
-                      <Ionicons
-                        name="checkmark-circle-outline"
-                        size={16}
-                        color={isSelected ? Colors.primary : '#64748B'}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.statusDot,
-                          { backgroundColor: opt.dot },
-                        ]}
-                      />
-                    )}
+                    <Ionicons
+                      name={isSelected ? 'checkbox' : 'square-outline'}
+                      size={18}
+                      color={isSelected ? Colors.primary : '#94A3B8'}
+                    />
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: opt.dot },
+                      ]}
+                    />
                     <Text
                       style={[
                         styles.statusDropdownItemText,
@@ -426,18 +470,21 @@ export default function JobsScreen() {
                       {opt.label}
                     </Text>
                   </View>
-
-                  {isSelected && (
-                    <Ionicons
-                      name="checkmark"
-                      size={16}
-                      color={Colors.primary}
-                    />
-                  )}
                 </Pressable>
               );
             })}
-          </View>
+
+            <Pressable
+              style={[styles.modalApplyBtn, { marginTop: 12 }]}
+              onPress={() => setIsStatusMenuOpen(false)}
+            >
+              <Text style={styles.modalApplyBtnText}>
+                {selectedStatuses.length === 0
+                  ? 'Showing All Statuses'
+                  : `Apply (${selectedStatuses.length} selected)`}
+              </Text>
+            </Pressable>
+          </Pressable>
         </Pressable>
       </Modal>
 

@@ -1,10 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { Pressable, View, StyleSheet, Platform, Text, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { api } from '../../services/api';
+import { MaterialBadge } from '../../components/MaterialBadge';
+
 export default function TabLayout() {
     const router = useRouter();
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchUnread = async () => {
+            try {
+                const list = await api.getNotifications();
+                if (isMounted && Array.isArray(list)) {
+                    const unread = list.filter((n) => !n.read).length;
+                    setUnreadCount(unread);
+                }
+            } catch {
+                // ignore error
+            }
+        };
+        fetchUnread();
+        const interval = setInterval(fetchUnread, 30000);
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
+    }, []);
+
     return (<Tabs screenOptions={{
             tabBarActiveTintColor: Colors.primary,
             tabBarInactiveTintColor: '#64748B',
@@ -48,8 +74,9 @@ export default function TabLayout() {
             </View>),
             tabBarIcon: ({ color, focused }) => (<Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color}/>),
             headerRight: () => (<Pressable onPress={() => router.push('/notifications')} style={({ pressed }) => [styles.headerNotifBtn, { opacity: pressed ? 0.7 : 1 }]}>
-              <Ionicons name="notifications-outline" size={22} color="#0F172A"/>
-              <View style={styles.notifBadgeDot}/>
+              <MaterialBadge badgeContent={unreadCount} color="error">
+                <Ionicons name="notifications-outline" size={22} color="#0F172A"/>
+              </MaterialBadge>
             </Pressable>),
         }}/>
       <Tabs.Screen name="jobs" options={{

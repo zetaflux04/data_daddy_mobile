@@ -9,6 +9,7 @@ import { Colors } from '../../constants/Colors';
 import { AppHeader } from '../../components/AppHeader';
 import { S3Image } from '../../components/S3Image';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
+import { OutlinedTextInput } from '../../components/OutlinedTextInput';
 const deviceTypes = [
     { type: 'mobile', label: 'Mobile', icon: 'phone-portrait-outline' },
     { type: 'laptop', label: 'Laptop', icon: 'laptop-outline' },
@@ -63,14 +64,14 @@ export default function NewJobScreen() {
     const [serialOrImei, setSerialOrImei] = useState('');
     const [passcode, setPasscode] = useState('');
     // Problem selection
-    const [selectedProblem, setSelectedProblem] = useState('');
+    const [selectedProblems, setSelectedProblems] = useState([]);
     const [customProblem, setCustomProblem] = useState('');
     const [isProblemModalOpen, setIsProblemModalOpen] = useState(false);
     const [photos, setPhotos] = useState([]);
     const [previewImage, setPreviewImage] = useState(null);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     // Accessory selection
-    const [selectedAccessory, setSelectedAccessory] = useState('');
+    const [selectedAccessories, setSelectedAccessories] = useState([]);
     const [customAccessory, setCustomAccessory] = useState('');
     const [isAccessoryModalOpen, setIsAccessoryModalOpen] = useState(false);
     const [productPrice, setProductPrice] = useState('');
@@ -103,14 +104,24 @@ export default function NewJobScreen() {
                     setCustomerPhone(existing.customerSnapshot?.phone || '');
                     if (existing.orderType === 'accessory') {
                         const existingProd = existing.productName || '';
-                        if (ACCESSORY_OPTIONS.filter((o) => o !== 'Others').includes(existingProd)) {
-                            setSelectedAccessory(existingProd);
-                            setCustomAccessory('');
-                        } else if (existingProd) {
-                            setSelectedAccessory('Others');
-                            setCustomAccessory(existingProd);
+                        if (existingProd) {
+                            const rawItems = existingProd.split(',').map((s) => s.trim()).filter(Boolean);
+                            const known = [];
+                            const others = [];
+                            rawItems.forEach((item) => {
+                                if (ACCESSORY_OPTIONS.filter((o) => o !== 'Others').includes(item)) {
+                                    known.push(item);
+                                } else {
+                                    others.push(item);
+                                }
+                            });
+                            if (others.length > 0) {
+                                known.push('Others');
+                                setCustomAccessory(others.join(', '));
+                            }
+                            setSelectedAccessories(known);
                         } else {
-                            setSelectedAccessory('');
+                            setSelectedAccessories([]);
                             setCustomAccessory('');
                         }
                         setProductPrice(String(existing.cost?.final || existing.productPrice || ''));
@@ -127,14 +138,24 @@ export default function NewJobScreen() {
                         setSerialOrImei(existing.serialOrImei || '');
                         setPasscode(existing.passcodePattern || '');
                         const existingProb = existing.problemDescription || '';
-                        if (PROBLEM_OPTIONS.filter((o) => o !== 'Others').includes(existingProb)) {
-                            setSelectedProblem(existingProb);
-                            setCustomProblem('');
-                        } else if (existingProb) {
-                            setSelectedProblem('Others');
-                            setCustomProblem(existingProb);
+                        if (existingProb) {
+                            const rawProbs = existingProb.split(',').map((s) => s.trim()).filter(Boolean);
+                            const known = [];
+                            const others = [];
+                            rawProbs.forEach((p) => {
+                                if (PROBLEM_OPTIONS.filter((o) => o !== 'Others').includes(p)) {
+                                    known.push(p);
+                                } else {
+                                    others.push(p);
+                                }
+                            });
+                            if (others.length > 0) {
+                                known.push('Others');
+                                setCustomProblem(others.join(', '));
+                            }
+                            setSelectedProblems(known);
                         } else {
-                            setSelectedProblem('');
+                            setSelectedProblems([]);
                             setCustomProblem('');
                         }
                         setPhotos((existing.photos || []).map(p => (typeof p === 'string' ? { url: p } : p)));
@@ -368,8 +389,15 @@ export default function NewJobScreen() {
         }
     };
     const handleSubmit = async () => {
-        const finalProblem = selectedProblem === 'Others' ? customProblem.trim() : selectedProblem.trim();
-        const finalProduct = selectedAccessory === 'Others' ? customAccessory.trim() : selectedAccessory.trim();
+        const problemParts = selectedProblems
+            .map((p) => (p === 'Others' ? customProblem.trim() : p.trim()))
+            .filter(Boolean);
+        const finalProblem = problemParts.join(', ');
+
+        const accessoryParts = selectedAccessories
+            .map((a) => (a === 'Others' ? customAccessory.trim() : a.trim()))
+            .filter(Boolean);
+        const finalProduct = accessoryParts.join(', ');
 
         if (!customerName.trim() || !customerPhone.trim()) {
             Alert.alert('Missing Customer', 'Please enter customer name and phone number.');
@@ -518,11 +546,24 @@ export default function NewJobScreen() {
           <View style={styles.sectionCard}>
             <Text style={styles.sectionHeader}>1. Customer Information</Text>
 
-            <Text style={styles.fieldLabel}>Customer Full Name *</Text>
-            <TextInput style={styles.textInput} placeholder="e.g. Ramesh Kumar" placeholderTextColor="#94A3B8" value={customerName} onChangeText={setCustomerName}/>
+            <OutlinedTextInput
+              label="Customer Full Name"
+              required
+              placeholder="e.g. Ramesh Kumar"
+              value={customerName}
+              onChangeText={setCustomerName}
+            />
 
-            <Text style={styles.fieldLabel}>Mobile Phone Number *</Text>
-            <TextInput style={styles.textInput} placeholder="10-digit number (e.g. 9876543210)" placeholderTextColor="#94A3B8" keyboardType="phone-pad" maxLength={10} value={customerPhone} onChangeText={setCustomerPhone}/>
+            <OutlinedTextInput
+              label="Mobile Phone Number"
+              required
+              placeholder="10-digit number (e.g. 9876543210)"
+              startAdornment="+91"
+              keyboardType="phone-pad"
+              maxLength={10}
+              value={customerPhone}
+              onChangeText={setCustomerPhone}
+            />
           </View>
 
           {/* Order Type Tab Switcher */}
@@ -564,48 +605,68 @@ export default function NewJobScreen() {
 
                 <View style={styles.twoCol}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Brand *</Text>
-                    <TextInput style={styles.textInput} placeholder="e.g. Apple" placeholderTextColor="#94A3B8" value={brand} onChangeText={setBrand}/>
+                    <OutlinedTextInput
+                      label="Brand"
+                      required
+                      placeholder="e.g. Apple"
+                      value={brand}
+                      onChangeText={setBrand}
+                    />
                   </View>
                   <View style={{ width: 12 }}/>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Model *</Text>
-                    <TextInput style={styles.textInput} placeholder="e.g. iPhone 13" placeholderTextColor="#94A3B8" value={model} onChangeText={setModel}/>
+                    <OutlinedTextInput
+                      label="Model"
+                      required
+                      placeholder="e.g. iPhone 13"
+                      value={model}
+                      onChangeText={setModel}
+                    />
                   </View>
                 </View>
 
                 <View style={styles.twoCol}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>IMEI / Serial (Opt)</Text>
-                    <TextInput style={styles.textInput} placeholder="Optional" placeholderTextColor="#94A3B8" value={serialOrImei} onChangeText={setSerialOrImei}/>
+                    <OutlinedTextInput
+                      label="IMEI / Serial (Opt)"
+                      placeholder="Optional"
+                      value={serialOrImei}
+                      onChangeText={setSerialOrImei}
+                    />
                   </View>
                   <View style={{ width: 12 }}/>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Passcode / PIN</Text>
-                    <TextInput style={styles.textInput} placeholder="e.g. 1234" placeholderTextColor="#94A3B8" value={passcode} onChangeText={setPasscode}/>
+                    <OutlinedTextInput
+                      label="Passcode / PIN"
+                      placeholder="e.g. 1234"
+                      value={passcode}
+                      onChangeText={setPasscode}
+                    />
                   </View>
                 </View>
 
                 <Text style={styles.fieldLabel}>Problem Description *</Text>
                 <Pressable
-                  style={[styles.dropdownSelector, !selectedProblem && styles.dropdownSelectorPlaceholder]}
+                  style={[styles.dropdownSelector, selectedProblems.length === 0 && styles.dropdownSelectorPlaceholder]}
                   onPress={() => setIsProblemModalOpen(true)}
                 >
-                  <Text style={[styles.dropdownSelectorText, !selectedProblem && styles.placeholderText]}>
-                    {selectedProblem || 'Select problem description...'}
+                  <Text
+                    style={[styles.dropdownSelectorText, selectedProblems.length === 0 && styles.placeholderText]}
+                    numberOfLines={2}
+                  >
+                    {selectedProblems.length > 0 ? selectedProblems.join(', ') : 'Select problem descriptions...'}
                   </Text>
                   <Ionicons name="chevron-down" size={18} color="#64748B" />
                 </Pressable>
 
-                {selectedProblem === 'Others' && (
+                {selectedProblems.includes('Others') && (
                   <View style={{ marginTop: 10 }}>
-                    <Text style={styles.fieldLabel}>Describe Problem / Fault *</Text>
-                    <TextInput
-                      style={[styles.textInput, styles.textArea]}
-                      placeholder="Describe broken screen, water damage, battery drain, no display, etc."
-                      placeholderTextColor="#94A3B8"
+                    <OutlinedTextInput
+                      label="Describe Problem / Fault"
+                      required
                       multiline
                       numberOfLines={3}
+                      placeholder="Describe broken screen, water damage, battery drain, no display, etc."
                       value={customProblem}
                       onChangeText={setCustomProblem}
                     />
@@ -660,11 +721,10 @@ export default function NewJobScreen() {
 
                 <View style={styles.twoCol}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Estimated Cost (₹)</Text>
-                    <TextInput
-                      style={styles.textInput}
+                    <OutlinedTextInput
+                      label="Estimated Cost (₹)"
                       placeholder="e.g. 2500"
-                      placeholderTextColor="#94A3B8"
+                      startAdornment="₹"
                       keyboardType="numeric"
                       returnKeyType="next"
                       onSubmitEditing={() => advancePaidInputRef.current?.focus()}
@@ -675,19 +735,19 @@ export default function NewJobScreen() {
                   </View>
                   <View style={{ width: 12 }}/>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Advance Paid (₹)</Text>
-                    <TextInput
+                    <OutlinedTextInput
                       ref={advancePaidInputRef}
-                      style={[
-                        styles.textInput,
-                        Number(advancePaid) > Number(estimatedCost) &&
-                          Number(estimatedCost) > 0 && { borderColor: Colors.rose, borderWidth: 1.5 },
-                      ]}
+                      label="Advance Paid (₹)"
                       placeholder="e.g. 500"
-                      placeholderTextColor="#94A3B8"
+                      startAdornment="₹"
                       keyboardType="numeric"
                       returnKeyType="done"
                       onSubmitEditing={() => Keyboard.dismiss()}
+                      error={
+                        Number(advancePaid) > Number(estimatedCost) && Number(estimatedCost) > 0
+                          ? `Max ₹${estimatedCost}`
+                          : undefined
+                      }
                       value={advancePaid}
                       onChangeText={setAdvancePaid}
                       onFocus={handleCostFocus}
@@ -727,33 +787,35 @@ export default function NewJobScreen() {
 
               <Text style={styles.fieldLabel}>Product / Accessory Name *</Text>
               <Pressable
-                style={[styles.dropdownSelector, !selectedAccessory && styles.dropdownSelectorPlaceholder]}
+                style={[styles.dropdownSelector, selectedAccessories.length === 0 && styles.dropdownSelectorPlaceholder]}
                 onPress={() => setIsAccessoryModalOpen(true)}
               >
-                <Text style={[styles.dropdownSelectorText, !selectedAccessory && styles.placeholderText]}>
-                  {selectedAccessory || 'Select accessory product...'}
+                <Text
+                  style={[styles.dropdownSelectorText, selectedAccessories.length === 0 && styles.placeholderText]}
+                  numberOfLines={2}
+                >
+                  {selectedAccessories.length > 0 ? selectedAccessories.join(', ') : 'Select accessory products...'}
                 </Text>
                 <Ionicons name="chevron-down" size={18} color="#64748B" />
               </Pressable>
 
-              {selectedAccessory === 'Others' && (
+              {selectedAccessories.includes('Others') && (
                 <View style={{ marginTop: 10 }}>
-                  <Text style={styles.fieldLabel}>Enter Custom Accessory Name *</Text>
-                  <TextInput
-                    style={styles.textInput}
+                  <OutlinedTextInput
+                    label="Enter Custom Accessory Name"
+                    required
                     placeholder="e.g. OTG Adapter, Car Mount, Power Bank"
-                    placeholderTextColor="#94A3B8"
                     value={customAccessory}
                     onChangeText={setCustomAccessory}
                   />
                 </View>
               )}
 
-              <Text style={styles.fieldLabel}>Selling Price (₹) *</Text>
-              <TextInput
-                style={styles.textInput}
+              <OutlinedTextInput
+                label="Selling Price (₹)"
+                required
                 placeholder="e.g. 299"
-                placeholderTextColor="#94A3B8"
+                startAdornment="₹"
                 keyboardType="numeric"
                 returnKeyType="done"
                 onSubmitEditing={() => Keyboard.dismiss()}
@@ -902,7 +964,7 @@ export default function NewJobScreen() {
         </View>
       </Modal>
 
-      {/* Problem Selection Modal */}
+      {/* Problem Selection Modal (Multiselect) */}
       <Modal
         visible={isProblemModalOpen}
         transparent={true}
@@ -919,40 +981,58 @@ export default function NewJobScreen() {
             <View style={styles.pickerModalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="construct-outline" size={20} color={Colors.primary} />
-                <Text style={styles.pickerModalTitle}>Select Problem Description</Text>
+                <Text style={styles.pickerModalTitle}>Select Problem Descriptions</Text>
               </View>
+              {selectedProblems.length > 0 && (
+                <Pressable onPress={() => setSelectedProblems([])}>
+                  <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '700' }}>Clear</Text>
+                </Pressable>
+              )}
             </View>
 
             <ScrollView style={styles.pickerModalScroll} showsVerticalScrollIndicator={false}>
               {PROBLEM_OPTIONS.map((item) => {
-                const isSelected = selectedProblem === item;
+                const isSelected = selectedProblems.includes(item);
                 return (
                   <Pressable
                     key={item}
                     style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
                     onPress={() => {
-                      setSelectedProblem(item);
-                      if (item !== 'Others') {
+                      const updated = isSelected
+                        ? selectedProblems.filter((p) => p !== item)
+                        : [...selectedProblems, item];
+                      setSelectedProblems(updated);
+                      if (!updated.includes('Others')) {
                         setCustomProblem('');
                       }
-                      setIsProblemModalOpen(false);
                     }}
                   >
                     <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextSelected]}>
                       {item}
                     </Text>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
-                    )}
+                    <Ionicons
+                      name={isSelected ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={isSelected ? Colors.primary : '#94A3B8'}
+                    />
                   </Pressable>
                 );
               })}
             </ScrollView>
+
+            <Pressable
+              style={styles.pickerModalDoneBtn}
+              onPress={() => setIsProblemModalOpen(false)}
+            >
+              <Text style={styles.pickerModalDoneBtnText}>
+                Done ({selectedProblems.length} selected)
+              </Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
 
-      {/* Accessory Selection Modal */}
+      {/* Accessory Selection Modal (Multiselect) */}
       <Modal
         visible={isAccessoryModalOpen}
         transparent={true}
@@ -969,35 +1049,53 @@ export default function NewJobScreen() {
             <View style={styles.pickerModalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="bag-handle-outline" size={20} color={Colors.primary} />
-                <Text style={styles.pickerModalTitle}>Select Accessory Product</Text>
+                <Text style={styles.pickerModalTitle}>Select Accessory Products</Text>
               </View>
+              {selectedAccessories.length > 0 && (
+                <Pressable onPress={() => setSelectedAccessories([])}>
+                  <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '700' }}>Clear</Text>
+                </Pressable>
+              )}
             </View>
 
             <ScrollView style={styles.pickerModalScroll} showsVerticalScrollIndicator={false}>
               {ACCESSORY_OPTIONS.map((item) => {
-                const isSelected = selectedAccessory === item;
+                const isSelected = selectedAccessories.includes(item);
                 return (
                   <Pressable
                     key={item}
                     style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
                     onPress={() => {
-                      setSelectedAccessory(item);
-                      if (item !== 'Others') {
+                      const updated = isSelected
+                        ? selectedAccessories.filter((a) => a !== item)
+                        : [...selectedAccessories, item];
+                      setSelectedAccessories(updated);
+                      if (!updated.includes('Others')) {
                         setCustomAccessory('');
                       }
-                      setIsAccessoryModalOpen(false);
                     }}
                   >
                     <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextSelected]}>
                       {item}
                     </Text>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
-                    )}
+                    <Ionicons
+                      name={isSelected ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={isSelected ? Colors.primary : '#94A3B8'}
+                    />
                   </Pressable>
                 );
               })}
             </ScrollView>
+
+            <Pressable
+              style={styles.pickerModalDoneBtn}
+              onPress={() => setIsAccessoryModalOpen(false)}
+            >
+              <Text style={styles.pickerModalDoneBtnText}>
+                Done ({selectedAccessories.length} selected)
+              </Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -1387,6 +1485,19 @@ const styles = StyleSheet.create({
     },
     pickerItemTextSelected: {
         color: Colors.primary,
+        fontWeight: '700',
+    },
+    pickerModalDoneBtn: {
+        backgroundColor: Colors.primary,
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 14,
+    },
+    pickerModalDoneBtnText: {
+        color: '#FFFFFF',
+        fontSize: 14,
         fontWeight: '700',
     },
 });
