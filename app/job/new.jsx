@@ -74,6 +74,8 @@ export default function NewJobScreen() {
     const [customAccessory, setCustomAccessory] = useState('');
     const [isAccessoryModalOpen, setIsAccessoryModalOpen] = useState(false);
     const [productPrice, setProductPrice] = useState('');
+    const [accessoryPhoto, setAccessoryPhoto] = useState(null);
+    const [isUploadingAccessoryPhoto, setIsUploadingAccessoryPhoto] = useState(false);
     // Cost & Advance for Repair
     const [estimatedCost, setEstimatedCost] = useState('');
     const [advancePaid, setAdvancePaid] = useState('');
@@ -112,6 +114,12 @@ export default function NewJobScreen() {
                             setCustomAccessory('');
                         }
                         setProductPrice(String(existing.cost?.final || existing.productPrice || ''));
+                        const existingImg = existing.productImage || existing.photos?.[0] || null;
+                        if (existingImg) {
+                            setAccessoryPhoto(typeof existingImg === 'string' ? { url: existingImg } : existingImg);
+                        } else {
+                            setAccessoryPhoto(null);
+                        }
                     } else {
                         setDeviceType(existing.deviceType || 'mobile');
                         setBrand(existing.brand || '');
@@ -290,6 +298,75 @@ export default function NewJobScreen() {
     const handleRemovePhoto = (indexToRemove) => {
         setPhotos((prev) => prev.filter((_, idx) => idx !== indexToRemove));
     };
+    // Single Product Photo for Accessories
+    const handlePickAccessoryPhoto = () => {
+        Alert.alert('Product Image', 'Choose an option to capture or select a photo of this product / accessory', [
+            {
+                text: 'Take Photo',
+                onPress: async () => {
+                    try {
+                        const permission = await ImagePicker.requestCameraPermissionsAsync();
+                        if (!permission.granted) {
+                            Alert.alert('Permission Required', 'Camera access is needed to take photos.');
+                            return;
+                        }
+                        const result = await ImagePicker.launchCameraAsync({
+                            allowsEditing: true,
+                            quality: 0.9,
+                        });
+                        if (!result.canceled && result.assets?.[0]) {
+                            await uploadAccessoryPhoto(result.assets[0]);
+                        }
+                    }
+                    catch (e) {
+                        Alert.alert('Camera Error', e.message || 'Could not launch camera');
+                    }
+                },
+            },
+            {
+                text: 'Choose from Gallery',
+                onPress: async () => {
+                    try {
+                        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                        if (!permission.granted) {
+                            Alert.alert('Permission Required', 'Photo library access is needed to select images.');
+                            return;
+                        }
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                            mediaTypes: ['images'],
+                            allowsMultipleSelection: false,
+                            selectionLimit: 1,
+                            quality: 0.9,
+                        });
+                        if (!result.canceled && result.assets?.[0]) {
+                            await uploadAccessoryPhoto(result.assets[0]);
+                        }
+                    }
+                    catch (e) {
+                        Alert.alert('Gallery Error', e.message || 'Could not pick image');
+                    }
+                },
+            },
+            { text: 'Cancel', style: 'cancel' },
+        ]);
+    };
+    const uploadAccessoryPhoto = async (asset) => {
+        setIsUploadingAccessoryPhoto(true);
+        try {
+            const fileName = asset.fileName || asset.uri?.split('/').pop() || `accessory_${Date.now()}.jpg`;
+            const mimeType = asset.mimeType || 'image/jpeg';
+            const res = await api.uploadDevicePhoto(asset.uri, mimeType, fileName);
+            if (res && res.url) {
+                setAccessoryPhoto({ url: res.url, localUri: asset.uri });
+            }
+        }
+        catch (e) {
+            Alert.alert('Upload Failed', e.message || 'Could not upload product photo to AWS S3.');
+        }
+        finally {
+            setIsUploadingAccessoryPhoto(false);
+        }
+    };
     const handleSubmit = async () => {
         const finalProblem = selectedProblem === 'Others' ? customProblem.trim() : selectedProblem.trim();
         const finalProduct = selectedAccessory === 'Others' ? customAccessory.trim() : selectedAccessory.trim();
@@ -339,6 +416,9 @@ export default function NewJobScreen() {
             else {
                 payload.productName = finalProduct;
                 payload.productPrice = Number(productPrice) || 0;
+                const photoUrl = accessoryPhoto ? (typeof accessoryPhoto === 'string' ? accessoryPhoto : accessoryPhoto.url) : '';
+                payload.productImage = photoUrl || '';
+                payload.photos = photoUrl ? [photoUrl] : [];
             }
             if (isEditing) {
                 const updated = await api.updateJob(params.editJobId, payload);
@@ -682,7 +762,70 @@ export default function NewJobScreen() {
                 onFocus={handleAccessoryFocus}
               />
 
-              <View style={{ marginTop: 12 }}>
+              {/* Product Image Option (Max 1 photo) */}
+              <View style={{ marginTop: 14 }}>
+                <View style={styles.photoHeaderRow}>
+                  <Text style={[styles.fieldLabel, { marginTop: 0, marginBottom: 0 }]}>
+                    Product Image {accessoryPhoto ? '(1/1)' : '(Optional)'}
+                  </Text>
+                  <Text style={styles.photoSubLabel}>1 photo limit for product record</Text>
+                </View>
+
+                {accessoryPhoto ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                    {(() => {
+                      const photoUrl = typeof accessoryPhoto === 'string' ? accessoryPhoto : accessoryPhoto.url;
+                      const localUri = typeof accessoryPhoto === 'object' ? accessoryPhoto.localUri : null;
+                      const urls = resolveImageUrls(photoUrl);
+                      const displayUri = localUri || urls?.uri || photoUrl;
+                      const proxyFallback = urls?.proxyUri;
+                      return (
+                        <Pressable style={styles.photoThumbWrapper} onPress={() => setPreviewImage(displayUri)}>
+                          <S3Image uri={displayUri} proxyUri={proxyFallback} style={styles.photoThumb} resizeMode="cover" />
+                          <Pressable
+                            style={styles.photoDeleteBtn}
+                            onPress={(e) => {
+                              e.stopPropagation?.();
+                              setAccessoryPhoto(null);
+                            }}
+                          >
+                            <Ionicons name="close" size={14} color="#FFFFFF" />
+                          </Pressable>
+                          <View style={styles.photoIndexBadge}>
+                            <Text style={styles.photoIndexText}>1</Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })()}
+
+                    <Pressable
+                      style={[styles.rePickPhotoBtn, isUploadingAccessoryPhoto && styles.addPhotoBtnDisabled]}
+                      disabled={isUploadingAccessoryPhoto}
+                      onPress={handlePickAccessoryPhoto}
+                    >
+                      <Ionicons name="camera-reverse-outline" size={16} color={Colors.primary} />
+                      <Text style={styles.rePickPhotoText}>Change Photo</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    style={[styles.addPhotoBtn, { marginTop: 8 }, isUploadingAccessoryPhoto && styles.addPhotoBtnDisabled]}
+                    disabled={isUploadingAccessoryPhoto}
+                    onPress={handlePickAccessoryPhoto}
+                  >
+                    {isUploadingAccessoryPhoto ? (
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                    ) : (
+                      <>
+                        <Ionicons name="camera" size={24} color={Colors.primary} />
+                        <Text style={styles.addPhotoText}>+ Add Photo</Text>
+                      </>
+                    )}
+                  </Pressable>
+                )}
+              </View>
+
+              <View style={{ marginTop: 14 }}>
                 <Text style={styles.fieldLabel}>Payment Mode *</Text>
                 <View style={styles.deviceTypeRow}>
                   {['cash', 'upi', 'card'].map((m) => (<Pressable key={m} style={[styles.deviceTypeChip, paymentMode === m && styles.deviceTypeChipSelected]} onPress={() => setPaymentMode(m)}>
@@ -1072,6 +1215,23 @@ const styles = StyleSheet.create({
     addPhotoText: {
         fontSize: 10,
         fontWeight: '700',
+        color: Colors.primary,
+    },
+    rePickPhotoBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: '#EFF6FF',
+        borderWidth: 1,
+        borderColor: '#DBEAFE',
+        marginLeft: 10,
+    },
+    rePickPhotoText: {
+        fontSize: 13,
+        fontWeight: '600',
         color: Colors.primary,
     },
     submitBtn: {

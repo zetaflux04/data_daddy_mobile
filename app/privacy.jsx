@@ -16,7 +16,7 @@ export default function PrivacyPolicyScreen() {
         </View>
 
         <Text style={styles.intro}>
-          Welcome to <Text style={styles.bold}>DataDaddy</Text>. We are committed to protecting the privacy and confidentiality of repair shop owners, technicians, and their customer data.
+          Welcome to <Text style={styles.bold}>Metafy</Text>. We are committed to protecting the privacy and confidentiality of repair shop owners, technicians, and their customer data.
         </Text>
 
         <View style={styles.sectionCard}>

@@ -109,7 +109,7 @@ export default function ProfileScreen() {
         }
     };
     const handleLogout = () => {
-        Alert.alert('Sign Out', 'Are you sure you want to sign out from DataDaddy?', [
+        Alert.alert('Sign Out', 'Are you sure you want to sign out from Metafy?', [
             { text: 'Cancel', style: 'cancel' },
             {
                 text: 'Sign Out',
@@ -130,7 +130,7 @@ export default function ProfileScreen() {
             const urls = resolveImageUrls(shop.logoUrl);
             return urls ? (<S3Image uri={urls.uri} proxyUri={urls.proxyUri} style={styles.shopAvatarImage} resizeMode="cover" onAllFailed={() => setAvatarFailed(true)}/>) : null;
         })() : (<Text style={styles.shopAvatarText}>
-                {shop?.name ? shop.name.charAt(0).toUpperCase() : 'D'}
+                {shop?.name ? shop.name.charAt(0).toUpperCase() : 'M'}
               </Text>)}
           </View>
           <Pressable style={({ pressed }) => [styles.avatarCameraBtn, { opacity: pressed ? 0.8 : 1 }]} onPress={handlePickImage} disabled={isUploadingPhoto}>
@@ -138,7 +138,7 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.shopName}>{shop?.name || 'DataDaddy Shop'}</Text>
+        <Text style={styles.shopName}>{shop?.name || 'Metafy Shop'}</Text>
         <Text style={styles.ownerName}>Owned by {shop?.ownerName || user?.name || 'Shop Owner'}</Text>
         <Text style={styles.phoneText}>+91 {shop?.phone || user?.phone || ''}</Text>
         {shop?.address ? (<Text style={styles.addressText} numberOfLines={2}>
@@ -196,7 +196,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <Text style={styles.versionFooter}>DataDaddy v1.0.0 Enterprise • Made for Indian Repair Shops</Text>
+      <Text style={styles.versionFooter}>Metafy v1.0.0 Enterprise • Powered by Chipix</Text>
       <View style={{ height: 30 }}/>
     </ScrollView>);
 }

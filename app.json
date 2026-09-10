@@ -1,19 +1,24 @@
 {
   "expo": {
-    "name": "DataDaddy",
-    "slug": "datadaddy",
+    "name": "Metafy",
+    "slug": "metafy",
     "version": "1.0.0",
     "orientation": "portrait",
     "primaryColor": "#2563EB",
     "icon": "./assets/images/icon.png",
-    "scheme": "datadaddy",
+    "scheme": "metafy",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.datadaddy.app"
+      "bundleIdentifier": "com.metafy.app"
     },
     "android": {
-      "package": "com.datadaddy.app",
+      "package": "com.metafy.app",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.CAMERA",
@@ -22,7 +27,7 @@
         "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#2563EB",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -47,8 +52,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "DataDaddy needs access to your photos to upload device and profile images.",
-          "cameraPermission": "DataDaddy needs camera access to take photos of devices for repair records.",
+          "photosPermission": "Metafy needs access to your photos to upload device and profile images.",
+          "cameraPermission": "Metafy needs camera access to take photos of devices for repair records.",
           "microphonePermission": false
         }
       ],

@@ -503,35 +503,42 @@ export default function JobDetailScreen() {
           </View>
         )}
 
-        {/* Device Photos if uploaded (repair only) */}
-        {job.orderType !== 'accessory' && job.photos && job.photos.length > 0 && (<View style={styles.card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <Text style={styles.cardTitle}>Product Photos ({job.photos.length})</Text>
+        {/* Device Photos / Product Photo if uploaded */}
+        {((Array.isArray(job.photos) && job.photos.length > 0) || Boolean(job.productImage)) && (() => {
+          const displayPhotos = (Array.isArray(job.photos) && job.photos.length > 0) ? job.photos : (job.productImage ? [job.productImage] : []);
+          return (
+            <View style={styles.card}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Text style={styles.cardTitle}>
+                  {job.orderType === 'accessory' ? 'Product Image' : `Product Photos (${displayPhotos.length})`}
+                </Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+                {displayPhotos.map((photoUrl, idx) => {
+                  const urls = resolveImageUrls(photoUrl);
+                  if (!urls)
+                      return null;
+                  return (<Pressable
+                      key={idx}
+                      onPress={() => setPreviewImage(photoUrl)}
+                      style={({ pressed }) => [
+                        { position: 'relative', marginRight: 10, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' },
+                        pressed && { opacity: 0.82 }
+                      ]}
+                    >
+                      <S3Image uri={urls.uri} proxyUri={urls.proxyUri} style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: '#F1F5F9' }} resizeMode="cover"/>
+                      <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: 'rgba(15, 23, 42, 0.75)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
+                        <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>#{idx + 1}</Text>
+                      </View>
+                      <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(15, 23, 42, 0.6)', borderRadius: 10, width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="expand" size={12} color="#FFFFFF" />
+                      </View>
+                    </Pressable>);
+              })}
+              </ScrollView>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
-              {job.photos.map((photoUrl, idx) => {
-                const urls = resolveImageUrls(photoUrl);
-                if (!urls)
-                    return null;
-                return (<Pressable
-                    key={idx}
-                    onPress={() => setPreviewImage(photoUrl)}
-                    style={({ pressed }) => [
-                      { position: 'relative', marginRight: 10, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' },
-                      pressed && { opacity: 0.82 }
-                    ]}
-                  >
-                    <S3Image uri={urls.uri} proxyUri={urls.proxyUri} style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: '#F1F5F9' }} resizeMode="cover"/>
-                    <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: 'rgba(15, 23, 42, 0.75)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
-                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>#{idx + 1}</Text>
-                    </View>
-                    <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(15, 23, 42, 0.6)', borderRadius: 10, width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name="expand" size={12} color="#FFFFFF" />
-                    </View>
-                  </Pressable>);
-            })}
-            </ScrollView>
-          </View>)}
+          );
+        })()}
 
         {/* Pipeline Status Controller — ONLY for repairs! (No update status required for accessory direct sale) */}
         {job.orderType !== 'accessory' && (

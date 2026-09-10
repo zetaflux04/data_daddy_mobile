@@ -16,13 +16,13 @@ export default function TermsScreen() {
         </View>
 
         <Text style={styles.intro}>
-          By creating an account or using <Text style={styles.bold}>DataDaddy</Text>, you agree to the following terms and operating guidelines.
+          By creating an account or using <Text style={styles.bold}>Metafy</Text>, you agree to the following terms and operating guidelines.
         </Text>
 
         <View style={styles.sectionCard}>
           <Text style={styles.heading}>1. Software License & Free Tier</Text>
           <Text style={styles.paragraph}>
-            DataDaddy provides a complimentary digital register tier for repair shops to record job cards, track customer dues, and compute profit/loss.
+            Metafy provides a complimentary digital register tier for repair shops to record job cards, track customer dues, and compute profit/loss.
           </Text>
         </View>
 
@@ -43,7 +43,7 @@ export default function TermsScreen() {
         <View style={styles.sectionCard}>
           <Text style={styles.heading}>4. Limitation of Liability</Text>
           <Text style={styles.paragraph}>
-            Repair guides and schematics are intended as reference technical materials for skilled electronics technicians. DataDaddy is not liable for device hardware damage caused during improper physical repairs or disassembly.
+            Repair guides and schematics are intended as reference technical materials for skilled electronics technicians. Metafy is not liable for device hardware damage caused during improper physical repairs or disassembly.
           </Text>
         </View>
       </ScrollView>

@@ -86,6 +86,10 @@ export const SplashScreenView = ({ onFinish }) => {
                 transform: [{ translateY: contentTranslateY }],
             },
         ]}>
+            <View style={styles.poweredByBadge}>
+              <Text style={styles.poweredByLabel}>POWERED BY </Text>
+              <Text style={styles.chipixLabel}>CHIPIX</Text>
+            </View>
             <Text style={styles.brandTagline}>
               Smart Digital Register for Repair Centers
             </Text>
@@ -136,8 +140,37 @@ const styles = StyleSheet.create({
         marginTop: 6,
         alignItems: 'center',
     },
+    poweredByBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        paddingHorizontal: 14,
+        paddingVertical: 5,
+        borderRadius: 20,
+        marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    poweredByLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#64748B',
+        letterSpacing: 1.2,
+    },
+    chipixLabel: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: '#2563EB',
+        letterSpacing: 1.5,
+    },
     brandTagline: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '600',
         color: '#64748B',
         letterSpacing: 0.2,

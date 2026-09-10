@@ -49,7 +49,7 @@ export const defaultBanners = [
     },
     {
         _id: 'banner_pro',
-        tag: 'DATADADDY PRO • UPGRADE',
+        tag: 'METAFY PRO • UPGRADE',
         tagBg: 'rgba(139, 92, 246, 0.25)',
         tagColor: '#DDD6FE',
         title: 'Multi-Technician & Live P&L',
