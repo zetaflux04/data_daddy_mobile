@@ -9,9 +9,13 @@
     "scheme": "metafy",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/splash-transparent.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#FFFFFF",
+      "dark": {
+        "image": "./assets/images/splash-transparent.png",
+        "backgroundColor": "#FFFFFF"
+      }
     },
     "ios": {
       "supportsTablet": true,
@@ -20,6 +24,15 @@
     "android": {
       "package": "com.metafy.app",
       "softwareKeyboardLayoutMode": "resize",
+      "splash": {
+        "image": "./assets/images/splash-transparent.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#FFFFFF",
+        "dark": {
+          "image": "./assets/images/splash-transparent.png",
+          "backgroundColor": "#FFFFFF"
+        }
+      },
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
@@ -44,9 +57,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-transparent.png",
           "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF"
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "image": "./assets/images/splash-transparent.png",
+            "backgroundColor": "#FFFFFF"
+          }
         }
       ],
       [
