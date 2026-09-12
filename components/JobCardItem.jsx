@@ -110,8 +110,8 @@ export const JobCardItem = ({ job, onPress }) => {
 
                     <View style={styles.actionDivider} />
 
-                    {/* Edit Icon Button (Only if not delivered) */}
-                    {job.status !== 'delivered' && (
+                    {/* Edit Icon Button (repairs: only if not delivered; accessories: always editable) */}
+                    {(job.status !== 'delivered' || job.orderType === 'accessory') && (
                         <Pressable
                             hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
                             onPress={handleEditPress}

@@ -464,13 +464,8 @@ export const api = {
         return res.data?.order;
     },
     async updateJobStatus(id, status, extraData) {
-        try {
-            const res = await apiClient.patch(`/orders/${id}/status`, { status, ...extraData });
-            return res.data?.order || null;
-        }
-        catch {
-            return null;
-        }
+        const res = await apiClient.patch(`/orders/${id}/status`, { status, ...extraData });
+        return res.data?.order ?? null;
     },
     async addPayment(id, amount, mode) {
         try {

@@ -83,6 +83,36 @@ export default function NewJobScreen() {
     const [paymentMode, setPaymentMode] = useState('cash');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const clearRepairFields = () => {
+        setDeviceType('mobile');
+        setBrand('');
+        setModel('');
+        setSerialOrImei('');
+        setPasscode('');
+        setSelectedProblems([]);
+        setCustomProblem('');
+        setPhotos([]);
+        setEstimatedCost('');
+        setAdvancePaid('');
+    };
+
+    const clearAccessoryFields = () => {
+        setSelectedAccessories([]);
+        setCustomAccessory('');
+        setProductPrice('');
+        setAccessoryPhoto(null);
+    };
+
+    const handleOrderTypeChange = (nextType) => {
+        if (isEditing || nextType === orderType) return;
+        if (nextType === 'repair') {
+            clearAccessoryFields();
+        } else {
+            clearRepairFields();
+        }
+        setOrderType(nextType);
+    };
+
     // Load existing job details when in Edit mode
     useEffect(() => {
         if (!params.editJobId) return;
@@ -91,7 +121,7 @@ export default function NewJobScreen() {
                 setIsLoadingEdit(true);
                 const existing = await api.getJobById(params.editJobId);
                 if (existing) {
-                    if (existing.status === 'delivered') {
+                    if (existing.status === 'delivered' && existing.orderType !== 'accessory') {
                         Alert.alert(
                             'Job Locked',
                             'This job has already been delivered to the customer. All details are read-only and cannot be changed.',
@@ -569,20 +599,34 @@ export default function NewJobScreen() {
           {/* Order Type Tab Switcher */}
           <View style={styles.tabContainer}>
             <Text style={styles.sectionHeader}>2. Order Type</Text>
-            <View style={styles.tabRow}>
-              <Pressable style={[styles.tabButton, orderType === 'repair' && styles.tabButtonActive]} onPress={() => setOrderType('repair')}>
-                <Ionicons name="construct-outline" size={18} color={orderType === 'repair' ? '#FFFFFF' : '#64748B'}/>
-                <Text style={[styles.tabButtonText, orderType === 'repair' && styles.tabButtonTextActive]}>
-                  Repair
+            {isEditing ? (
+              <View style={styles.orderTypeLockedPill}>
+                <Ionicons
+                  name={orderType === 'accessory' ? 'bag-handle-outline' : 'construct-outline'}
+                  size={16}
+                  color={Colors.primary}
+                />
+                <Text style={styles.orderTypeLockedText}>
+                  {orderType === 'accessory' ? 'Accessory Sale' : 'Repair Job'}
                 </Text>
-              </Pressable>
-              <Pressable style={[styles.tabButton, orderType === 'accessory' && styles.tabButtonActive]} onPress={() => setOrderType('accessory')}>
-                <Ionicons name="bag-handle-outline" size={18} color={orderType === 'accessory' ? '#FFFFFF' : '#64748B'}/>
-                <Text style={[styles.tabButtonText, orderType === 'accessory' && styles.tabButtonTextActive]}>
-                  Accessories
-                </Text>
-              </Pressable>
-            </View>
+                <Text style={styles.orderTypeLockedHint}>Order type cannot be changed after creation</Text>
+              </View>
+            ) : (
+              <View style={styles.tabRow}>
+                <Pressable style={[styles.tabButton, orderType === 'repair' && styles.tabButtonActive]} onPress={() => handleOrderTypeChange('repair')}>
+                  <Ionicons name="construct-outline" size={18} color={orderType === 'repair' ? '#FFFFFF' : '#64748B'}/>
+                  <Text style={[styles.tabButtonText, orderType === 'repair' && styles.tabButtonTextActive]}>
+                    Repair
+                  </Text>
+                </Pressable>
+                <Pressable style={[styles.tabButton, orderType === 'accessory' && styles.tabButtonActive]} onPress={() => handleOrderTypeChange('accessory')}>
+                  <Ionicons name="bag-handle-outline" size={18} color={orderType === 'accessory' ? '#FFFFFF' : '#64748B'}/>
+                  <Text style={[styles.tabButtonText, orderType === 'accessory' && styles.tabButtonTextActive]}>
+                    Accessories
+                  </Text>
+                </Pressable>
+              </View>
+            )}
           </View>
 
           {/* Repair Form */}
@@ -1207,6 +1251,28 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E2E8F0',
         marginBottom: 16,
+    },
+    orderTypeLockedPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 8,
+        backgroundColor: '#EFF6FF',
+        borderRadius: 12,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+    },
+    orderTypeLockedText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#1E40AF',
+    },
+    orderTypeLockedHint: {
+        fontSize: 12,
+        color: '#64748B',
+        flexBasis: '100%',
+        marginTop: 2,
     },
     tabRow: {
         flexDirection: 'row',

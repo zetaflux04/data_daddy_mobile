@@ -34,6 +34,7 @@ export default function JobDetailScreen() {
     const [warrantyUnit, setWarrantyUnit] = useState('months');
     const [warrantyPeriod, setWarrantyPeriod] = useState('3');
     const [isDelivering, setIsDelivering] = useState(false);
+    const [deliveryRemark, setDeliveryRemark] = useState('');
     // Unrepairable Modal State
     const [isUnrepairableModalOpen, setIsUnrepairableModalOpen] = useState(false);
     const [unrepairableReason, setUnrepairableReason] = useState('');
@@ -110,6 +111,7 @@ export default function JobDetailScreen() {
         }
         if (newStatus === 'delivered') {
             setDeliveryImei(job.serialOrImei || '');
+            setDeliveryRemark(job.deliveryRemark || '');
             setHasWarranty(job.warranty?.hasWarranty ?? false);
             setWarrantyUnit(job.warranty?.unit ?? 'months');
             setWarrantyPeriod(job.warranty?.period ? String(job.warranty.period) : '3');
@@ -146,15 +148,18 @@ export default function JobDetailScreen() {
             Alert.alert('Reason Required', 'Please choose or enter a reason why this device is unrepairable.');
             return;
         }
+        const jobId = job._id || job.id || id;
         setIsSubmittingUnrepairable(true);
         try {
-            const updated = await api.updateJobStatus(job._id, 'unrepairable', {
+            const updated = await api.updateJobStatus(jobId, 'unrepairable', {
                 unrepairableReason: finalReason,
             });
             if (updated) {
                 setJob({ ...updated });
                 setIsUnrepairableModalOpen(false);
                 Alert.alert('Status Updated', 'Device has been marked as Unrepairable.');
+            } else {
+                Alert.alert('Update Failed', 'Could not update status. Please try again.');
             }
         } catch (e) {
             Alert.alert('Update Failed', e.response?.data?.message || 'Failed to update status.');
@@ -165,13 +170,16 @@ export default function JobDetailScreen() {
     const handleUpdateStatus = async (newStatus) => {
         if (!job)
             return;
+        const jobId = job._id || job.id || id;
         try {
-            const updated = await api.updateJobStatus(job._id, newStatus);
+            const updated = await api.updateJobStatus(jobId, newStatus);
             if (updated) {
                 setJob({ ...updated });
                 if (newStatus === 'repaired') {
                     Alert.alert('Status Updated: Repaired', `SMS sent to customer ${job.customerSnapshot.phone}: "Device for ${job.jobId} is ready for pickup."`);
                 }
+            } else {
+                Alert.alert('Update Failed', 'Could not update status. Please try again.');
             }
         }
         catch (e) {
@@ -188,9 +196,10 @@ export default function JobDetailScreen() {
                 return;
             }
         }
+        const jobId = job._id || job.id || id;
         setIsDelivering(true);
         try {
-            const updated = await api.updateJobStatus(job._id, 'delivered', {
+            const updated = await api.updateJobStatus(jobId, 'delivered', {
                 serialOrImei: deliveryImei.trim(),
                 warranty: {
                     hasWarranty,
@@ -205,16 +214,19 @@ export default function JobDetailScreen() {
                     }
                     : undefined,
                 assignedTechnicianId: selectedRepairedBy?.id,
+                deliveryRemark: deliveryRemark.trim() || undefined,
             });
             if (updated) {
                 setJob({ ...updated });
                 setIsDeliveryModalOpen(false);
                 const techInfo = selectedRepairedBy?.name ? ` Repaired by: ${selectedRepairedBy.name}.` : '';
                 Alert.alert('Status Updated: Delivered', `Device marked as delivered.${hasWarranty ? ` Warranty active for ${warrantyPeriod} ${warrantyUnit}.` : ''}${techInfo} Invoice sent to ${job.customerSnapshot.phone}.`);
+            } else {
+                Alert.alert('Delivery Error', 'Could not update job status to delivered. Please try again.');
             }
         }
-        catch {
-            Alert.alert('Delivery Error', 'Failed to update job status to delivered.');
+        catch (e) {
+            Alert.alert('Delivery Error', e.response?.data?.message || 'Failed to update job status to delivered.');
         }
         finally {
             setIsDelivering(false);
@@ -241,13 +253,6 @@ export default function JobDetailScreen() {
         }
         if (job.status !== 'delivered') {
             Alert.alert('Payment Restricted', 'Payments can only be recorded once the job status is Delivered.');
-            return;
-        }
-        const estimatePrice = job.cost.final || job.cost.estimated || 0;
-        const currentPaid = job.cost.advancePaid || 0;
-        const maxPayable = job.cost.due;
-        if (entered > maxPayable || (currentPaid + entered) > estimatePrice) {
-            Alert.alert('Payment Exceeds Estimate', `Payment amount (₹${entered}) cannot exceed the estimate price of ₹${estimatePrice} (Remaining due: ₹${maxPayable}). Total paid cannot be greater than the estimate price.`);
             return;
         }
         try {
@@ -329,7 +334,7 @@ export default function JobDetailScreen() {
             </View>) : null}
 
           <View style={styles.topCardActionRow}>
-            {job.status !== 'delivered' && (
+            {(job.status !== 'delivered' || job.orderType === 'accessory') && (
               <Pressable
                 style={styles.editCardHeaderBtn}
                 onPress={() => router.push({ pathname: '/job/new', params: { editJobId: job._id || job.id || id } })}
@@ -348,6 +353,17 @@ export default function JobDetailScreen() {
             </Pressable>
           </View>
         </View>
+
+        {/* Delivery Remark Card */}
+        {job.status === 'delivered' && job.deliveryRemark && (
+          <View style={styles.deliveryRemarkCard}>
+            <View style={styles.deliveryRemarkHeader}>
+              <Ionicons name="document-text-outline" size={18} color={Colors.primary} />
+              <Text style={styles.deliveryRemarkTitle}>Delivery Remark</Text>
+            </View>
+            <Text style={styles.deliveryRemarkText}>{job.deliveryRemark}</Text>
+          </View>
+        )}
 
         {/* Unrepairable Alert Card */}
         {job.status === 'unrepairable' && (
@@ -838,6 +854,20 @@ export default function JobDetailScreen() {
                     💡 Tip: Add more technicians from Settings &gt; Staff to assign orders directly to team members.
                   </Text>)}
 
+                <Text style={[styles.inputLabel, { marginTop: 14 }]}>4. Delivery Remark (Optional)</Text>
+                <Text style={styles.inputSubLabel}>
+                  Add any notes about the repair or device condition at delivery:
+                </Text>
+                <TextInput
+                  style={[styles.modalInput, styles.reasonTextInput]}
+                  placeholder="e.g. Screen replaced, battery health 85%, minor scratches on back..."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  numberOfLines={3}
+                  value={deliveryRemark}
+                  onChangeText={setDeliveryRemark}
+                />
+
                 {/* Outstanding balance warning if applicable */}
                 {hasDue && (<View style={styles.dueWarningBox}>
                     <Ionicons name="alert-circle-outline" size={18} color={Colors.rose}/>
@@ -884,17 +914,14 @@ export default function JobDetailScreen() {
                 </Text>
 
                 <Text style={styles.inputLabel}>Amount Received (₹)</Text>
-                <TextInput style={[
-            styles.modalInput,
-            (Number(payAmount) > job.cost.due || (job.cost.advancePaid + Number(payAmount)) > job.cost.final) && {
-                borderColor: Colors.rose,
-                borderWidth: 1.5,
-            },
-        ]} placeholder={`Max ₹${job.cost.due}`} placeholderTextColor="#94A3B8" keyboardType="numeric" value={payAmount} onChangeText={setPayAmount}/>
-
-                {(Number(payAmount) > job.cost.due || (job.cost.advancePaid + Number(payAmount)) > job.cost.final) && (<Text style={{ color: Colors.rose, fontSize: 12, marginTop: 4, marginBottom: 10, fontWeight: '600' }}>
-                    Payment amount cannot exceed remaining due ₹{job.cost.due} (Estimate: ₹{job.cost.final}).
-                  </Text>)}
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter amount received"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  value={payAmount}
+                  onChangeText={setPayAmount}
+                />
 
                 <Text style={styles.inputLabel}>Payment Mode</Text>
                 <View style={styles.modeRow}>
@@ -905,18 +932,14 @@ export default function JobDetailScreen() {
                     </Pressable>))}
                 </View>
 
-                <Pressable style={[
-            styles.submitPayBtn,
-            (!payAmount ||
-                Number(payAmount) <= 0 ||
-                Number(payAmount) > job.cost.due ||
-                (job.cost.advancePaid + Number(payAmount)) > job.cost.final) && {
-                backgroundColor: '#94A3B8',
-            },
-        ]} disabled={!payAmount ||
-            Number(payAmount) <= 0 ||
-            Number(payAmount) > job.cost.due ||
-            (job.cost.advancePaid + Number(payAmount)) > job.cost.final} onPress={handleRecordPayment}>
+                <Pressable
+                  style={[
+                    styles.submitPayBtn,
+                    (!payAmount || Number(payAmount) <= 0) && { backgroundColor: '#94A3B8' },
+                  ]}
+                  disabled={!payAmount || Number(payAmount) <= 0}
+                  onPress={handleRecordPayment}
+                >
                   <Text style={styles.submitPayBtnText}>Confirm Payment</Text>
                 </Pressable>
               </ScrollView>
@@ -2060,6 +2083,30 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '700',
         color: '#059669',
+    },
+    deliveryRemarkCard: {
+        backgroundColor: '#EFF6FF',
+        borderRadius: 16,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+        marginBottom: 16,
+    },
+    deliveryRemarkHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
+    },
+    deliveryRemarkTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#1E40AF',
+    },
+    deliveryRemarkText: {
+        fontSize: 14,
+        color: '#334155',
+        lineHeight: 20,
     },
     unrepairableCard: {
         backgroundColor: '#FEF2F2',
