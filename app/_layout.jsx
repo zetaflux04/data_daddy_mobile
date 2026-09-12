@@ -68,6 +68,9 @@ function RootNavigation() {
         <Stack.Screen name="analytics" options={{
             headerShown: false,
         }}/>
+        <Stack.Screen name="insights" options={{
+            headerShown: false,
+        }}/>
         <Stack.Screen name="guides" options={{
             headerShown: false,
         }}/>

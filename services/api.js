@@ -343,6 +343,19 @@ async function uploadMediaFile({ endpoint, fileUri, mimeType, fileName, paramete
     }
 }
 
+const emptyInsights = () => ({
+    range: 'month',
+    kpis: { totalRevenue: 0, pendingDues: 0, totalJobs: 0 },
+    revenueOverview: [],
+    statusDistribution: [],
+    deviceTypes: [],
+    accessories: [],
+    serviceTypes: [],
+    orderTypes: [],
+    customersByDay: [],
+    jobsByDay: [],
+});
+
 export const api = {
     // Auth
     async requestOtp(phone) {
@@ -425,15 +438,24 @@ export const api = {
         try {
             const res = await apiClient.get('/analytics/summary');
             return (res.data?.data || {
-                jobs: { pending: 0, inProgress: 0, partsDelayed: 0, readyForPickup: 0, delivered: 0, todayNew: 0 },
+                jobs: { pending: 0, inProgress: 0, partsDelayed: 0, readyForPickup: 0, delivered: 0, todayNew: 0, total: 0 },
                 financials: { totalRevenue: 0, totalExpense: 0, netProfit: 0, totalDuesPending: 0 },
             });
         }
         catch {
             return {
-                jobs: { pending: 0, inProgress: 0, partsDelayed: 0, readyForPickup: 0, delivered: 0, todayNew: 0 },
+                jobs: { pending: 0, inProgress: 0, partsDelayed: 0, readyForPickup: 0, delivered: 0, todayNew: 0, total: 0 },
                 financials: { totalRevenue: 0, totalExpense: 0, netProfit: 0, totalDuesPending: 0 },
             };
+        }
+    },
+    async getAnalyticsInsights(params) {
+        try {
+            const res = await apiClient.get('/analytics/insights', { params });
+            return res.data?.data || emptyInsights();
+        }
+        catch {
+            return emptyInsights();
         }
     },
     // Jobs / Orders
