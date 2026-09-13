@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Linking, Modal, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Linking, Modal, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { useAuth } from '../../context/AuthContext';
 import { OutlinedTextInput } from '../../components/OutlinedTextInput';
 import { MaterialSelect } from '../../components/MaterialSelect';
+import { TextInput as PaperTextInput } from 'react-native-paper';
 const statusFlow = ['pending', 'in_progress', 'parts_delayed', 'repaired', 'delivered', 'unrepairable'];
 export default function JobDetailScreen() {
     const insets = useSafeAreaInsets();
@@ -34,6 +35,12 @@ export default function JobDetailScreen() {
     const [hasWarranty, setHasWarranty] = useState(false);
     const [warrantyUnit, setWarrantyUnit] = useState('months');
     const [warrantyPeriod, setWarrantyPeriod] = useState('3');
+    const [unitMenuOpen, setUnitMenuOpen] = useState(false);
+    const [unitMenuAnchor, setUnitMenuAnchor] = useState(null);
+    const deliveryOverlayRef = useRef(null);
+    const unitFieldRef = useRef(null);
+    const unitMenuOpenRef = useRef(false);
+    const ignoreUnitToggleUntilRef = useRef(0);
     const [isDelivering, setIsDelivering] = useState(false);
     const [deliveryRemark, setDeliveryRemark] = useState('');
     // Unrepairable Modal State
@@ -245,6 +252,47 @@ export default function JobDetailScreen() {
             d.setFullYear(d.getFullYear() + period);
         return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     };
+    const closeUnitMenu = () => {
+        unitMenuOpenRef.current = false;
+        setUnitMenuOpen(false);
+        setUnitMenuAnchor(null);
+    };
+    const dismissUnitMenuFromOverlay = () => {
+        ignoreUnitToggleUntilRef.current = Date.now() + 500;
+        closeUnitMenu();
+    };
+    const openUnitMenu = () => {
+        if (Date.now() < ignoreUnitToggleUntilRef.current) {
+            return;
+        }
+        if (unitMenuOpenRef.current) {
+            closeUnitMenu();
+            return;
+        }
+        Keyboard.dismiss();
+        const host = deliveryOverlayRef.current;
+        const trigger = unitFieldRef.current;
+        if (!host || !trigger) return;
+        trigger.measureInWindow((tx, ty, tw, th) => {
+            host.measureInWindow((hx, hy) => {
+                unitMenuOpenRef.current = true;
+                setUnitMenuAnchor({
+                    x: tx - hx,
+                    y: ty - hy + th,
+                    width: Math.max(tw, 120),
+                });
+                setUnitMenuOpen(true);
+            });
+        });
+    };
+    useEffect(() => {
+        if (!unitMenuOpen) return undefined;
+        const hide = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            closeUnitMenu
+        );
+        return () => hide.remove();
+    }, [unitMenuOpen]);
     const handleRecordPayment = async () => {
         const entered = Number(payAmount);
         if (!job || !payAmount || isNaN(entered) || entered <= 0) {
@@ -682,10 +730,11 @@ export default function JobDetailScreen() {
         </View>
 
         {/* Delivered Confirmation Modal */}
-        <Modal visible={isDeliveryModalOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setIsDeliveryModalOpen(false)}>
+        <Modal visible={isDeliveryModalOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => { closeUnitMenu(); setIsDeliveryModalOpen(false); }}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} style={styles.modalOverlay}>
-            <Pressable style={styles.modalBackdrop} onPress={() => setIsDeliveryModalOpen(false)}/>
-            <FloatingCloseButton onPress={() => setIsDeliveryModalOpen(false)}/>
+            <View ref={deliveryOverlayRef} collapsable={false} style={styles.deliveryOverlayHost}>
+            <Pressable style={styles.modalBackdrop} onPress={() => { closeUnitMenu(); setIsDeliveryModalOpen(false); }}/>
+            <FloatingCloseButton onPress={() => { closeUnitMenu(); setIsDeliveryModalOpen(false); }}/>
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
                 <View style={styles.modalHeaderTitleRow}>
@@ -699,19 +748,27 @@ export default function JobDetailScreen() {
                 </View>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                onScrollBeginDrag={dismissUnitMenuFromOverlay}
+                onTouchStart={unitMenuOpen ? dismissUnitMenuFromOverlay : undefined}
+              >
                 {/* IMEI / Serial Number Input */}
                 <OutlinedTextInput
                   label="1. IMEI / Serial Number"
                   placeholder="e.g. 356984110293847 or SN-98234"
                   value={deliveryImei}
-                  onChangeText={setDeliveryImei}
+                  onChangeText={(text) => {
+                    closeUnitMenu();
+                    setDeliveryImei(text);
+                  }}
                 />
 
                 {/* Warranty Yes/No Selection */}
                 <Text style={[styles.inputLabel, { marginTop: 14 }]}>2. Warranty Guarantee</Text>
                 <View style={styles.warrantyChoiceRow}>
-                  <Pressable style={[styles.warrantyChoiceBtn, !hasWarranty && styles.warrantyChoiceBtnActive]} onPress={() => setHasWarranty(false)}>
+                  <Pressable style={[styles.warrantyChoiceBtn, !hasWarranty && styles.warrantyChoiceBtnActive]} onPress={() => { closeUnitMenu(); setHasWarranty(false); }}>
                     <Ionicons name={!hasWarranty ? 'radio-button-on' : 'radio-button-off'} size={18} color={!hasWarranty ? Colors.primary : '#94A3B8'}/>
                     <Text style={[styles.warrantyChoiceText, !hasWarranty && styles.warrantyChoiceTextActive]}>
                       No Warranty
@@ -728,30 +785,37 @@ export default function JobDetailScreen() {
 
                 {/* If Warranty is Yes: Time Span Unit Dropdown/Chips + Number Input */}
                 {hasWarranty && (<View style={styles.warrantyFormBox}>
-                    <Text style={styles.warrantyFormLabel}>Choose Time Span & Duration:</Text>
-
-                    {/* Dropdown / Chips for Unit (Days, Months, Years) */}
-                    <View style={styles.unitChipsRow}>
-                      {['days', 'months', 'years'].map((unit) => {
-                const isSelected = warrantyUnit === unit;
-                return (<Pressable key={unit} style={[styles.unitChip, isSelected && styles.unitChipSelected]} onPress={() => setWarrantyUnit(unit)}>
-                            <Text style={[styles.unitChipText, isSelected && styles.unitChipTextSelected]}>
-                              {unit === 'days' ? 'Days' : unit === 'months' ? 'Months' : 'Years'}
-                            </Text>
-                          </Pressable>);
-            })}
+                    <Text style={styles.warrantyFormLabel}>Duration</Text>
+                    <View style={styles.warrantyDurationRow}>
+                      <OutlinedTextInput
+                        style={styles.warrantyDurationInput}
+                        label="Number"
+                        placeholder="e.g. 3"
+                        keyboardType="numeric"
+                        value={warrantyPeriod}
+                        onChangeText={(text) => {
+                          closeUnitMenu();
+                          setWarrantyPeriod(text);
+                        }}
+                      />
+                      <View ref={unitFieldRef} collapsable={false} style={styles.warrantyUnitSelect}>
+                        <Pressable onPress={openUnitMenu}>
+                          <View pointerEvents="none">
+                            <PaperTextInput
+                              mode="outlined"
+                              dense
+                              label="Unit"
+                              value={warrantyUnit === 'days' ? 'Days' : warrantyUnit === 'years' ? 'Years' : 'Months'}
+                              editable={false}
+                              right={<PaperTextInput.Icon icon={unitMenuOpen ? 'menu-up' : 'menu-down'} />}
+                              style={{ backgroundColor: '#FFFFFF' }}
+                              outlineStyle={{ borderRadius: 4 }}
+                            />
+                          </View>
+                        </Pressable>
+                      </View>
                     </View>
 
-                    {/* Number Input Box */}
-                    <OutlinedTextInput
-                      label={`Enter Number of ${warrantyUnit.charAt(0).toUpperCase() + warrantyUnit.slice(1)}`}
-                      placeholder="e.g. 1, 3, 6, 12, 30"
-                      keyboardType="numeric"
-                      value={warrantyPeriod}
-                      onChangeText={setWarrantyPeriod}
-                    />
-
-                    {/* Calculated Live Expiry Preview */}
                     {getWarrantyExpiryPreview() ? (<View style={styles.expiryPreviewPill}>
                         <Ionicons name="shield-checkmark" size={15} color={Colors.emerald}/>
                         <Text style={styles.expiryPreviewText}>
@@ -773,15 +837,13 @@ export default function JobDetailScreen() {
                     subtitle: opt.isSelf ? 'Shop Owner' : opt.role === 'technician' ? 'Technician' : 'Staff Member',
                   }))}
                   onChange={(val) => {
+                    closeUnitMenu();
                     const opt = repairedByOptions.find((o) => o.id === val);
                     if (opt) {
                       setSelectedRepairedBy({ id: opt.id, name: opt.name, role: opt.role });
                     }
                   }}
                 />
-                <Text style={styles.inputSubLabel}>
-                  Select technician or shop owner (self) who completed this repair:
-                </Text>
 
                 {repairedByOptions.length === 1 && (<Text style={styles.techHintText}>
                     💡 Tip: Add more technicians from Settings &gt; Staff to assign orders directly to team members.
@@ -793,7 +855,11 @@ export default function JobDetailScreen() {
                   multiline
                   numberOfLines={3}
                   value={deliveryRemark}
-                  onChangeText={setDeliveryRemark}
+                  onChangeText={(text) => {
+                    closeUnitMenu();
+                    setDeliveryRemark(text);
+                  }}
+                  onFocus={closeUnitMenu}
                 />
 
                 {/* Outstanding balance warning if applicable */}
@@ -820,6 +886,49 @@ export default function JobDetailScreen() {
                   </Pressable>
                 </View>
               </ScrollView>
+            </View>
+            {unitMenuOpen ? (
+              <>
+                <Pressable
+                  style={styles.unitMenuDismiss}
+                  onPress={dismissUnitMenuFromOverlay}
+                />
+                {unitMenuAnchor ? (
+                  <View
+                    style={[
+                      styles.unitMenu,
+                      {
+                        top: unitMenuAnchor.y,
+                        left: unitMenuAnchor.x,
+                        width: unitMenuAnchor.width,
+                      },
+                    ]}
+                  >
+                    {[
+                      { value: 'days', label: 'Days' },
+                      { value: 'months', label: 'Months' },
+                      { value: 'years', label: 'Years' },
+                    ].map((opt) => {
+                      const selected = warrantyUnit === opt.value;
+                      return (
+                        <Pressable
+                          key={opt.value}
+                          style={[styles.unitMenuItem, selected && styles.unitMenuItemSelected]}
+                          onPress={() => {
+                            setWarrantyUnit(opt.value);
+                            closeUnitMenu();
+                          }}
+                        >
+                          <Text style={[styles.unitMenuItemText, selected && styles.unitMenuItemTextSelected]}>
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+              </>
+            ) : null}
             </View>
           </KeyboardAvoidingView>
         </Modal>
@@ -1405,6 +1514,10 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(15, 23, 42, 0.55)',
         justifyContent: 'flex-end',
     },
+    deliveryOverlayHost: {
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
     modalBackdrop: {
         ...StyleSheet.absoluteFill,
     },
@@ -1506,6 +1619,8 @@ const styles = StyleSheet.create({
         borderColor: '#E2E8F0',
         padding: 14,
         marginTop: 12,
+        overflow: 'visible',
+        zIndex: 2,
     },
     warrantyFormLabel: {
         fontSize: 12,
@@ -1513,31 +1628,58 @@ const styles = StyleSheet.create({
         color: '#475569',
         marginBottom: 8,
     },
-    unitChipsRow: {
+    warrantyDurationRow: {
         flexDirection: 'row',
-        gap: 8,
-        marginBottom: 4,
+        alignItems: 'flex-start',
+        gap: 10,
+        overflow: 'visible',
+        zIndex: 2,
     },
-    unitChip: {
+    warrantyDurationInput: {
         flex: 1,
-        alignItems: 'center',
-        paddingVertical: 8,
-        borderRadius: 10,
+        marginVertical: 0,
+    },
+    warrantyUnitSelect: {
+        width: 132,
+        marginVertical: 0,
+    },
+    unitMenuDismiss: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 40,
+        elevation: 20,
+        backgroundColor: 'rgba(15, 23, 42, 0.04)',
+    },
+    unitMenu: {
+        position: 'absolute',
+        zIndex: 41,
+        elevation: 24,
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
         borderColor: '#CBD5E1',
+        borderRadius: 4,
+        overflow: 'hidden',
+        elevation: 16,
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.16,
+        shadowRadius: 12,
     },
-    unitChipSelected: {
-        backgroundColor: Colors.emerald,
-        borderColor: Colors.emerald,
+    unitMenuItem: {
+        minHeight: 40,
+        paddingHorizontal: 12,
+        justifyContent: 'center',
     },
-    unitChipText: {
-        fontSize: 13,
+    unitMenuItemSelected: {
+        backgroundColor: '#EFF6FF',
+    },
+    unitMenuItemText: {
+        fontSize: 15,
+        color: '#0F172A',
+        fontWeight: '600',
+    },
+    unitMenuItemTextSelected: {
+        color: Colors.primary,
         fontWeight: '700',
-        color: '#475569',
-    },
-    unitChipTextSelected: {
-        color: '#FFFFFF',
     },
     expiryPreviewPill: {
         flexDirection: 'row',
@@ -1800,12 +1942,6 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 0.5,
-    },
-    inputSubLabel: {
-        fontSize: 12,
-        color: '#64748B',
-        marginBottom: 8,
-        marginTop: -2,
     },
     // Dropdown Styles for Repaired By
     dropdownContainer: {

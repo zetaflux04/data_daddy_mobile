@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { HeaderFilterBar } from '../../components/HeaderFilterBar';
@@ -22,6 +22,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { Colors } from '../../constants/Colors';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { OutlinedTextInput } from '../../components/OutlinedTextInput';
+import { AppHeader } from '../../components/AppHeader';
 
 const customerStatusTabs = [
   { key: 'all', label: 'All' },
@@ -32,6 +33,7 @@ const customerStatusTabs = [
 
 export default function CustomersScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -75,6 +77,25 @@ export default function CustomersScreen() {
   useEffect(() => {
     fetchCustomers();
   }, [search, selectedDateRange, customStartDate, customEndDate]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      header: () => (
+        <AppHeader
+          title="Customer Directory"
+          rightAction={
+            <Pressable
+              onPress={() => setIsAddModalVisible(true)}
+              style={({ pressed }) => [styles.headerAddBtn, { opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Ionicons name="person-add" size={15} color="#FFFFFF" />
+              <Text style={styles.headerAddBtnText}>Add</Text>
+            </Pressable>
+          }
+        />
+      ),
+    });
+  }, [navigation]);
 
   const handleDateRangeChange = (range, startDate, endDate) => {
     setSelectedDateRange(range);
@@ -205,8 +226,8 @@ export default function CustomersScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Search & Add Header */}
-      <View style={styles.searchHeader}>
+      {/* Top Search Bar */}
+      <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
           <TextInput
@@ -222,14 +243,6 @@ export default function CustomersScreen() {
             </Pressable>
           )}
         </View>
-
-        <Pressable
-          style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.88 : 1 }]}
-          onPress={() => setIsAddModalVisible(true)}
-        >
-          <Ionicons name="person-add" size={18} color="#FFFFFF" />
-          <Text style={styles.addBtnText}>Add</Text>
-        </Pressable>
       </View>
 
       {/* Date Range Dropdown & Filter Button Bar */}
@@ -716,39 +729,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  searchHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 6,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    gap: 10,
   },
   searchBox: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 42,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 44,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: '#0F172A',
   },
-  addBtn: {
+  headerAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+    justifyContent: 'center',
     gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  addBtnText: {
+  headerAddBtnText: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',

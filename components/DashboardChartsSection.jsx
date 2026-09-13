@@ -43,6 +43,40 @@ export const DashboardChartsSection = ({ summary, onPressJobs, onPressRevenue, }
         currentRevenueData = summary?.charts?.weeklyRevenue || [];
     }
 
+    const emptyRevenueSeries = {
+        today: [
+            { day: '9 AM', amount: 0 },
+            { day: '12 PM', amount: 0 },
+            { day: '3 PM', amount: 0 },
+            { day: '6 PM', amount: 0 },
+            { day: '9 PM', amount: 0 },
+        ],
+        week: [
+            { day: 'Mon', amount: 0 },
+            { day: 'Tue', amount: 0 },
+            { day: 'Wed', amount: 0 },
+            { day: 'Thu', amount: 0 },
+            { day: 'Fri', amount: 0 },
+            { day: 'Sat', amount: 0 },
+            { day: 'Sun', amount: 0 },
+        ],
+        month: [
+            { day: 'W1', amount: 0 },
+            { day: 'W2', amount: 0 },
+            { day: 'W3', amount: 0 },
+            { day: 'W4', amount: 0 },
+        ],
+        year: [
+            { day: 'Q1', amount: 0 },
+            { day: 'Q2', amount: 0 },
+            { day: 'Q3', amount: 0 },
+            { day: 'Q4', amount: 0 },
+        ],
+    };
+    if (!Array.isArray(currentRevenueData) || currentRevenueData.length === 0) {
+        currentRevenueData = emptyRevenueSeries[selectedTimeFilter] || emptyRevenueSeries.today;
+    }
+
     const pendingCount = summary?.jobs?.pending ?? 0;
     const inProgressCount = (summary?.jobs?.inProgress ?? 0) + (summary?.jobs?.partsDelayed ?? 0);
     const readyCount = summary?.jobs?.readyForPickup ?? 0;

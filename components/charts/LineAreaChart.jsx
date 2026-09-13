@@ -16,18 +16,19 @@ export const LineAreaChart = ({
     const paddingBottom = 24;
     const plotWidth = chartWidth - paddingLeft - paddingRight;
     const plotHeight = height - paddingTop - paddingBottom;
-    const pointsData = Array.isArray(data) ? data : [];
+    const incoming = Array.isArray(data) ? data : [];
+    const pointsData = incoming.length
+        ? incoming
+        : [
+            { day: '9 AM', [valueKey]: 0 },
+            { day: '12 PM', [valueKey]: 0 },
+            { day: '3 PM', [valueKey]: 0 },
+            { day: '6 PM', [valueKey]: 0 },
+            { day: '9 PM', [valueKey]: 0 },
+        ];
     const maxDataAmount = Math.max(...pointsData.map((p) => Number(p[valueKey]) || 0), 0);
 
-    if (!pointsData.length || maxDataAmount === 0) {
-        return (
-            <View style={[styles.emptyWrap, { height }]}>
-                <Text style={styles.emptyText}>{emptyLabel}</Text>
-            </View>
-        );
-    }
-
-    let maxVal = 10000;
+    let maxVal = 1000;
     if (maxDataAmount > 0) {
         if (maxDataAmount <= 10) maxVal = 10;
         else if (maxDataAmount <= 50) maxVal = 50;

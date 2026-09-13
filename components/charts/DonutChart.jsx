@@ -52,22 +52,18 @@ export const DonutChart = ({
             </View>
 
             <View style={styles.legendContainer}>
-                {items.length === 0 || total === 0 ? (
-                    <Text style={styles.emptyText}>{emptyLabel}</Text>
-                ) : (
-                    items.map((item) => (
-                        <View key={item.key || item.label} style={styles.legendItemRow}>
-                            <View style={[styles.legendDot, { backgroundColor: item.color }]}/>
-                            <Text style={styles.legendLabel} numberOfLines={1}>{item.label}</Text>
-                            <Text style={styles.legendCount}>
-                                {item.count}{' '}
-                                <Text style={styles.legendPct}>
-                                    ({total > 0 ? Math.round((item.count / total) * 100) : 0}%)
-                                </Text>
+                {items.map((item) => (
+                    <View key={item.key || item.label} style={styles.legendItemRow}>
+                        <View style={[styles.legendDot, { backgroundColor: item.color }]}/>
+                        <Text style={styles.legendLabel} numberOfLines={1}>{item.label}</Text>
+                        <Text style={styles.legendCount}>
+                            {item.count}{' '}
+                            <Text style={styles.legendPct}>
+                                ({total > 0 ? Math.round((item.count / total) * 100) : 0}%)
                             </Text>
-                        </View>
-                    ))
-                )}
+                        </Text>
+                    </View>
+                ))}
             </View>
         </View>
     );

@@ -16,9 +16,10 @@ import { api } from '../../services/api';
 import { JobCardItem } from '../../components/JobCardItem';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { Colors } from '../../constants/Colors';
-import { OutlinedTextInput } from '../../components/OutlinedTextInput';
 import { MaterialMultiSelect } from '../../components/MaterialMultiSelect';
 import { TextInput as PaperTextInput } from 'react-native-paper';
+import { CustomDateRangeModal } from '../../components/CustomDateRangeModal';
+import { formatShortRange, todayISO } from '../../utils/date';
 
 const statusOptions = [
   { key: 'all', label: 'All Status', dot: '#2563EB' },
@@ -50,15 +51,12 @@ export default function JobsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const [tempStart, setTempStart] = useState(
-    new Date().toISOString().split('T')[0]
-  );
-  const [tempEnd, setTempEnd] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [tempStart, setTempStart] = useState(todayISO());
+  const [tempEnd, setTempEnd] = useState(todayISO());
 
   // Advanced Filter Modal State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
   const [filterDeviceType, setFilterDeviceType] = useState('all');
   const [filterPaymentStatus, setFilterPaymentStatus] = useState('all');
   const [filterSortBy, setFilterSortBy] = useState('newest');
@@ -338,11 +336,16 @@ export default function JobsScreen() {
                       selectedDateRange === opt.key && styles.modalChipActive,
                     ]}
                     onPress={() => {
-                      setSelectedDateRange(opt.key);
-                      if (opt.key !== 'custom') {
-                        setCustomStartDate(undefined);
-                        setCustomEndDate(undefined);
+                      if (opt.key === 'custom') {
+                        setTempStart(customStartDate || todayISO());
+                        setTempEnd(customEndDate || todayISO());
+                        setIsFilterModalOpen(false);
+                        setTimeout(() => setIsCustomDateModalOpen(true), 280);
+                        return;
                       }
+                      setSelectedDateRange(opt.key);
+                      setCustomStartDate(undefined);
+                      setCustomEndDate(undefined);
                     }}
                   >
                     <Ionicons
@@ -357,28 +360,16 @@ export default function JobsScreen() {
                         selectedDateRange === opt.key && styles.modalChipTextActive,
                       ]}
                     >
-                      {opt.label}
+                      {opt.key === 'custom' &&
+                      selectedDateRange === 'custom' &&
+                      customStartDate &&
+                      customEndDate
+                        ? formatShortRange(customStartDate, customEndDate)
+                        : opt.label}
                     </Text>
                   </Pressable>
                 ))}
               </View>
-
-              {selectedDateRange === 'custom' && (
-                <View style={{ marginBottom: 8 }}>
-                  <OutlinedTextInput
-                    label="Start Date (YYYY-MM-DD)"
-                    placeholder="e.g. 2026-05-01"
-                    value={tempStart}
-                    onChangeText={setTempStart}
-                  />
-                  <OutlinedTextInput
-                    label="End Date (YYYY-MM-DD)"
-                    placeholder="e.g. 2026-05-31"
-                    value={tempEnd}
-                    onChangeText={setTempEnd}
-                  />
-                </View>
-              )}
 
               {/* Device Type (Only if activeTab is repair) */}
               {activeTab === 'repair' && (
@@ -477,10 +468,6 @@ export default function JobsScreen() {
               <Pressable
                 style={styles.modalApplyBtn}
                 onPress={() => {
-                  if (selectedDateRange === 'custom') {
-                    setCustomStartDate(tempStart);
-                    setCustomEndDate(tempEnd);
-                  }
                   setIsFilterModalOpen(false);
                 }}
               >
@@ -490,6 +477,25 @@ export default function JobsScreen() {
           </View>
         </View>
       </Modal>
+
+      <CustomDateRangeModal
+        visible={isCustomDateModalOpen}
+        startDate={tempStart}
+        endDate={tempEnd}
+        onChangeStart={setTempStart}
+        onChangeEnd={setTempEnd}
+        onCancel={() => {
+          setIsCustomDateModalOpen(false);
+          setTimeout(() => setIsFilterModalOpen(true), 280);
+        }}
+        onApply={() => {
+          setSelectedDateRange('custom');
+          setCustomStartDate(tempStart);
+          setCustomEndDate(tempEnd);
+          setIsCustomDateModalOpen(false);
+          setTimeout(() => setIsFilterModalOpen(true), 280);
+        }}
+      />
     </View>
   );
 }
