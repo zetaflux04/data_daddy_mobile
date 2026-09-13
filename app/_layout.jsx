@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import React from 'react';
 import { TextInput } from 'react-native';
 import { CustomAlertProvider } from '../components/CustomAlert';
+import { DropdownHost } from '../components/DropdownHost';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Colors } from '../constants/Colors';
@@ -57,6 +58,7 @@ function RootNavigation() {
     };
     return (<>
       <StatusBar style="dark"/>
+      <DropdownHost>
       <Stack screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: '#F8FAFC' },
@@ -109,6 +111,7 @@ function RootNavigation() {
       </Stack>
 
       {!splashFinished && (<SplashScreenView onFinish={handleSplashFinish}/>)}
+      </DropdownHost>
     </>);
 }
 export default function RootLayout() {

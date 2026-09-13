@@ -1,11 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { TextInput } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Colors } from '../constants/Colors';
-
-const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
+import { useDropdownHost } from './DropdownHost';
 
 function normalizeOptions(options) {
   return (options || []).map((opt) =>
@@ -16,8 +14,7 @@ function normalizeOptions(options) {
 }
 
 /**
- * Material outlined Select.
- * Corresponds to MUI FormControl + InputLabel + Select + MenuItem.
+ * Material outlined Select — attached dropdown under the field.
  */
 export function MaterialSelect({
   label,
@@ -31,53 +28,45 @@ export function MaterialSelect({
   style,
   inputStyle,
   displayValue,
-  variant = 'modal',
 }) {
-  const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState(null);
+  const host = useDropdownHost();
   const triggerRef = useRef(null);
-  const overlayRootRef = useRef(null);
+  const openRef = useRef(false);
+  const ignoreUntilRef = useRef(0);
+  const [open, setOpen] = useState(false);
   const normalized = normalizeOptions(options);
   const selected = normalized.find((o) => o.value === value);
   const display = displayValue != null ? displayValue : (selected?.label || '');
   const displayLabel = label ? `${label}${required ? ' *' : ''}` : undefined;
-  const isInline = variant === 'dropdown';
 
-  const placeDropdown = () => {
-    const overlayNode = overlayRootRef.current;
-    const triggerNode = triggerRef.current;
-    if (!overlayNode || !triggerNode) return;
-    overlayNode.measureInWindow((ox, oy) => {
-      triggerNode.measureInWindow((x, y, width, height) => {
-        setAnchor({
-          x: x - ox,
-          y: y - oy + height,
-          width: Math.max(width, 120),
-        });
-      });
-    });
+  const markClosed = () => {
+    ignoreUntilRef.current = Date.now() + 500;
+    openRef.current = false;
+    setOpen(false);
   };
 
-  const renderOptions = (itemStyle) =>
+  const closeMenu = () => {
+    host?.close();
+    markClosed();
+  };
+
+  const renderMenu = (dismiss) =>
     normalized.map((opt) => {
       const isSelected = opt.value === value;
       return (
         <Pressable
           key={String(opt.value)}
-          style={[itemStyle, isSelected && styles.menuItemSelected]}
+          style={[styles.menuItem, isSelected && styles.menuItemSelected]}
           onPress={() => {
             onChange(opt.value, opt);
-            setOpen(false);
-            setAnchor(null);
+            dismiss();
           }}
         >
           <View style={styles.menuItemTextWrap}>
             <Text style={[styles.menuItemText, isSelected && styles.menuItemTextSelected]}>
               {opt.label}
             </Text>
-            {opt.subtitle ? (
-              <Text style={styles.menuItemSub}>{opt.subtitle}</Text>
-            ) : null}
+            {opt.subtitle ? <Text style={styles.menuItemSub}>{opt.subtitle}</Text> : null}
           </View>
           {isSelected ? (
             <MaterialCommunityIcons name="check" size={20} color={Colors.primary} />
@@ -86,24 +75,27 @@ export function MaterialSelect({
       );
     });
 
+  const toggle = () => {
+    if (disabled) return;
+    if (Date.now() < ignoreUntilRef.current) return;
+    if (openRef.current) {
+      closeMenu();
+      return;
+    }
+    if (!host) return;
+    openRef.current = true;
+    setOpen(true);
+    host.open({
+      triggerRef,
+      itemCount: normalized.length,
+      onClose: markClosed,
+      render: renderMenu,
+    });
+  };
+
   return (
-    <View style={[styles.container, style]} ref={triggerRef} collapsable={false}>
-      <Pressable
-        disabled={disabled}
-        onPress={() => {
-          if (isInline) {
-            if (open) {
-              setOpen(false);
-              setAnchor(null);
-              return;
-            }
-            setAnchor(null);
-            setOpen(true);
-            return;
-          }
-          setOpen(true);
-        }}
-      >
+    <View ref={triggerRef} collapsable={false} style={[styles.container, style]}>
+      <Pressable disabled={disabled} onPress={toggle}>
         <View style={styles.pointerNone}>
           <TextInput
             mode="outlined"
@@ -113,7 +105,7 @@ export function MaterialSelect({
             placeholder={placeholder}
             editable={false}
             error={!!error}
-            right={<TextInput.Icon icon={open && isInline ? 'menu-up' : 'menu-down'} />}
+            right={<TextInput.Icon icon={open ? 'menu-up' : 'menu-down'} />}
             style={[styles.input, inputStyle]}
             outlineStyle={styles.outline}
           />
@@ -122,71 +114,6 @@ export function MaterialSelect({
       {error && typeof error === 'string' ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : null}
-
-      {isInline ? (
-        <Modal
-          visible={open}
-          transparent
-          animationType="none"
-          statusBarTranslucent
-          onRequestClose={() => {
-            setOpen(false);
-            setAnchor(null);
-          }}
-        >
-          <View
-            ref={overlayRootRef}
-            collapsable={false}
-            style={styles.dropdownLayer}
-            onLayout={() => {
-              requestAnimationFrame(placeDropdown);
-            }}
-          >
-            <Pressable
-              style={styles.dropdownDismiss}
-              onPress={() => {
-                setOpen(false);
-                setAnchor(null);
-              }}
-            />
-            {anchor ? (
-              <View
-                style={[
-                  styles.anchoredMenu,
-                  {
-                    top: anchor.y,
-                    left: anchor.x,
-                    width: anchor.width,
-                  },
-                ]}
-              >
-                {renderOptions(styles.inlineMenuItem)}
-              </View>
-            ) : null}
-          </View>
-        </Modal>
-      ) : null}
-
-      {!isInline ? (
-        <Modal
-          visible={open}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setOpen(false)}
-        >
-          <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
-            <Pressable style={styles.menuCard} onPress={(e) => e.stopPropagation?.()}>
-              {label ? <Text style={styles.menuTitle}>{label}</Text> : null}
-              <ScrollView
-                style={{ maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP }}
-                keyboardShouldPersistTaps="handled"
-              >
-                {renderOptions(styles.menuItem)}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
-      ) : null}
     </View>
   );
 }
@@ -194,32 +121,6 @@ export function MaterialSelect({
 const styles = StyleSheet.create({
   container: {
     marginVertical: 4,
-  },
-  dropdownLayer: {
-    flex: 1,
-  },
-  dropdownDismiss: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  anchoredMenu: {
-    position: 'absolute',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 4,
-    overflow: 'hidden',
-    elevation: 12,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-  },
-  inlineMenuItem: {
-    minHeight: 40,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   pointerNone: {
     pointerEvents: 'none',
@@ -236,33 +137,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '500',
   },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  menuCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-    overflow: 'hidden',
-    elevation: 8,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-  },
-  menuTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
-  },
   menuItem: {
-    minHeight: ITEM_HEIGHT,
-    paddingHorizontal: 16,
+    minHeight: 44,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -276,7 +153,7 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   menuItemText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#0F172A',
   },
   menuItemTextSelected: {
