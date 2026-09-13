@@ -11,6 +11,23 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import React from 'react';
 import { TextInput } from 'react-native';
 import { CustomAlertProvider } from '../components/CustomAlert';
+import { PaperProvider, MD3LightTheme } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { Colors } from '../constants/Colors';
+
+const paperTheme = {
+    ...MD3LightTheme,
+    colors: {
+        ...MD3LightTheme.colors,
+        primary: Colors.primary,
+        secondary: Colors.accent,
+        error: Colors.rose,
+        background: Colors.light.background,
+        surface: '#FFFFFF',
+        outline: '#CBD5E1',
+        onSurfaceVariant: '#64748B',
+    },
+};
 // Ensure default placeholder text color is never overridden to white in dark mode
 if (TextInput.defaultProps == null) {
     TextInput.defaultProps = {};
@@ -98,6 +115,7 @@ export default function RootLayout() {
     const [loaded, error] = useFonts({
         SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
         ...Ionicons.font,
+        ...MaterialCommunityIcons.font,
     });
     useEffect(() => {
         if (error)
@@ -112,10 +130,17 @@ export default function RootLayout() {
         return null;
     }
     return (<SafeAreaProvider>
-      <CustomAlertProvider>
-        <AuthProvider>
-          <RootNavigation />
-        </AuthProvider>
-      </CustomAlertProvider>
+      <PaperProvider
+        theme={paperTheme}
+        settings={{
+          icon: (props) => <MaterialCommunityIcons {...props} />,
+        }}
+      >
+        <CustomAlertProvider>
+          <AuthProvider>
+            <RootNavigation />
+          </AuthProvider>
+        </CustomAlertProvider>
+      </PaperProvider>
     </SafeAreaProvider>);
 }

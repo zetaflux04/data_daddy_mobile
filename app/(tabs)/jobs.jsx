@@ -16,6 +16,9 @@ import { api } from '../../services/api';
 import { JobCardItem } from '../../components/JobCardItem';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { Colors } from '../../constants/Colors';
+import { OutlinedTextInput } from '../../components/OutlinedTextInput';
+import { MaterialMultiSelect } from '../../components/MaterialMultiSelect';
+import { TextInput as PaperTextInput } from 'react-native-paper';
 
 const statusOptions = [
   { key: 'all', label: 'All Status', dot: '#2563EB' },
@@ -47,10 +50,6 @@ export default function JobsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Dropdown & Modal Visibility States
-  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
-  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
-  const [isCustomDateActive, setIsCustomDateActive] = useState(false);
   const [tempStart, setTempStart] = useState(
     new Date().toISOString().split('T')[0]
   );
@@ -132,16 +131,21 @@ export default function JobsScreen() {
   }, [jobs, activeTab, selectedStatuses, filterDeviceType, filterPaymentStatus, filterSortBy]);
 
   const hasActiveFilters =
+    selectedDateRange !== 'all' ||
     filterDeviceType !== 'all' ||
     filterPaymentStatus !== 'all' ||
     filterSortBy !== 'newest';
 
   const activeFilterCount =
+    (selectedDateRange !== 'all' ? 1 : 0) +
     (filterDeviceType !== 'all' ? 1 : 0) +
     (filterPaymentStatus !== 'all' ? 1 : 0) +
     (filterSortBy !== 'newest' ? 1 : 0);
 
   const handleResetFilters = () => {
+    setSelectedDateRange('all');
+    setCustomStartDate(undefined);
+    setCustomEndDate(undefined);
     setFilterDeviceType('all');
     setFilterPaymentStatus('all');
     setFilterSortBy('newest');
@@ -154,26 +158,6 @@ export default function JobsScreen() {
     setCustomStartDate(undefined);
     setCustomEndDate(undefined);
     handleResetFilters();
-  };
-
-  const getSelectedStatusLabel = () => {
-    if (!selectedStatuses || selectedStatuses.length === 0) return 'All Status';
-    if (selectedStatuses.length === 1) {
-      const found = statusOptions.find((s) => s.key === selectedStatuses[0]);
-      return found ? found.label : selectedStatuses[0];
-    }
-    return `${selectedStatuses.length} Statuses`;
-  };
-
-  const getSelectedDateLabel = () => {
-    if (selectedDateRange === 'custom') {
-      if (customStartDate && customEndDate) {
-        return `${customStartDate} - ${customEndDate}`;
-      }
-      return 'Custom Range';
-    }
-    const found = dateRangeOptions.find((opt) => opt.key === selectedDateRange);
-    return found ? found.label : 'All Time';
   };
 
   return (
@@ -247,95 +231,33 @@ export default function JobsScreen() {
         </Pressable>
       </View>
 
-      {/* Filter Row: Status Dropdown | Date Range | Advanced Filter */}
       <View style={styles.filterRowContainer}>
-        {/* 1. Status Dropdown Trigger */}
-        <Pressable
-          style={[
-            styles.filterRowBtn,
-            selectedStatuses.length > 0 && styles.filterRowBtnActive,
-          ]}
-          onPress={() => setIsStatusMenuOpen(true)}
-        >
-          <Ionicons
-            name="flag-outline"
-            size={15}
-            color={selectedStatuses.length > 0 ? Colors.primary : '#0F172A'}
-          />
-          <Text
-            style={[
-              styles.filterRowBtnText,
-              selectedStatuses.length > 0 && styles.filterRowBtnTextActive,
-            ]}
-            numberOfLines={1}
-          >
-            {getSelectedStatusLabel()}
-          </Text>
-          <Ionicons
-            name="chevron-down"
-            size={13}
-            color={selectedStatuses.length > 0 ? Colors.primary : '#64748B'}
-          />
-        </Pressable>
-
-        {/* 2. Date Range Trigger */}
-        <Pressable
-          style={[
-            styles.filterRowBtn,
-            selectedDateRange !== 'all' && styles.filterRowBtnActive,
-          ]}
-          onPress={() => {
-            setIsCustomDateActive(selectedDateRange === 'custom');
-            setIsDateModalOpen(true);
-          }}
-        >
-          <Ionicons
-            name="calendar-outline"
-            size={15}
-            color={selectedDateRange !== 'all' ? Colors.primary : '#0F172A'}
-          />
-          <Text
-            style={[
-              styles.filterRowBtnText,
-              selectedDateRange !== 'all' && styles.filterRowBtnTextActive,
-            ]}
-            numberOfLines={1}
-          >
-            {getSelectedDateLabel()}
-          </Text>
-          <Ionicons
-            name="chevron-down"
-            size={13}
-            color={selectedDateRange !== 'all' ? Colors.primary : '#64748B'}
-          />
-        </Pressable>
-
-        {/* 3. Advanced Filter Button with Badge */}
-        <Pressable
-          style={[
-            styles.filterRowBtnSmall,
-            hasActiveFilters && styles.filterRowBtnActive,
-          ]}
-          onPress={() => setIsFilterModalOpen(true)}
-        >
-          <Ionicons
-            name="funnel-outline"
-            size={14}
-            color={hasActiveFilters ? Colors.primary : '#0F172A'}
-          />
-          <Text
-            style={[
-              styles.filterRowBtnText,
-              hasActiveFilters && styles.filterRowBtnTextActive,
-            ]}
-          >
-            Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-          </Text>
-          {activeFilterCount > 0 ? (
-            <View style={styles.filterBadgeCircle}>
-              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-            </View>
-          ) : null}
+        <MaterialMultiSelect
+          style={styles.statusSelect}
+          inputStyle={styles.statusInput}
+          label="Status"
+          placeholder="All Status"
+          value={selectedStatuses}
+          onChange={setSelectedStatuses}
+          options={statusOptions
+            .filter((opt) => opt.key !== 'all')
+            .map((opt) => ({ value: opt.key, label: opt.label }))}
+        />
+        <Pressable style={styles.filterBtnWrap} onPress={() => setIsFilterModalOpen(true)}>
+          <View style={styles.filterBtnInner}>
+            <PaperTextInput
+              mode="outlined"
+              dense
+              label="Filter"
+              value={activeFilterCount > 0 ? String(activeFilterCount) : ''}
+              editable={false}
+              outlineColor={hasActiveFilters ? Colors.primary : undefined}
+              activeOutlineColor={Colors.primary}
+              right={<PaperTextInput.Icon icon="filter-variant" />}
+              style={styles.filterInput}
+              outlineStyle={styles.filterOutline}
+            />
+          </View>
         </Pressable>
       </View>
 
@@ -378,234 +300,7 @@ export default function JobsScreen() {
         }
       />
 
-      {/* 1. Status Dropdown Popup Modal (Multiselect) */}
-      <Modal
-        visible={isStatusMenuOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsStatusMenuOpen(false)}
-      >
-        <Pressable
-          style={styles.dropdownModalOverlay}
-          onPress={() => setIsStatusMenuOpen(false)}
-        >
-          <Pressable style={styles.statusDropdownCard} onPress={(e) => e.stopPropagation?.()}>
-            <View style={styles.statusDropdownHeader}>
-              <Text style={styles.statusDropdownTitle}>Select Status</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                {selectedStatuses.length > 0 && (
-                  <Pressable onPress={() => setSelectedStatuses([])}>
-                    <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '700' }}>Reset</Text>
-                  </Pressable>
-                )}
-                <Pressable onPress={() => setIsStatusMenuOpen(false)}>
-                  <Ionicons name="close" size={18} color="#64748B" />
-                </Pressable>
-              </View>
-            </View>
-
-            {/* All Status Option */}
-            <Pressable
-              style={[
-                styles.statusDropdownItem,
-                selectedStatuses.length === 0 && styles.statusDropdownItemActive,
-              ]}
-              onPress={() => {
-                setSelectedStatuses([]);
-              }}
-            >
-              <View style={styles.statusDropdownItemLeft}>
-                <Ionicons
-                  name={selectedStatuses.length === 0 ? 'checkbox' : 'square-outline'}
-                  size={18}
-                  color={selectedStatuses.length === 0 ? Colors.primary : '#94A3B8'}
-                />
-                <Text
-                  style={[
-                    styles.statusDropdownItemText,
-                    selectedStatuses.length === 0 && styles.statusDropdownItemTextActive,
-                  ]}
-                >
-                  All Status
-                </Text>
-              </View>
-            </Pressable>
-
-            {/* Specific Status Options */}
-            {statusOptions.filter((opt) => opt.key !== 'all').map((opt) => {
-              const isSelected = selectedStatuses.includes(opt.key);
-              return (
-                <Pressable
-                  key={opt.key}
-                  style={[
-                    styles.statusDropdownItem,
-                    isSelected && styles.statusDropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    if (isSelected) {
-                      setSelectedStatuses(selectedStatuses.filter((s) => s !== opt.key));
-                    } else {
-                      setSelectedStatuses([...selectedStatuses, opt.key]);
-                    }
-                  }}
-                >
-                  <View style={styles.statusDropdownItemLeft}>
-                    <Ionicons
-                      name={isSelected ? 'checkbox' : 'square-outline'}
-                      size={18}
-                      color={isSelected ? Colors.primary : '#94A3B8'}
-                    />
-                    <View
-                      style={[
-                        styles.statusDot,
-                        { backgroundColor: opt.dot },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.statusDropdownItemText,
-                        isSelected && styles.statusDropdownItemTextActive,
-                      ]}
-                    >
-                      {opt.label}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-
-            <Pressable
-              style={[styles.modalApplyBtn, { marginTop: 12 }]}
-              onPress={() => setIsStatusMenuOpen(false)}
-            >
-              <Text style={styles.modalApplyBtnText}>
-                {selectedStatuses.length === 0
-                  ? 'Showing All Statuses'
-                  : `Apply (${selectedStatuses.length} selected)`}
-              </Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* 2. Date Range Modal */}
-      <Modal
-        visible={isDateModalOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsDateModalOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setIsDateModalOpen(false)}
-          />
-          <FloatingCloseButton onPress={() => setIsDateModalOpen(false)} />
-
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleRow}>
-                <Ionicons name="calendar" size={20} color={Colors.primary} />
-                <Text style={styles.modalTitle}>
-                  {isCustomDateActive ? 'Custom Date Range' : 'Filter by Date'}
-                </Text>
-              </View>
-            </View>
-
-            {!isCustomDateActive ? (
-              <View style={styles.optionsList}>
-                {dateRangeOptions.map((opt) => {
-                  const isSelected = selectedDateRange === opt.key;
-                  return (
-                    <Pressable
-                      key={opt.key}
-                      style={[
-                        styles.optionRow,
-                        isSelected && styles.optionRowActive,
-                      ]}
-                      onPress={() => {
-                        if (opt.key === 'custom') {
-                          setIsCustomDateActive(true);
-                        } else {
-                          setSelectedDateRange(opt.key);
-                          setCustomStartDate(undefined);
-                          setCustomEndDate(undefined);
-                          setIsDateModalOpen(false);
-                        }
-                      }}
-                    >
-                      <View style={styles.optionLeft}>
-                        <Ionicons
-                          name={opt.icon}
-                          size={18}
-                          color={isSelected ? Colors.primary : '#64748B'}
-                        />
-                        <Text
-                          style={[
-                            styles.optionText,
-                            isSelected && styles.optionTextActive,
-                          ]}
-                        >
-                          {opt.label}
-                        </Text>
-                      </View>
-                      {isSelected && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={18}
-                          color={Colors.primary}
-                        />
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : (
-              <View>
-                <Text style={styles.inputLabel}>Start Date (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  placeholder="e.g. 2026-05-01"
-                  placeholderTextColor="#94A3B8"
-                  value={tempStart}
-                  onChangeText={setTempStart}
-                />
-
-                <Text style={styles.inputLabel}>End Date (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  placeholder="e.g. 2026-05-31"
-                  placeholderTextColor="#94A3B8"
-                  value={tempEnd}
-                  onChangeText={setTempEnd}
-                />
-
-                <View style={styles.modalActions}>
-                  <Pressable
-                    style={styles.backToPresetsBtn}
-                    onPress={() => setIsCustomDateActive(false)}
-                  >
-                    <Text style={styles.backToPresetsBtnText}>Presets</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.applyBtn}
-                    onPress={() => {
-                      setSelectedDateRange('custom');
-                      setCustomStartDate(tempStart);
-                      setCustomEndDate(tempEnd);
-                      setIsDateModalOpen(false);
-                    }}
-                  >
-                    <Text style={styles.applyBtnText}>Apply Filter</Text>
-                  </Pressable>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* 3. Advanced Filter Modal */}
+      {/* Advanced Filter Modal */}
       <Modal
         visible={isFilterModalOpen}
         transparent
@@ -633,6 +328,58 @@ export default function JobsScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.filterSectionTitle}>Time Range</Text>
+              <View style={styles.modalChipRow}>
+                {dateRangeOptions.map((opt) => (
+                  <Pressable
+                    key={opt.key}
+                    style={[
+                      styles.modalChip,
+                      selectedDateRange === opt.key && styles.modalChipActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedDateRange(opt.key);
+                      if (opt.key !== 'custom') {
+                        setCustomStartDate(undefined);
+                        setCustomEndDate(undefined);
+                      }
+                    }}
+                  >
+                    <Ionicons
+                      name={opt.icon}
+                      size={14}
+                      color={selectedDateRange === opt.key ? '#FFFFFF' : '#64748B'}
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text
+                      style={[
+                        styles.modalChipText,
+                        selectedDateRange === opt.key && styles.modalChipTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {selectedDateRange === 'custom' && (
+                <View style={{ marginBottom: 8 }}>
+                  <OutlinedTextInput
+                    label="Start Date (YYYY-MM-DD)"
+                    placeholder="e.g. 2026-05-01"
+                    value={tempStart}
+                    onChangeText={setTempStart}
+                  />
+                  <OutlinedTextInput
+                    label="End Date (YYYY-MM-DD)"
+                    placeholder="e.g. 2026-05-31"
+                    value={tempEnd}
+                    onChangeText={setTempEnd}
+                  />
+                </View>
+              )}
+
               {/* Device Type (Only if activeTab is repair) */}
               {activeTab === 'repair' && (
                 <>
@@ -729,7 +476,13 @@ export default function JobsScreen() {
             <View style={styles.modalFooter}>
               <Pressable
                 style={styles.modalApplyBtn}
-                onPress={() => setIsFilterModalOpen(false)}
+                onPress={() => {
+                  if (selectedDateRange === 'custom') {
+                    setCustomStartDate(tempStart);
+                    setCustomEndDate(tempEnd);
+                  }
+                  setIsFilterModalOpen(false);
+                }}
               >
                 <Text style={styles.modalApplyBtnText}>Apply Filters</Text>
               </Pressable>
@@ -801,55 +554,38 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
     backgroundColor: Colors.primary,
   },
-  // 3-Button Filter Row
   filterRowContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'stretch',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingTop: 8,
+    paddingBottom: 10,
     backgroundColor: '#FFFFFF',
-    gap: 8,
+    gap: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  filterRowBtn: {
+  statusSelect: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginVertical: 0,
+  },
+  statusInput: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 6,
+    height: 40,
   },
-  filterRowBtnSmall: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  filterBtnWrap: {
+    width: 118,
     justifyContent: 'center',
+  },
+  filterBtnInner: {
+    pointerEvents: 'none',
+  },
+  filterInput: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
+    height: 40
   },
-  filterRowBtnActive: {
-    borderColor: Colors.primary,
-    backgroundColor: '#EFF6FF',
-  },
-  filterRowBtnText: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  filterRowBtnTextActive: {
-    color: Colors.primary,
-    fontWeight: '700',
+  filterOutline: {
+    borderRadius: 4,
   },
   filterBadgeCircle: {
     backgroundColor: Colors.primary,
@@ -1114,6 +850,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   modalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 10,

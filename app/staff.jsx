@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, Alert, KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator, RefreshControl, } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, Modal, Alert, KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator, RefreshControl, } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
 import { AppHeader } from '../components/AppHeader';
 import { FloatingCloseButton } from '../components/FloatingCloseButton';
+import { OutlinedTextInput } from '../components/OutlinedTextInput';
 export default function StaffScreen() {
     const insets = useSafeAreaInsets();
     const [staff, setStaff] = useState([]);
@@ -189,11 +190,23 @@ export default function StaffScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>Full Name *</Text>
-              <TextInput style={styles.input} placeholder="e.g. Ramesh Sharma" placeholderTextColor="#94A3B8" value={name} onChangeText={setName}/>
+              <OutlinedTextInput
+                label="Full Name"
+                required
+                placeholder="e.g. Ramesh Sharma"
+                value={name}
+                onChangeText={setName}
+              />
 
-              <Text style={styles.inputLabel}>Mobile Phone (10 digits) *</Text>
-              <TextInput style={styles.input} placeholder="e.g. 9811223344" placeholderTextColor="#94A3B8" keyboardType="phone-pad" maxLength={10} value={phone} onChangeText={setPhone}/>
+              <OutlinedTextInput
+                label="Mobile Phone (10 digits)"
+                required
+                placeholder="e.g. 9811223344"
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={phone}
+                onChangeText={setPhone}
+              />
 
               <Text style={styles.inputLabel}>Role *</Text>
               <View style={styles.roleSelectionRow}>

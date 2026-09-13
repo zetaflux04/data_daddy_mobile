@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, Alert, ScrollView, Image, KeyboardAvoidingView, Platform, } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Image, KeyboardAvoidingView, Platform, } from 'react-native';
+import { OutlinedTextInput } from '../../components/OutlinedTextInput';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,21 +54,41 @@ export default function RegisterShopScreen() {
           <View style={styles.cardInner}>
             <Text style={styles.cardHeading}>Set Up Your Shop</Text>
 
-            <Text style={styles.inputLabel}>SHOP BUSINESS NAME *</Text>
-            <TextInput style={styles.textInput} placeholder="e.g. Master Mobile & Laptop Care" placeholderTextColor="#94A3B8" value={shopName} onChangeText={setShopName}/>
+            <OutlinedTextInput
+              label="Shop Business Name"
+              required
+              placeholder="e.g. Master Mobile & Laptop Care"
+              value={shopName}
+              onChangeText={setShopName}
+            />
 
-            <Text style={styles.inputLabel}>OWNER / MANAGER FULL NAME *</Text>
-            <TextInput style={styles.textInput} placeholder="e.g. Sunil Verma" placeholderTextColor="#94A3B8" value={ownerName} onChangeText={setOwnerName}/>
+            <OutlinedTextInput
+              label="Owner / Manager Full Name"
+              required
+              placeholder="e.g. Sunil Verma"
+              value={ownerName}
+              onChangeText={setOwnerName}
+            />
 
             <View style={styles.twoCol}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>CITY / TOWN</Text>
-                <TextInput style={styles.textInput} placeholder="e.g. Jaipur" placeholderTextColor="#94A3B8" value={city} onChangeText={setCity}/>
+                <OutlinedTextInput
+                  label="City / Town"
+                  placeholder="e.g. Jaipur"
+                  value={city}
+                  onChangeText={setCity}
+                />
               </View>
               <View style={{ width: 12 }}/>
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>PIN CODE</Text>
-                <TextInput style={styles.textInput} placeholder="e.g. 302001" placeholderTextColor="#94A3B8" keyboardType="numeric" maxLength={6} value={pincode} onChangeText={setPincode}/>
+                <OutlinedTextInput
+                  label="Pin Code"
+                  placeholder="e.g. 302001"
+                  keyboardType="numeric"
+                  maxLength={6}
+                  value={pincode}
+                  onChangeText={setPincode}
+                />
               </View>
             </View>
 

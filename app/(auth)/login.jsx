@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, Image, ScrollView, } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, KeyboardAvoidingView, Platform, Image, ScrollView, } from 'react-native';
+import { OutlinedTextInput } from '../../components/OutlinedTextInput';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -79,13 +80,16 @@ export default function LoginScreen() {
             </Text>
 
             {!isOtpSent ? (<>
-                <Text style={styles.inputLabel}>MOBILE NUMBER</Text>
-                <View style={styles.phoneInputRow}>
-                  <View style={styles.countryCodeBox}>
-                    <Text style={styles.countryCodeText}>+91</Text>
-                  </View>
-                  <TextInput style={styles.phoneInput} placeholder="Enter 10 digit number" placeholderTextColor="#94A3B8" keyboardType="phone-pad" maxLength={10} value={phone} onChangeText={setPhone}/>
-                </View>
+                <OutlinedTextInput
+                  label="Mobile Number"
+                  placeholder="Enter 10 digit number"
+                  startAdornment="+91"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  value={phone}
+                  onChangeText={setPhone}
+                  style={{ marginBottom: 16 }}
+                />
 
                 {/* Send OTP Button (Brand Blue) */}
                 <Pressable style={({ pressed }) => [
@@ -101,7 +105,16 @@ export default function LoginScreen() {
                   Enter the 6-digit verification code sent to +91 {phone}
                 </Text>
 
-                <TextInput style={styles.otpInput} placeholder="• • • • • •" placeholderTextColor="#94A3B8" keyboardType="numeric" maxLength={6} value={otp} onChangeText={setOtp}/>
+                <OutlinedTextInput
+                  label="OTP"
+                  placeholder="• • • • • •"
+                  keyboardType="numeric"
+                  maxLength={6}
+                  value={otp}
+                  onChangeText={setOtp}
+                  style={{ marginBottom: 12 }}
+                  inputStyle={{ letterSpacing: 6, fontWeight: '700', textAlign: 'center' }}
+                />
 
                 {devOtpHint && (<View style={styles.devHintBox}>
                     <Text style={styles.devHintText}>

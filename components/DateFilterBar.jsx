@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal, TextInput, } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { FloatingCloseButton } from './FloatingCloseButton';
+import { OutlinedTextInput } from './OutlinedTextInput';
 const filterTabs = [
     { key: 'all', label: 'All Time', icon: 'infinite-outline' },
     { key: 'today', label: 'Today', icon: 'today-outline' },
@@ -58,11 +59,19 @@ export const DateFilterBar = ({ selectedRange, onRangeChange, customStartDate, c
               </View>
             </View>
 
-            <Text style={styles.inputLabel}>Start Date (YYYY-MM-DD)</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g. 2025-05-01" placeholderTextColor="#94A3B8" value={tempStart} onChangeText={setTempStart}/>
+            <OutlinedTextInput
+              label="Start Date (YYYY-MM-DD)"
+              placeholder="e.g. 2025-05-01"
+              value={tempStart}
+              onChangeText={setTempStart}
+            />
 
-            <Text style={styles.inputLabel}>End Date (YYYY-MM-DD)</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g. 2025-05-31" placeholderTextColor="#94A3B8" value={tempEnd} onChangeText={setTempEnd}/>
+            <OutlinedTextInput
+              label="End Date (YYYY-MM-DD)"
+              placeholder="e.g. 2025-05-31"
+              value={tempEnd}
+              onChangeText={setTempEnd}
+            />
 
             {/* Quick Presets */}
             <View style={styles.presetsRow}>

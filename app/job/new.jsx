@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Keyboard, } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Keyboard, } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,8 +8,8 @@ import { api, resolveImageUrls } from '../../services/api';
 import { Colors } from '../../constants/Colors';
 import { AppHeader } from '../../components/AppHeader';
 import { S3Image } from '../../components/S3Image';
-import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { OutlinedTextInput } from '../../components/OutlinedTextInput';
+import { MaterialMultiSelect } from '../../components/MaterialMultiSelect';
 const deviceTypes = [
     { type: 'mobile', label: 'Mobile', icon: 'phone-portrait-outline' },
     { type: 'laptop', label: 'Laptop', icon: 'laptop-outline' },
@@ -66,14 +66,12 @@ export default function NewJobScreen() {
     // Problem selection
     const [selectedProblems, setSelectedProblems] = useState([]);
     const [customProblem, setCustomProblem] = useState('');
-    const [isProblemModalOpen, setIsProblemModalOpen] = useState(false);
     const [photos, setPhotos] = useState([]);
     const [previewImage, setPreviewImage] = useState(null);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     // Accessory selection
     const [selectedAccessories, setSelectedAccessories] = useState([]);
     const [customAccessory, setCustomAccessory] = useState('');
-    const [isAccessoryModalOpen, setIsAccessoryModalOpen] = useState(false);
     const [productPrice, setProductPrice] = useState('');
     const [accessoryPhoto, setAccessoryPhoto] = useState(null);
     const [isUploadingAccessoryPhoto, setIsUploadingAccessoryPhoto] = useState(false);
@@ -689,19 +687,19 @@ export default function NewJobScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.fieldLabel}>Problem Description *</Text>
-                <Pressable
-                  style={[styles.dropdownSelector, selectedProblems.length === 0 && styles.dropdownSelectorPlaceholder]}
-                  onPress={() => setIsProblemModalOpen(true)}
-                >
-                  <Text
-                    style={[styles.dropdownSelectorText, selectedProblems.length === 0 && styles.placeholderText]}
-                    numberOfLines={2}
-                  >
-                    {selectedProblems.length > 0 ? selectedProblems.join(', ') : 'Select problem descriptions...'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={18} color="#64748B" />
-                </Pressable>
+                <MaterialMultiSelect
+                  label="Problem Description"
+                  required
+                  options={PROBLEM_OPTIONS}
+                  value={selectedProblems}
+                  placeholder="Select problem descriptions..."
+                  onChange={(updated) => {
+                    setSelectedProblems(updated);
+                    if (!updated.includes('Others')) {
+                      setCustomProblem('');
+                    }
+                  }}
+                />
 
                 {selectedProblems.includes('Others') && (
                   <View style={{ marginTop: 10 }}>
@@ -829,19 +827,19 @@ export default function NewJobScreen() {
             >
               <Text style={styles.sectionHeader}>3. Accessory Details</Text>
 
-              <Text style={styles.fieldLabel}>Product / Accessory Name *</Text>
-              <Pressable
-                style={[styles.dropdownSelector, selectedAccessories.length === 0 && styles.dropdownSelectorPlaceholder]}
-                onPress={() => setIsAccessoryModalOpen(true)}
-              >
-                <Text
-                  style={[styles.dropdownSelectorText, selectedAccessories.length === 0 && styles.placeholderText]}
-                  numberOfLines={2}
-                >
-                  {selectedAccessories.length > 0 ? selectedAccessories.join(', ') : 'Select accessory products...'}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#64748B" />
-              </Pressable>
+              <MaterialMultiSelect
+                label="Product / Accessory Name"
+                required
+                options={ACCESSORY_OPTIONS}
+                value={selectedAccessories}
+                placeholder="Select accessory products..."
+                onChange={(updated) => {
+                  setSelectedAccessories(updated);
+                  if (!updated.includes('Others')) {
+                    setCustomAccessory('');
+                  }
+                }}
+              />
 
               {selectedAccessories.includes('Others') && (
                 <View style={{ marginTop: 10 }}>
@@ -1005,142 +1003,6 @@ export default function NewJobScreen() {
               );
             })()}
           </Pressable>
-        </View>
-      </Modal>
-
-      {/* Problem Selection Modal (Multiselect) */}
-      <Modal
-        visible={isProblemModalOpen}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsProblemModalOpen(false)}
-      >
-        <View style={styles.pickerModalOverlay}>
-          <Pressable
-            style={styles.pickerModalBackdrop}
-            onPress={() => setIsProblemModalOpen(false)}
-          />
-          <FloatingCloseButton onPress={() => setIsProblemModalOpen(false)} />
-          <View style={styles.pickerModalCard}>
-            <View style={styles.pickerModalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="construct-outline" size={20} color={Colors.primary} />
-                <Text style={styles.pickerModalTitle}>Select Problem Descriptions</Text>
-              </View>
-              {selectedProblems.length > 0 && (
-                <Pressable onPress={() => setSelectedProblems([])}>
-                  <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '700' }}>Clear</Text>
-                </Pressable>
-              )}
-            </View>
-
-            <ScrollView style={styles.pickerModalScroll} showsVerticalScrollIndicator={false}>
-              {PROBLEM_OPTIONS.map((item) => {
-                const isSelected = selectedProblems.includes(item);
-                return (
-                  <Pressable
-                    key={item}
-                    style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
-                    onPress={() => {
-                      const updated = isSelected
-                        ? selectedProblems.filter((p) => p !== item)
-                        : [...selectedProblems, item];
-                      setSelectedProblems(updated);
-                      if (!updated.includes('Others')) {
-                        setCustomProblem('');
-                      }
-                    }}
-                  >
-                    <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextSelected]}>
-                      {item}
-                    </Text>
-                    <Ionicons
-                      name={isSelected ? 'checkbox' : 'square-outline'}
-                      size={20}
-                      color={isSelected ? Colors.primary : '#94A3B8'}
-                    />
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            <Pressable
-              style={styles.pickerModalDoneBtn}
-              onPress={() => setIsProblemModalOpen(false)}
-            >
-              <Text style={styles.pickerModalDoneBtnText}>
-                Done ({selectedProblems.length} selected)
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Accessory Selection Modal (Multiselect) */}
-      <Modal
-        visible={isAccessoryModalOpen}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsAccessoryModalOpen(false)}
-      >
-        <View style={styles.pickerModalOverlay}>
-          <Pressable
-            style={styles.pickerModalBackdrop}
-            onPress={() => setIsAccessoryModalOpen(false)}
-          />
-          <FloatingCloseButton onPress={() => setIsAccessoryModalOpen(false)} />
-          <View style={styles.pickerModalCard}>
-            <View style={styles.pickerModalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="bag-handle-outline" size={20} color={Colors.primary} />
-                <Text style={styles.pickerModalTitle}>Select Accessory Products</Text>
-              </View>
-              {selectedAccessories.length > 0 && (
-                <Pressable onPress={() => setSelectedAccessories([])}>
-                  <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '700' }}>Clear</Text>
-                </Pressable>
-              )}
-            </View>
-
-            <ScrollView style={styles.pickerModalScroll} showsVerticalScrollIndicator={false}>
-              {ACCESSORY_OPTIONS.map((item) => {
-                const isSelected = selectedAccessories.includes(item);
-                return (
-                  <Pressable
-                    key={item}
-                    style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
-                    onPress={() => {
-                      const updated = isSelected
-                        ? selectedAccessories.filter((a) => a !== item)
-                        : [...selectedAccessories, item];
-                      setSelectedAccessories(updated);
-                      if (!updated.includes('Others')) {
-                        setCustomAccessory('');
-                      }
-                    }}
-                  >
-                    <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextSelected]}>
-                      {item}
-                    </Text>
-                    <Ionicons
-                      name={isSelected ? 'checkbox' : 'square-outline'}
-                      size={20}
-                      color={isSelected ? Colors.primary : '#94A3B8'}
-                    />
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            <Pressable
-              style={styles.pickerModalDoneBtn}
-              onPress={() => setIsAccessoryModalOpen(false)}
-            >
-              <Text style={styles.pickerModalDoneBtnText}>
-                Done ({selectedAccessories.length} selected)
-              </Text>
-            </Pressable>
-          </View>
         </View>
       </Modal>
     </View>);

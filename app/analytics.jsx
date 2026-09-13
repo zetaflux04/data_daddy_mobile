@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal, Alert, KeyboardAvoidingView, Platform, } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Alert, KeyboardAvoidingView, Platform, } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
 import { AppHeader } from '../components/AppHeader';
 import { FloatingCloseButton } from '../components/FloatingCloseButton';
+import { OutlinedTextInput } from '../components/OutlinedTextInput';
 const categories = [
     { key: 'spare_part', label: 'Spare Part', icon: 'hardware-chip-outline' },
     { key: 'rent', label: 'Rent', icon: 'business-outline' },
@@ -158,11 +159,23 @@ export default function AnalyticsScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-              <Text style={styles.inputLabel}>Title *</Text>
-              <TextInput style={styles.modalInput} placeholder="e.g. iPhone 13 Screen combo purchase" placeholderTextColor="#94A3B8" value={expTitle} onChangeText={setExpTitle}/>
+              <OutlinedTextInput
+                label="Title"
+                required
+                placeholder="e.g. iPhone 13 Screen combo purchase"
+                value={expTitle}
+                onChangeText={setExpTitle}
+              />
 
-              <Text style={styles.inputLabel}>Amount (₹) *</Text>
-              <TextInput style={styles.modalInput} placeholder="e.g. 2800" placeholderTextColor="#94A3B8" keyboardType="numeric" value={expAmount} onChangeText={setExpAmount}/>
+              <OutlinedTextInput
+                label="Amount (₹)"
+                required
+                placeholder="e.g. 2800"
+                keyboardType="numeric"
+                startAdornment="₹"
+                value={expAmount}
+                onChangeText={setExpAmount}
+              />
 
               <Text style={styles.inputLabel}>Category</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
@@ -173,8 +186,12 @@ export default function AnalyticsScreen() {
                   </Pressable>))}
               </ScrollView>
 
-              <Text style={styles.inputLabel}>Note (Optional)</Text>
-              <TextInput style={styles.modalInput} placeholder="e.g. Purchased from Nehru Place distributor" placeholderTextColor="#94A3B8" value={expNote} onChangeText={setExpNote}/>
+              <OutlinedTextInput
+                label="Note (Optional)"
+                placeholder="e.g. Purchased from Nehru Place distributor"
+                value={expNote}
+                onChangeText={setExpNote}
+              />
 
               <View style={styles.modalActions}>
                 <Pressable style={styles.cancelBtn} onPress={() => setIsAddExpenseOpen(false)}>

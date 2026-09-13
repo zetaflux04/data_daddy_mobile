@@ -5,11 +5,11 @@ import {
   StyleSheet,
   Pressable,
   Modal,
-  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { FloatingCloseButton } from './FloatingCloseButton';
+import { OutlinedTextInput } from './OutlinedTextInput';
 
 const dateRangeOptions = [
   { key: 'all', label: 'All Time', icon: 'infinite-outline' },
@@ -172,20 +172,16 @@ export const HeaderFilterBar = ({
               </View>
             ) : (
               <View>
-                <Text style={styles.inputLabel}>Start Date (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.modalInput}
+                <OutlinedTextInput
+                  label="Start Date (YYYY-MM-DD)"
                   placeholder="e.g. 2026-05-01"
-                  placeholderTextColor="#94A3B8"
                   value={tempStart}
                   onChangeText={setTempStart}
                 />
 
-                <Text style={styles.inputLabel}>End Date (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.modalInput}
+                <OutlinedTextInput
+                  label="End Date (YYYY-MM-DD)"
                   placeholder="e.g. 2026-05-31"
-                  placeholderTextColor="#94A3B8"
                   value={tempEnd}
                   onChangeText={setTempEnd}
                 />

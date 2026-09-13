@@ -21,6 +21,7 @@ import { HeaderFilterBar } from '../../components/HeaderFilterBar';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Colors } from '../../constants/Colors';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
+import { OutlinedTextInput } from '../../components/OutlinedTextInput';
 
 const customerStatusTabs = [
   { key: 'all', label: 'All' },
@@ -668,31 +669,27 @@ export default function CustomersScreen() {
             </View>
 
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
-              <Text style={styles.inputLabel}>Customer Name *</Text>
-              <TextInput
-                style={styles.modalInput}
+              <OutlinedTextInput
+                label="Customer Name"
+                required
                 placeholder="e.g. Ramesh Kumar"
-                placeholderTextColor="#94A3B8"
                 value={newName}
                 onChangeText={setNewName}
               />
 
-              <Text style={styles.inputLabel}>Mobile Phone Number *</Text>
-              <TextInput
-                style={styles.modalInput}
+              <OutlinedTextInput
+                label="Mobile Phone Number"
+                required
                 placeholder="10-digit number (e.g. 9876543210)"
-                placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 maxLength={10}
                 value={newPhone}
                 onChangeText={setNewPhone}
               />
 
-              <Text style={styles.inputLabel}>Address / Area (Optional)</Text>
-              <TextInput
-                style={styles.modalInput}
+              <OutlinedTextInput
+                label="Address / Area (Optional)"
                 placeholder="e.g. Main Market, Shop #4"
-                placeholderTextColor="#94A3B8"
                 value={newAddress}
                 onChangeText={setNewAddress}
               />

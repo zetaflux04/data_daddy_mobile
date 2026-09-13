@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, Pressable, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { Colors } from '../constants/Colors';
 import { AppHeader } from '../components/AppHeader';
+import { OutlinedTextInput } from '../components/OutlinedTextInput';
 export default function SettingsScreen() {
     const insets = useSafeAreaInsets();
     const { shop, updateShopProfile, refreshShopProfile } = useAuth();
@@ -128,17 +129,30 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Shop Profile Details</Text>
             <View style={styles.card}>
-              <Text style={styles.inputLabel}>Shop Business Name</Text>
-              <TextInput style={styles.textInput} value={shopName} onChangeText={setShopName} placeholderTextColor="#94A3B8"/>
+              <OutlinedTextInput
+                label="Shop Business Name"
+                value={shopName}
+                onChangeText={setShopName}
+              />
 
-              <Text style={styles.inputLabel}>Owner / Primary Manager</Text>
-              <TextInput style={styles.textInput} value={ownerName} onChangeText={setOwnerName} placeholderTextColor="#94A3B8"/>
+              <OutlinedTextInput
+                label="Owner / Primary Manager"
+                value={ownerName}
+                onChangeText={setOwnerName}
+              />
 
-              <Text style={styles.inputLabel}>Shop Contact Phone</Text>
-              <TextInput style={styles.textInput} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholderTextColor="#94A3B8"/>
+              <OutlinedTextInput
+                label="Shop Contact Phone"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+              />
 
-              <Text style={styles.inputLabel}>Physical Address (Prints on Invoice)</Text>
-              <TextInput style={styles.textInput} value={address} onChangeText={setAddress} placeholderTextColor="#94A3B8"/>
+              <OutlinedTextInput
+                label="Physical Address (Prints on Invoice)"
+                value={address}
+                onChangeText={setAddress}
+              />
             </View>
           </View>
 

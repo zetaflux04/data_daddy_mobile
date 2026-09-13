@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Linking, Modal, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Linking, Modal, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,8 @@ import { AppHeader } from '../../components/AppHeader';
 import { S3Image } from '../../components/S3Image';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { useAuth } from '../../context/AuthContext';
+import { OutlinedTextInput } from '../../components/OutlinedTextInput';
+import { MaterialSelect } from '../../components/MaterialSelect';
 const statusFlow = ['pending', 'in_progress', 'parts_delayed', 'repaired', 'delivered', 'unrepairable'];
 export default function JobDetailScreen() {
     const insets = useSafeAreaInsets();
@@ -22,7 +24,6 @@ export default function JobDetailScreen() {
     // Staff & Technician State
     const [staffList, setStaffList] = useState([]);
     const [selectedRepairedBy, setSelectedRepairedBy] = useState(null);
-    const [isTechDropdownOpen, setIsTechDropdownOpen] = useState(false);
     // Payment Modal
     const [isPayModalOpen, setIsPayModalOpen] = useState(false);
     const [payAmount, setPayAmount] = useState('');
@@ -135,7 +136,6 @@ export default function JobDetailScreen() {
                     role: 'owner',
                 });
             }
-            setIsTechDropdownOpen(false);
             setIsDeliveryModalOpen(true);
         }
         else {
@@ -701,8 +701,12 @@ export default function JobDetailScreen() {
 
               <ScrollView showsVerticalScrollIndicator={false}>
                 {/* IMEI / Serial Number Input */}
-                <Text style={styles.inputLabel}>1. IMEI / Serial Number</Text>
-                <TextInput style={styles.modalInput} placeholder="e.g. 356984110293847 or SN-98234" placeholderTextColor="#94A3B8" value={deliveryImei} onChangeText={setDeliveryImei}/>
+                <OutlinedTextInput
+                  label="1. IMEI / Serial Number"
+                  placeholder="e.g. 356984110293847 or SN-98234"
+                  value={deliveryImei}
+                  onChangeText={setDeliveryImei}
+                />
 
                 {/* Warranty Yes/No Selection */}
                 <Text style={[styles.inputLabel, { marginTop: 14 }]}>2. Warranty Guarantee</Text>
@@ -739,10 +743,13 @@ export default function JobDetailScreen() {
                     </View>
 
                     {/* Number Input Box */}
-                    <Text style={[styles.warrantyFormLabel, { marginTop: 10 }]}>
-                      Enter Number of {warrantyUnit.charAt(0).toUpperCase() + warrantyUnit.slice(1)}:
-                    </Text>
-                    <TextInput style={styles.modalInput} placeholder="e.g. 1, 3, 6, 12, 30" placeholderTextColor="#94A3B8" keyboardType="numeric" value={warrantyPeriod} onChangeText={setWarrantyPeriod}/>
+                    <OutlinedTextInput
+                      label={`Enter Number of ${warrantyUnit.charAt(0).toUpperCase() + warrantyUnit.slice(1)}`}
+                      placeholder="e.g. 1, 3, 6, 12, 30"
+                      keyboardType="numeric"
+                      value={warrantyPeriod}
+                      onChangeText={setWarrantyPeriod}
+                    />
 
                     {/* Calculated Live Expiry Preview */}
                     {getWarrantyExpiryPreview() ? (<View style={styles.expiryPreviewPill}>
@@ -756,112 +763,33 @@ export default function JobDetailScreen() {
                       </View>) : null}
                   </View>)}
 
-                {/* 3. Repaired By Dropdown */}
-                <Text style={[styles.inputLabel, { marginTop: 14 }]}>3. Repaired By</Text>
+                <MaterialSelect
+                  label="3. Repaired By"
+                  placeholder="Select Technician"
+                  value={selectedRepairedBy?.id}
+                  options={repairedByOptions.map((opt) => ({
+                    value: opt.id,
+                    label: opt.name,
+                    subtitle: opt.isSelf ? 'Shop Owner' : opt.role === 'technician' ? 'Technician' : 'Staff Member',
+                  }))}
+                  onChange={(val) => {
+                    const opt = repairedByOptions.find((o) => o.id === val);
+                    if (opt) {
+                      setSelectedRepairedBy({ id: opt.id, name: opt.name, role: opt.role });
+                    }
+                  }}
+                />
                 <Text style={styles.inputSubLabel}>
                   Select technician or shop owner (self) who completed this repair:
                 </Text>
-
-                {/* Dropdown Selector */}
-                <View style={styles.dropdownContainer}>
-                  <Pressable style={[
-            styles.dropdownTrigger,
-            isTechDropdownOpen && styles.dropdownTriggerActive,
-        ]} onPress={() => setIsTechDropdownOpen((prev) => !prev)}>
-                    <View style={styles.dropdownTriggerLeft}>
-                      <View style={[
-            styles.dropdownTriggerAvatar,
-            (selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)'))
-                ? { backgroundColor: '#FEF3C7' }
-                : { backgroundColor: '#EFF6FF' },
-        ]}>
-                        <Ionicons name={(selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)'))
-            ? 'person-circle-outline'
-            : 'construct-outline'} size={20} color={(selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)'))
-            ? '#D97706'
-            : Colors.primary}/>
-                      </View>
-                      <View style={{ marginLeft: 10, flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={styles.dropdownTriggerValue} numberOfLines={1}>
-                            {selectedRepairedBy?.name || 'Select Technician'}
-                          </Text>
-                          {(selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)')) && (<View style={styles.selfBadge}>
-                              <Text style={styles.selfBadgeText}>SELF</Text>
-                            </View>)}
-                        </View>
-                        <Text style={styles.dropdownTriggerSub}>
-                          {(selectedRepairedBy?.role === 'owner' || selectedRepairedBy?.name?.includes('(Self)'))
-            ? 'Shop Owner'
-            : selectedRepairedBy?.role === 'technician'
-                ? 'Technician'
-                : 'Staff Member'}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.dropdownChevronCircle}>
-                      <Ionicons name={isTechDropdownOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#475569"/>
-                    </View>
-                  </Pressable>
-
-                  {/* Dropdown Menu Options */}
-                  {isTechDropdownOpen && (<View style={styles.dropdownMenu}>
-                      {repairedByOptions.map((opt, idx) => {
-                const isSelected = selectedRepairedBy?.name === opt.name ||
-                    (selectedRepairedBy?.id && selectedRepairedBy?.id === opt.id);
-                const isLast = idx === repairedByOptions.length - 1;
-                return (<Pressable key={opt.id} style={[
-                        styles.dropdownMenuItem,
-                        isSelected && styles.dropdownMenuItemSelected,
-                        !isLast && styles.dropdownMenuItemDivider,
-                    ]} onPress={() => {
-                        setSelectedRepairedBy({ id: opt.id, name: opt.name, role: opt.role });
-                        setIsTechDropdownOpen(false);
-                    }}>
-                            <View style={styles.dropdownMenuItemLeft}>
-                              <View style={[
-                        styles.dropdownMenuItemAvatar,
-                        opt.isSelf ? { backgroundColor: '#FEF3C7' } : { backgroundColor: '#EFF6FF' },
-                    ]}>
-                                <Ionicons name={opt.isSelf ? 'person-circle-outline' : 'construct-outline'} size={17} color={opt.isSelf ? '#D97706' : Colors.primary}/>
-                              </View>
-                              <View style={{ marginLeft: 10, flex: 1 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                  <Text style={[
-                        styles.dropdownMenuItemName,
-                        isSelected && styles.dropdownMenuItemNameSelected,
-                    ]} numberOfLines={1}>
-                                    {opt.name}
-                                  </Text>
-                                  {opt.isSelf && (<View style={styles.selfBadge}>
-                                      <Text style={styles.selfBadgeText}>SELF</Text>
-                                    </View>)}
-                                </View>
-                                <Text style={styles.dropdownMenuItemRole}>
-                                  {opt.isSelf ? 'Shop Owner' : opt.role === 'technician' ? 'Technician' : 'Staff Member'}
-                                </Text>
-                              </View>
-                            </View>
-
-                            {isSelected ? (<Ionicons name="checkmark-circle" size={19} color={Colors.emerald}/>) : (<Ionicons name="ellipse-outline" size={19} color="#CBD5E1"/>)}
-                          </Pressable>);
-            })}
-                    </View>)}
-                </View>
 
                 {repairedByOptions.length === 1 && (<Text style={styles.techHintText}>
                     💡 Tip: Add more technicians from Settings &gt; Staff to assign orders directly to team members.
                   </Text>)}
 
-                <Text style={[styles.inputLabel, { marginTop: 14 }]}>4. Delivery Remark (Optional)</Text>
-                <Text style={styles.inputSubLabel}>
-                  Add any notes about the repair or device condition at delivery:
-                </Text>
-                <TextInput
-                  style={[styles.modalInput, styles.reasonTextInput]}
+                <OutlinedTextInput
+                  label="4. Delivery Remark (Optional)"
                   placeholder="e.g. Screen replaced, battery health 85%, minor scratches on back..."
-                  placeholderTextColor="#94A3B8"
                   multiline
                   numberOfLines={3}
                   value={deliveryRemark}
@@ -913,12 +841,11 @@ export default function JobDetailScreen() {
                   <Text style={{ color: '#64748B', fontWeight: '500' }}> (Estimate: ₹{job.cost.final})</Text>
                 </Text>
 
-                <Text style={styles.inputLabel}>Amount Received (₹)</Text>
-                <TextInput
-                  style={styles.modalInput}
+                <OutlinedTextInput
+                  label="Amount Received (₹)"
                   placeholder="Enter amount received"
-                  placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
+                  startAdornment="₹"
                   value={payAmount}
                   onChangeText={setPayAmount}
                 />
@@ -1005,11 +932,9 @@ export default function JobDetailScreen() {
                   })}
                 </View>
 
-                <Text style={[styles.inputLabel, { marginTop: 14 }]}>Or Enter Custom Reason / Notes</Text>
-                <TextInput
-                  style={[styles.modalInput, styles.reasonTextInput]}
+                <OutlinedTextInput
+                  label="Or Enter Custom Reason / Notes"
                   placeholder="Describe why device cannot be repaired..."
-                  placeholderTextColor="#94A3B8"
                   multiline
                   numberOfLines={3}
                   value={unrepairableReason}
