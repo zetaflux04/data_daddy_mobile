@@ -7,18 +7,17 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  Modal,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { JobCardItem } from '../../components/JobCardItem';
-import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { Colors } from '../../constants/Colors';
 import { MaterialMultiSelect } from '../../components/MaterialMultiSelect';
 import { TextInput as PaperTextInput } from 'react-native-paper';
 import { CustomDateRangeModal } from '../../components/CustomDateRangeModal';
+import { FilterModal } from '../../components/FilterModal';
 import { formatShortRange, todayISO } from '../../utils/date';
 
 const statusOptions = [
@@ -31,43 +30,64 @@ const statusOptions = [
   { key: 'unrepairable', label: 'Unrepairable', dot: '#B91C1C' },
 ];
 
-const dateRangeOptions = [
-  { key: 'all', label: 'All Time', icon: 'infinite-outline' },
-  { key: 'today', label: 'Today', icon: 'today-outline' },
-  { key: 'week', label: 'This Week', icon: 'calendar-outline' },
-  { key: 'month', label: 'This Month', icon: 'calendar-number-outline' },
-  { key: 'year', label: 'This Year', icon: 'time-outline' },
-  { key: 'custom', label: 'Custom Range', icon: 'options-outline' },
-];
-
 export default function JobsScreen() {
   const router = useRouter();
   const [jobs, setJobs] = useState([]);
   const [activeTab, setActiveTab] = useState('repair'); // 'repair' | 'accessory'
   const [selectedStatuses, setSelectedStatuses] = useState([]);
-  const [selectedDateRange, setSelectedDateRange] = useState('all');
+  const [selectedDateRange, setSelectedDateRange] = useState('any_time');
   const [customStartDate, setCustomStartDate] = useState(undefined);
   const [customEndDate, setCustomEndDate] = useState(undefined);
+  const [filterDeviceType, setFilterDeviceType] = useState('all');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState('all');
+  const [filterTechnician, setFilterTechnician] = useState('anyone');
+  const [technicians, setTechnicians] = useState([]);
+  const [filterSortBy, setFilterSortBy] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const [tempStart, setTempStart] = useState(todayISO());
   const [tempEnd, setTempEnd] = useState(todayISO());
 
-  // Advanced Filter Modal State
+  // Filter Modal State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
-  const [filterDeviceType, setFilterDeviceType] = useState('all');
-  const [filterPaymentStatus, setFilterPaymentStatus] = useState('all');
-  const [filterSortBy, setFilterSortBy] = useState('newest');
+
+  // Fetch Technicians for Filter
+  useEffect(() => {
+    let isMounted = true;
+    const loadTechnicians = async () => {
+      try {
+        const list = await api.getStaff();
+        if (isMounted && Array.isArray(list)) {
+          setTechnicians(list);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    loadTechnicians();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const fetchJobs = async () => {
     setIsLoading(true);
     try {
+      let mappedDateRange = selectedDateRange;
+      if (selectedDateRange === 'any_time' || selectedDateRange === 'all') {
+        mappedDateRange = undefined;
+      } else if (selectedDateRange === 'last_7_days') {
+        mappedDateRange = 'week';
+      } else if (selectedDateRange === 'this_month') {
+        mappedDateRange = 'month';
+      }
+
       const data = await api.getJobs({
         status: selectedStatuses.length === 0 ? undefined : selectedStatuses.join(','),
         search: searchQuery,
-        dateRange: selectedDateRange,
+        dateRange: mappedDateRange,
         startDate: customStartDate,
         endDate: customEndDate,
         orderType: activeTab,
@@ -89,16 +109,49 @@ export default function JobsScreen() {
     searchQuery,
   ]);
 
-  // Client-side filtering & sorting for device type, payment status, and order
+  // Client-side filtering & sorting for status, date range, device type, payment status, technician, and order
   const processedJobs = useMemo(() => {
     let list = [...jobs];
 
     // Filter by orderType tab
     list = list.filter((j) => (j.orderType || 'repair') === activeTab);
 
-    // Multi-select status filter
+    // Multi-select status filter (from outside status selector)
     if (selectedStatuses.length > 0) {
       list = list.filter((j) => selectedStatuses.includes(j.status));
+    }
+
+    // Came In / Date Range filtering
+    if (selectedDateRange && selectedDateRange !== 'any_time' && selectedDateRange !== 'all') {
+      const now = new Date();
+      list = list.filter((j) => {
+        const d = j.createdAt ? new Date(j.createdAt) : null;
+        if (!d || isNaN(d.getTime())) return true;
+        if (selectedDateRange === 'today') {
+          const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          return d >= startToday;
+        }
+        if (selectedDateRange === 'yesterday') {
+          const startYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+          const endYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          return d >= startYesterday && d < endYesterday;
+        }
+        if (selectedDateRange === 'last_7_days') {
+          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return d >= sevenDaysAgo;
+        }
+        if (selectedDateRange === 'this_month') {
+          const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          return d >= startMonth;
+        }
+        if (selectedDateRange === 'custom' && customStartDate && customEndDate) {
+          const start = new Date(customStartDate);
+          const end = new Date(customEndDate);
+          end.setHours(23, 59, 59, 999);
+          return d >= start && d <= end;
+        }
+        return true;
+      });
     }
 
     // Device Type filter (for repairs)
@@ -115,6 +168,19 @@ export default function JobsScreen() {
       list = list.filter((j) => (j.cost?.due || 0) > 0);
     }
 
+    // Technician filter
+    if (filterTechnician !== 'anyone') {
+      if (filterTechnician === 'not_assigned') {
+        list = list.filter((j) => !j.assignedTechnicianId && (!j.repairedBy || !j.repairedBy.userId));
+      } else {
+        list = list.filter((j) => {
+          const assignedId = typeof j.assignedTechnicianId === 'object' ? j.assignedTechnicianId?._id : j.assignedTechnicianId;
+          const repairedId = j.repairedBy?.userId;
+          return String(assignedId) === String(filterTechnician) || String(repairedId) === String(filterTechnician);
+        });
+      }
+    }
+
     // Sort By
     if (filterSortBy === 'oldest') {
       list.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
@@ -126,35 +192,35 @@ export default function JobsScreen() {
     }
 
     return list;
-  }, [jobs, activeTab, selectedStatuses, filterDeviceType, filterPaymentStatus, filterSortBy]);
+  }, [jobs, activeTab, selectedStatuses, selectedDateRange, customStartDate, customEndDate, filterDeviceType, filterPaymentStatus, filterTechnician, filterSortBy]);
 
   const hasActiveFilters =
-    selectedDateRange !== 'all' ||
+    (selectedDateRange !== 'any_time' && selectedDateRange !== 'all') ||
     filterDeviceType !== 'all' ||
     filterPaymentStatus !== 'all' ||
+    filterTechnician !== 'anyone' ||
     filterSortBy !== 'newest';
 
   const activeFilterCount =
-    (selectedDateRange !== 'all' ? 1 : 0) +
+    (selectedDateRange !== 'any_time' && selectedDateRange !== 'all' ? 1 : 0) +
     (filterDeviceType !== 'all' ? 1 : 0) +
     (filterPaymentStatus !== 'all' ? 1 : 0) +
+    (filterTechnician !== 'anyone' ? 1 : 0) +
     (filterSortBy !== 'newest' ? 1 : 0);
 
   const handleResetFilters = () => {
-    setSelectedDateRange('all');
+    setSelectedDateRange('any_time');
     setCustomStartDate(undefined);
     setCustomEndDate(undefined);
     setFilterDeviceType('all');
     setFilterPaymentStatus('all');
+    setFilterTechnician('anyone');
     setFilterSortBy('newest');
   };
 
   const handleClearAll = () => {
     setSearchQuery('');
     setSelectedStatuses([]);
-    setSelectedDateRange('all');
-    setCustomStartDate(undefined);
-    setCustomEndDate(undefined);
     handleResetFilters();
   };
 
@@ -298,185 +364,39 @@ export default function JobsScreen() {
         }
       />
 
-      {/* Advanced Filter Modal */}
-      <Modal
+      {/* Bottom Sheet Filter Modal */}
+      <FilterModal
         visible={isFilterModalOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsFilterModalOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setIsFilterModalOpen(false)}
-          />
-          <FloatingCloseButton onPress={() => setIsFilterModalOpen(false)} />
-
-          <View style={styles.filterModalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleRow}>
-                <Ionicons name="options" size={20} color={Colors.primary} />
-                <Text style={styles.modalTitle}>Filter Jobs</Text>
-              </View>
-              {hasActiveFilters && (
-                <Pressable onPress={handleResetFilters}>
-                  <Text style={styles.resetModalText}>Reset All</Text>
-                </Pressable>
-              )}
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.filterSectionTitle}>Time Range</Text>
-              <View style={styles.modalChipRow}>
-                {dateRangeOptions.map((opt) => (
-                  <Pressable
-                    key={opt.key}
-                    style={[
-                      styles.modalChip,
-                      selectedDateRange === opt.key && styles.modalChipActive,
-                    ]}
-                    onPress={() => {
-                      if (opt.key === 'custom') {
-                        setTempStart(customStartDate || todayISO());
-                        setTempEnd(customEndDate || todayISO());
-                        setIsFilterModalOpen(false);
-                        setTimeout(() => setIsCustomDateModalOpen(true), 280);
-                        return;
-                      }
-                      setSelectedDateRange(opt.key);
-                      setCustomStartDate(undefined);
-                      setCustomEndDate(undefined);
-                    }}
-                  >
-                    <Ionicons
-                      name={opt.icon}
-                      size={14}
-                      color={selectedDateRange === opt.key ? '#FFFFFF' : '#64748B'}
-                      style={{ marginRight: 4 }}
-                    />
-                    <Text
-                      style={[
-                        styles.modalChipText,
-                        selectedDateRange === opt.key && styles.modalChipTextActive,
-                      ]}
-                    >
-                      {opt.key === 'custom' &&
-                      selectedDateRange === 'custom' &&
-                      customStartDate &&
-                      customEndDate
-                        ? formatShortRange(customStartDate, customEndDate)
-                        : opt.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              {/* Device Type (Only if activeTab is repair) */}
-              {activeTab === 'repair' && (
-                <>
-                  <Text style={styles.filterSectionTitle}>Device Type</Text>
-                  <View style={styles.modalChipRow}>
-                    {[
-                      { key: 'all', label: 'All Devices' },
-                      { key: 'mobile', label: 'Mobile' },
-                      { key: 'laptop', label: 'Laptop' },
-                      { key: 'tablet', label: 'Tablet' },
-                      { key: 'smartwatch', label: 'Watch' },
-                    ].map((item) => (
-                      <Pressable
-                        key={item.key}
-                        style={[
-                          styles.modalChip,
-                          filterDeviceType === item.key && styles.modalChipActive,
-                        ]}
-                        onPress={() => setFilterDeviceType(item.key)}
-                      >
-                        <Text
-                          style={[
-                            styles.modalChipText,
-                            filterDeviceType === item.key &&
-                              styles.modalChipTextActive,
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </>
-              )}
-
-              {/* Payment Status */}
-              <Text style={styles.filterSectionTitle}>Payment Status</Text>
-              <View style={styles.modalChipRow}>
-                {[
-                  { key: 'all', label: 'All' },
-                  { key: 'paid', label: 'Paid in Full' },
-                  { key: 'due', label: 'Has Dues' },
-                ].map((item) => (
-                  <Pressable
-                    key={item.key}
-                    style={[
-                      styles.modalChip,
-                      filterPaymentStatus === item.key && styles.modalChipActive,
-                    ]}
-                    onPress={() => setFilterPaymentStatus(item.key)}
-                  >
-                    <Text
-                      style={[
-                        styles.modalChipText,
-                        filterPaymentStatus === item.key &&
-                          styles.modalChipTextActive,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              {/* Sort By */}
-              <Text style={styles.filterSectionTitle}>Sort By</Text>
-              <View style={styles.modalChipRow}>
-                {[
-                  { key: 'newest', label: 'Newest First' },
-                  { key: 'oldest', label: 'Oldest First' },
-                  { key: 'due_high', label: 'Highest Due' },
-                ].map((item) => (
-                  <Pressable
-                    key={item.key}
-                    style={[
-                      styles.modalChip,
-                      filterSortBy === item.key && styles.modalChipActive,
-                    ]}
-                    onPress={() => setFilterSortBy(item.key)}
-                  >
-                    <Text
-                      style={[
-                        styles.modalChipText,
-                        filterSortBy === item.key && styles.modalChipTextActive,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <Pressable
-                style={styles.modalApplyBtn}
-                onPress={() => {
-                  setIsFilterModalOpen(false);
-                }}
-              >
-                <Text style={styles.modalApplyBtnText}>Apply Filters</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setIsFilterModalOpen(false)}
+        selectedCameIn={selectedDateRange}
+        onSelectCameIn={setSelectedDateRange}
+        selectedDeviceType={filterDeviceType}
+        onSelectDeviceType={setFilterDeviceType}
+        showDeviceType={activeTab === 'repair'}
+        selectedPaymentStatus={filterPaymentStatus}
+        onSelectPaymentStatus={setFilterPaymentStatus}
+        selectedTechnician={filterTechnician}
+        onSelectTechnician={setFilterTechnician}
+        technicians={technicians}
+        selectedSortBy={filterSortBy}
+        onSelectSortBy={setFilterSortBy}
+        onClearAll={handleResetFilters}
+        onApply={() => {
+          setIsFilterModalOpen(false);
+          fetchJobs();
+        }}
+        onOpenCustomDates={() => {
+          setTempStart(customStartDate || todayISO());
+          setTempEnd(customEndDate || todayISO());
+          setIsFilterModalOpen(false);
+          setTimeout(() => setIsCustomDateModalOpen(true), 300);
+        }}
+        customDateLabel={
+          customStartDate && customEndDate
+            ? formatShortRange(customStartDate, customEndDate)
+            : undefined
+        }
+      />
 
       <CustomDateRangeModal
         visible={isCustomDateModalOpen}

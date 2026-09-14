@@ -23,6 +23,7 @@ import { Colors } from '../../constants/Colors';
 import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { OutlinedTextInput } from '../../components/OutlinedTextInput';
 import { AppHeader } from '../../components/AppHeader';
+import { CustomerFilterModal } from '../../components/CustomerFilterModal';
 
 const customerStatusTabs = [
   { key: 'all', label: 'All' },
@@ -397,106 +398,20 @@ export default function CustomersScreen() {
         }
       />
 
-      {/* Advanced Filter Modal for Customers */}
-      <Modal
+      {/* Bottom Sheet Filter Modal for Customers */}
+      <CustomerFilterModal
         visible={isFilterModalOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsFilterModalOpen(false)}
-      >
-        <View style={styles.filterModalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setIsFilterModalOpen(false)}
-          />
-          <FloatingCloseButton onPress={() => setIsFilterModalOpen(false)} />
-
-          <View style={styles.filterModalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleRow}>
-                <Ionicons name="options" size={20} color={Colors.primary} />
-                <Text style={styles.modalTitle}>Filter Customers</Text>
-              </View>
-              {hasActiveFilters && (
-                <Pressable onPress={handleResetFilters}>
-                  <Text style={styles.resetModalText}>Reset All</Text>
-                </Pressable>
-              )}
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Filter By */}
-              <Text style={styles.filterSectionTitle}>Customer Type</Text>
-              <View style={styles.modalChipRow}>
-                {[
-                  { key: 'all', label: 'All Customers' },
-                  { key: 'dues', label: 'With Pending Dues' },
-                  { key: 'repeat', label: 'Repeat (2+ Jobs)' },
-                  { key: 'single', label: 'First-time (1 Job)' },
-                ].map((item) => (
-                  <Pressable
-                    key={item.key}
-                    style={[
-                      styles.modalChip,
-                      customerFilterType === item.key && styles.modalChipActive,
-                    ]}
-                    onPress={() => setCustomerFilterType(item.key)}
-                  >
-                    <Text
-                      style={[
-                        styles.modalChipText,
-                        customerFilterType === item.key &&
-                          styles.modalChipTextActive,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              {/* Sort By */}
-              <Text style={styles.filterSectionTitle}>Sort By</Text>
-              <View style={styles.modalChipRow}>
-                {[
-                  { key: 'recent', label: 'Recently Active' },
-                  { key: 'name_asc', label: 'Name (A to Z)' },
-                  { key: 'name_desc', label: 'Name (Z to A)' },
-                  { key: 'most_jobs', label: 'Most Jobs' },
-                ].map((item) => (
-                  <Pressable
-                    key={item.key}
-                    style={[
-                      styles.modalChip,
-                      customerSortBy === item.key && styles.modalChipActive,
-                    ]}
-                    onPress={() => setCustomerSortBy(item.key)}
-                  >
-                    <Text
-                      style={[
-                        styles.modalChipText,
-                        customerSortBy === item.key &&
-                          styles.modalChipTextActive,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <Pressable
-                style={styles.modalApplyBtn}
-                onPress={() => setIsFilterModalOpen(false)}
-              >
-                <Text style={styles.modalApplyBtnText}>Apply Filters</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setIsFilterModalOpen(false)}
+        selectedType={customerFilterType}
+        onSelectType={setCustomerFilterType}
+        selectedSortBy={customerSortBy}
+        onSelectSortBy={setCustomerSortBy}
+        onClearAll={handleResetFilters}
+        onApply={() => {
+          setIsFilterModalOpen(false);
+          fetchCustomers();
+        }}
+      />
 
       {/* Multiple Jobs Selection Pop-up Modal */}
       <Modal
