@@ -108,8 +108,8 @@ export function MaterialMultiSelect({
   };
 
   return (
-    <View ref={triggerRef} collapsable={false} style={[styles.container, style]}>
-      <Pressable disabled={disabled} onPress={toggle}>
+    <View style={[styles.container, style]}>
+      <Pressable ref={triggerRef} collapsable={false} disabled={disabled} onPress={toggle}>
         <View style={styles.pointerNone}>
           <TextInput
             mode="outlined"

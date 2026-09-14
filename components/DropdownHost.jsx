@@ -7,12 +7,14 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
 import { usePathname } from 'expo-router';
 
 const DropdownHostContext = createContext(null);
-const FIELD_FALLBACK_HEIGHT = 56;
-const MENU_GAP = 2;
+const FIELD_FALLBACK_HEIGHT = 44;
+const MENU_GAP = 4;
 
 export function DropdownHost({ children, style }) {
   const pathname = usePathname();
@@ -30,14 +32,49 @@ export function DropdownHost({ children, style }) {
   const placeMenu = useCallback((payload) => {
     const trigger = payload?.triggerRef?.current;
     if (!trigger) return;
+
     trigger.measureInWindow((x, y, width, height) => {
       if (!sessionRef.current) return;
+      if (typeof x !== 'number' || typeof y !== 'number') return;
+
+      const { width: screenWidth, height: screenHeight } = Dimensions.get('screen');
+
+      // On Android, Modal with statusBarTranslucent starts at y = 0 of the physical screen.
+      // However, trigger.measureInWindow() measures relative to the Activity window (below the status bar).
+      // We must add StatusBar.currentHeight to align window coordinates to the translucent Modal.
+      const statusBarOffset = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
       const fieldHeight = height > 12 ? height : FIELD_FALLBACK_HEIGHT;
+
+      const fieldTopOnScreen = y + statusBarOffset;
+      const fieldBottomOnScreen = fieldTopOnScreen + fieldHeight;
+
+      // Available vertical space
+      const spaceBelow = screenHeight - fieldBottomOnScreen - 16;
+      const spaceAbove = fieldTopOnScreen - 16;
+
+      let menuY;
+      let calculatedMaxHeight = 260;
+
+      // If severely cramped below (< 160dp) but significantly more space above, open upward
+      if (spaceBelow < 160 && spaceAbove > spaceBelow) {
+        calculatedMaxHeight = Math.min(260, Math.max(100, spaceAbove - MENU_GAP));
+        menuY = fieldTopOnScreen - calculatedMaxHeight - MENU_GAP;
+      } else {
+        // Standard behavior: open directly below the select box
+        calculatedMaxHeight = Math.min(260, Math.max(100, spaceBelow));
+        menuY = fieldBottomOnScreen + MENU_GAP;
+      }
+
+      const menuWidth = Math.min(Math.max(width, 140), screenWidth - 24);
+      const menuX = Math.max(12, Math.min(x, screenWidth - menuWidth - 12));
+
       const nextAnchor = {
-        x,
-        y: y + fieldHeight + MENU_GAP,
-        width: Math.max(width, 140),
+        x: menuX,
+        y: Math.max(8, menuY),
+        width: menuWidth,
+        maxHeight: calculatedMaxHeight,
       };
+
       setSession((prev) => {
         if (!prev) return prev;
         const next = { ...prev, anchor: nextAnchor };
@@ -71,6 +108,7 @@ export function DropdownHost({ children, style }) {
     sessionRef.current = next;
     setSession(next);
     setTimeout(() => placeMenu(payload), 16);
+    setTimeout(() => placeMenu(payload), 100);
   }, [placeMenu]);
 
   useEffect(() => {
@@ -79,6 +117,17 @@ export function DropdownHost({ children, style }) {
     const sub = Keyboard.addListener(event, close);
     return () => sub.remove();
   }, [session, close]);
+
+  useEffect(() => {
+    if (!session) return undefined;
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const subHide = Keyboard.addListener(hideEvent, () => {
+      if (sessionRef.current?.triggerRef) {
+        placeMenu(sessionRef.current);
+      }
+    });
+    return () => subHide.remove();
+  }, [session, placeMenu]);
 
   const pathRef = useRef(pathname);
   useEffect(() => {
@@ -113,14 +162,18 @@ export function DropdownHost({ children, style }) {
                     top: session.anchor.y,
                     left: session.anchor.x,
                     width: session.anchor.width,
+                    ...(session.anchor.maxHeight ? { maxHeight: session.anchor.maxHeight } : {}),
                   },
                 ]}
-                onPress={() => {}}
+                onPress={(e) => e.stopPropagation?.()}
               >
                 <ScrollView
                   keyboardShouldPersistTaps="handled"
                   nestedScrollEnabled
-                  style={styles.menuScroll}
+                  style={[
+                    styles.menuScroll,
+                    session.anchor.maxHeight ? { maxHeight: session.anchor.maxHeight } : null,
+                  ]}
                   bounces={false}
                 >
                   {session.render(close)}
@@ -151,7 +204,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 4,
+    borderRadius: 8,
     overflow: 'hidden',
     elevation: 24,
     shadowColor: '#0F172A',
@@ -164,3 +217,4 @@ const styles = StyleSheet.create({
     maxHeight: 260,
   },
 });
+
