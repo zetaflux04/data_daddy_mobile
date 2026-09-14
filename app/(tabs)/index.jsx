@@ -4,20 +4,18 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { api, resolveImageUrls } from '../../services/api';
+import { api } from '../../services/api';
 import { MetricCard } from '../../components/MetricCard';
 import { DashboardChartsSection } from '../../components/DashboardChartsSection';
 import { JobCardItem } from '../../components/JobCardItem';
 import { BannerCarousel } from '../../components/BannerCarousel';
-import { S3Image } from '../../components/S3Image';
 import { Colors } from '../../constants/Colors';
 export default function DashboardScreen() {
     const router = useRouter();
-    const { shop, refreshShopProfile } = useAuth();
+    const { refreshShopProfile } = useAuth();
     const [summary, setSummary] = useState(null);
     const [recentJobs, setRecentJobs] = useState([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [avatarFailed, setAvatarFailed] = useState(false);
     const loadData = async () => {
         try {
             const [sumData, jobsData] = await Promise.all([
@@ -49,40 +47,6 @@ export default function DashboardScreen() {
                 summary.jobs.delivered
             : recentJobs.length);
     return (<ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary}/>}>
-      {/* Welcome & Shop Profile Bar */}
-      <View style={styles.shopTopBar}>
-        <Pressable style={styles.shopAvatarBtn} onPress={() => router.push('/(tabs)/profile')}>
-          {shop?.logoUrl && !avatarFailed ? (() => {
-            const urls = resolveImageUrls(shop.logoUrl);
-            return urls ? (<S3Image uri={urls.uri} proxyUri={urls.proxyUri} style={styles.shopHeaderAvatarImg} resizeMode="cover" onAllFailed={() => setAvatarFailed(true)}/>) : null;
-        })() : (<View style={styles.shopHeaderAvatarFallback}>
-              <Text style={styles.shopHeaderAvatarLetter}>
-                {shop?.name ? shop.name.charAt(0).toUpperCase() : 'C'}
-              </Text>
-            </View>)}
-        </Pressable>
-
-        <View style={styles.shopTopInfo}>
-          <Text style={styles.shopTopGreeting}>Welcome back, 👋</Text>
-          <View style={styles.shopNameRow}>
-            <Text style={styles.shopTopName} numberOfLines={2}>
-              {shop?.name || 'Chipix'}
-            </Text>
-            <View style={styles.proPlanPill}>
-              <Ionicons name="checkmark-circle" size={12} color="#059669"/>
-              <Text style={styles.proPlanPillText}>Pro</Text>
-            </View>
-          </View>
-        </View>
-
-        <Pressable style={({ pressed }) => [styles.newJobBtnCompact, { opacity: pressed ? 0.88 : 1 }]} onPress={() => router.push('/job/new')}>
-          <LinearGradient colors={Colors.gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.newJobGradientCompact}>
-            <Ionicons name="add" size={17} color="#FFFFFF"/>
-            <Text style={styles.newJobBtnTextCompact}>New Job</Text>
-          </LinearGradient>
-        </Pressable>
-      </View>
-
       {/* Promotional Banner Carousel (Diwali Bulk Parts Discount) */}
       <BannerCarousel />
 
@@ -140,114 +104,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 16,
-    },
-    shopTopBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 14,
-        backgroundColor: '#FFFFFF',
-        padding: 14,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 6,
-        elevation: 2,
-        gap: 12,
-    },
-    shopAvatarBtn: {
-        borderRadius: 22,
-        overflow: 'hidden',
-    },
-    shopHeaderAvatarImg: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        borderWidth: 1.5,
-        borderColor: '#E2E8F0',
-    },
-    shopHeaderAvatarFallback: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: Colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-    },
-    shopHeaderAvatarLetter: {
-        color: '#FFFFFF',
-        fontSize: 18,
-        fontWeight: '800',
-    },
-    shopTopInfo: {
-        flex: 1,
-        minWidth: 0,
-        justifyContent: 'center',
-    },
-    shopTopGreeting: {
-        fontSize: 12,
-        color: '#64748B',
-        fontWeight: '600',
-    },
-    shopNameRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 6,
-        marginTop: 2,
-    },
-    shopTopName: {
-        fontSize: 16,
-        fontWeight: '900',
-        color: '#0F172A',
-        letterSpacing: -0.3,
-        flexShrink: 1,
-    },
-    proPlanPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#ECFDF5',
-        borderWidth: 1,
-        borderColor: '#A7F3D0',
-        paddingHorizontal: 7,
-        paddingVertical: 2,
-        borderRadius: 6,
-        gap: 3,
-        alignSelf: 'center',
-    },
-    proPlanPillText: {
-        fontSize: 10,
-        fontWeight: '800',
-        color: '#059669',
-    },
-    newJobBtnCompact: {
-        flexShrink: 0,
-        borderRadius: 12,
-        overflow: 'hidden',
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 6,
-        elevation: 3,
-    },
-    newJobGradientCompact: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 13,
-        paddingVertical: 9,
-        gap: 4,
-    },
-    newJobBtnTextCompact: {
-        color: '#FFFFFF',
-        fontSize: 13,
-        fontWeight: '800',
+        paddingBottom: 110,
     },
     metricsGrid: {
         marginBottom: 16,

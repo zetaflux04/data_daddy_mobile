@@ -772,6 +772,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+    paddingBottom: 110,
   },
   customerCard: {
     backgroundColor: '#FFFFFF',

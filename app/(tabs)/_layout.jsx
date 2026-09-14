@@ -1,11 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import { Pressable, View, StyleSheet, Platform, Text, Image } from 'react-native';
+import { Pressable, View, StyleSheet, Platform, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
-import { api } from '../../services/api';
+import { api, resolveImageUrls } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { S3Image } from '../../components/S3Image';
 import { MaterialBadge } from '../../components/MaterialBadge';
 import { AppHeader } from '../../components/AppHeader';
+import { CustomTabBar } from '../../components/CustomTabBar';
+
+function DashboardHeaderTitle() {
+    const router = useRouter();
+    const { shop } = useAuth();
+    const [avatarFailed, setAvatarFailed] = useState(false);
+    const urls = shop?.logoUrl ? resolveImageUrls(shop.logoUrl) : null;
+
+    return (
+        <Pressable
+            style={({ pressed }) => [styles.headerProfileRow, { opacity: pressed ? 0.75 : 1 }]}
+            onPress={() => router.push('/(tabs)/profile')}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+        >
+            <View style={styles.headerAvatarWrap}>
+                {urls && !avatarFailed ? (
+                    <S3Image
+                        uri={urls.uri}
+                        proxyUri={urls.proxyUri}
+                        style={styles.headerAvatarImg}
+                        resizeMode="cover"
+                        onAllFailed={() => setAvatarFailed(true)}
+                    />
+                ) : (
+                    <View style={styles.headerAvatarFallback}>
+                        <Text style={styles.headerAvatarLetter}>
+                            {shop?.name ? shop.name.charAt(0).toUpperCase() : 'C'}
+                        </Text>
+                    </View>
+                )}
+            </View>
+
+            <View style={styles.headerShopInfo}>
+                <Text style={styles.headerGreeting}>Welcome back, 👋</Text>
+                <View style={styles.headerNameRow}>
+                    <Text style={styles.headerShopName} numberOfLines={1}>
+                        {shop?.name || 'Chipix'}
+                    </Text>
+                    <View style={styles.headerProPill}>
+                        <Ionicons name="checkmark-circle" size={10} color="#059669" />
+                        <Text style={styles.headerProPillText}>Pro</Text>
+                    </View>
+                </View>
+            </View>
+        </Pressable>
+    );
+}
 
 export default function TabLayout() {
     const router = useRouter();
@@ -34,26 +83,15 @@ export default function TabLayout() {
 
     return (
         <Tabs
+            tabBar={(props) => <CustomTabBar {...props} />}
             screenOptions={{
                 tabBarActiveTintColor: Colors.primary,
                 tabBarInactiveTintColor: '#64748B',
                 tabBarStyle: {
-                    backgroundColor: '#FFFFFF',
-                    borderTopColor: '#E2E8F0',
-                    borderTopWidth: 1,
-                    height: Platform.OS === 'ios' ? 88 : 64,
-                    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-                    paddingTop: 6,
-                    shadowColor: '#0F172A',
-                    shadowOffset: { width: 0, height: -3 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 8,
-                    elevation: 6,
-                },
-                tabBarLabelStyle: {
-                    fontSize: 11,
-                    fontWeight: '700',
-                    marginTop: 2,
+                    position: 'absolute',
+                    backgroundColor: 'transparent',
+                    borderTopWidth: 0,
+                    elevation: 0,
                 },
             }}
         >
@@ -64,24 +102,25 @@ export default function TabLayout() {
                     header: () => (
                         <AppHeader
                             showBack={false}
-                            titleComponent={
-                                <View style={styles.headerLogoWrap}>
-                                    <Image
-                                        source={require('../../assets/logo.png')}
-                                        style={styles.headerLogo}
-                                        resizeMode="contain"
-                                    />
-                                </View>
-                            }
+                            titleComponent={<DashboardHeaderTitle />}
                             rightAction={
-                                <Pressable
-                                    onPress={() => router.push('/notifications')}
-                                    style={({ pressed }) => [styles.headerNotifBtn, { opacity: pressed ? 0.7 : 1 }]}
-                                >
-                                    <MaterialBadge badgeContent={unreadCount} color="error">
-                                        <Ionicons name="notifications-outline" size={20} color="#0F172A" />
-                                    </MaterialBadge>
-                                </Pressable>
+                                <View style={styles.headerActionsRow}>
+                                    <Pressable
+                                        onPress={() => router.push('/search')}
+                                        style={({ pressed }) => [styles.headerIconBtn, { opacity: pressed ? 0.7 : 1 }]}
+                                        accessibilityLabel="Global Search"
+                                    >
+                                        <Ionicons name="search-outline" size={20} color="#0F172A" />
+                                    </Pressable>
+                                    <Pressable
+                                        onPress={() => router.push('/notifications')}
+                                        style={({ pressed }) => [styles.headerIconBtn, { opacity: pressed ? 0.7 : 1 }]}
+                                    >
+                                        <MaterialBadge badgeContent={unreadCount} color="error">
+                                            <Ionicons name="notifications-outline" size={20} color="#0F172A" />
+                                        </MaterialBadge>
+                                    </Pressable>
+                                </View>
                             }
                         />
                     ),
@@ -138,18 +177,90 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-    headerLogoWrap: {
-        justifyContent: 'center',
-        marginLeft: 4,
+    headerProfileRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        minWidth: 0,
+        paddingRight: 4,
     },
-    headerLogo: {
+    headerAvatarWrap: {
+        width: 38,
         height: 38,
-        width: 58,
+        borderRadius: 19,
+        overflow: 'hidden',
     },
-    headerNotifBtn: {
-        padding: 8,
-        borderRadius: 12,
-        backgroundColor: '#F1F5F9',
+    headerAvatarImg: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        borderWidth: 1.5,
+        borderColor: '#E2E8F0',
+    },
+    headerAvatarFallback: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: Colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerAvatarLetter: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '800',
+    },
+    headerShopInfo: {
+        marginLeft: 9,
+        flex: 1,
+        minWidth: 0,
+        justifyContent: 'center',
+    },
+    headerGreeting: {
+        fontSize: 10.5,
+        color: '#64748B',
+        fontWeight: '600',
+        letterSpacing: -0.1,
+    },
+    headerNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        marginTop: 1,
+    },
+    headerShopName: {
+        fontSize: 14.5,
+        fontWeight: '800',
+        color: '#0F172A',
+        letterSpacing: -0.2,
+        flexShrink: 1,
+    },
+    headerProPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ECFDF5',
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+        paddingHorizontal: 5,
+        paddingVertical: 1,
+        borderRadius: 6,
+        gap: 2,
+    },
+    headerProPillText: {
+        fontSize: 9.5,
+        fontWeight: '800',
+        color: '#059669',
+    },
+    headerActionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    headerIconBtn: {
+        width: 36,
+        height: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     jobsAddBtn: {
         flexDirection: 'row',

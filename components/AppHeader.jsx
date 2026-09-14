@@ -20,6 +20,7 @@ export const AppHeader = ({
     rightAction,
     backgroundColor = '#FFFFFF',
     titleColor = TITLE_STYLE.color,
+    hasBorder = false,
 }) => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -34,7 +35,15 @@ export const AppHeader = ({
     };
 
     return (
-        <View style={[styles.headerWrapper, { backgroundColor, paddingTop: insets.top }]}>
+        <View style={[
+            styles.headerWrapper,
+            {
+                backgroundColor,
+                paddingTop: Math.max(insets.top, 8) + 2,
+                borderBottomWidth: hasBorder ? 1 : 0,
+                borderBottomColor: hasBorder ? '#E2E8F0' : 'transparent',
+            }
+        ]}>
             <View style={styles.headerContent}>
                 <View style={styles.titleRow}>
                     {showBack ? (
@@ -74,17 +83,16 @@ export const headerTitleTextStyle = TITLE_STYLE;
 
 const styles = StyleSheet.create({
     headerWrapper: {
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        borderBottomWidth: 0,
         zIndex: 10,
     },
     headerContent: {
-        minHeight: 54,
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingVertical: 2,
     },
     titleRow: {
         flex: 1,
