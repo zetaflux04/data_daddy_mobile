@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, HelperText } from 'react-native-paper';
+import { Colors } from '../constants/Colors';
 
 /**
  * Material outlined TextField (React Native Paper).
@@ -21,6 +22,9 @@ export const OutlinedTextInput = forwardRef(({
   inputStyle,
   required,
   dense = true,
+  outlineColor = '#CBD5E1',
+  activeOutlineColor,
+  outlineStyle,
   ...rest
 }, ref) => {
   const displayLabel = label
@@ -60,6 +64,10 @@ export const OutlinedTextInput = forwardRef(({
         multiline={multiline}
         numberOfLines={multiline ? lines : 1}
         error={!!error}
+        outlineColor={outlineColor}
+        activeOutlineColor={error ? undefined : (activeOutlineColor || '#64748B')}
+        cursorColor={Colors.primary}
+        selectionColor="rgba(37, 99, 235, 0.25)"
         left={left}
         right={right}
         style={[
@@ -70,7 +78,11 @@ export const OutlinedTextInput = forwardRef(({
           multiline ? styles.multilineContent : undefined,
           inputStyle,
         ]}
-        outlineStyle={styles.outline}
+        outlineStyle={[
+          styles.outline,
+          !error && styles.outlineNormal,
+          outlineStyle,
+        ]}
         {...rest}
       />
       {error && typeof error === 'string' ? (
@@ -96,6 +108,10 @@ const styles = StyleSheet.create({
   outline: {
     borderRadius: 4,
     overflow: 'visible',
+  },
+  outlineNormal: {
+    borderColor: '#CBD5E1',
+    borderWidth: 1,
   },
   affixText: {
     fontSize: 15,

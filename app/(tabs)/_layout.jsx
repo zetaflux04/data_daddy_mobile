@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import { Pressable, View, StyleSheet, Platform, Text } from 'react-native';
+import { Pressable, View, StyleSheet, Platform, Text, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { api } from '../../services/api';
@@ -63,7 +63,16 @@ export default function TabLayout() {
                     title: 'Dashboard',
                     header: () => (
                         <AppHeader
-                            title="Dashboard"
+                            showBack={false}
+                            titleComponent={
+                                <View style={styles.headerLogoWrap}>
+                                    <Image
+                                        source={require('../../assets/logo.png')}
+                                        style={styles.headerLogo}
+                                        resizeMode="contain"
+                                    />
+                                </View>
+                            }
                             rightAction={
                                 <Pressable
                                     onPress={() => router.push('/notifications')}
@@ -118,7 +127,7 @@ export default function TabLayout() {
                 name="profile"
                 options={{
                     title: 'Profile',
-                    header: () => <AppHeader title="Shop Profile" />,
+                    headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
                     ),
@@ -129,6 +138,14 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+    headerLogoWrap: {
+        justifyContent: 'center',
+        marginLeft: 4,
+    },
+    headerLogo: {
+        height: 38,
+        width: 58,
+    },
     headerNotifBtn: {
         padding: 8,
         borderRadius: 12,

@@ -16,8 +16,10 @@ const DropdownHostContext = createContext(null);
 const FIELD_FALLBACK_HEIGHT = 44;
 const MENU_GAP = 4;
 
-export function DropdownHost({ children, style }) {
+export function DropdownHost({ children, style, insideModal = false }) {
   const pathname = usePathname();
+  const parentHost = useContext(DropdownHostContext);
+  const isInsideModal = Boolean(insideModal || parentHost);
   const sessionRef = useRef(null);
   const [session, setSession] = useState(null);
 
@@ -39,29 +41,35 @@ export function DropdownHost({ children, style }) {
 
       const { width: screenWidth, height: screenHeight } = Dimensions.get('screen');
 
-      // On Android, Modal with statusBarTranslucent starts at y = 0 of the physical screen.
-      // However, trigger.measureInWindow() measures relative to the Activity window (below the status bar).
-      // We must add StatusBar.currentHeight to align window coordinates to the translucent Modal.
-      const statusBarOffset = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
+      // On Android, in the root Activity, measureInWindow() measures below the status bar,
+      // while the translucent Modal starts at y = 0. We must add StatusBar.currentHeight.
+      // However, inside a Modal that already has statusBarTranslucent={true}, measureInWindow()
+      // is ALREADY in full-screen coordinates (starting at y = 0), so no offset is needed.
+      const statusBarOffset = (!isInsideModal && Platform.OS === 'android') ? (StatusBar.currentHeight || 0) : 0;
       const fieldHeight = height > 12 ? height : FIELD_FALLBACK_HEIGHT;
 
       const fieldTopOnScreen = y + statusBarOffset;
       const fieldBottomOnScreen = fieldTopOnScreen + fieldHeight;
 
-      // Available vertical space
-      const spaceBelow = screenHeight - fieldBottomOnScreen - 16;
-      const spaceAbove = fieldTopOnScreen - 16;
+      // Available vertical space (leave 20dp margin at screen edges)
+      const spaceBelow = screenHeight - fieldBottomOnScreen - 20;
+      const spaceAbove = fieldTopOnScreen - 20;
+
+      // Estimate needed menu height based on item count
+      const itemCount = payload?.itemCount || sessionRef.current?.itemCount || 4;
+      const neededHeight = Math.min(260, Math.max(90, itemCount * 46 + 10));
 
       let menuY;
       let calculatedMaxHeight = 260;
 
-      // If severely cramped below (< 160dp) but significantly more space above, open upward
-      if (spaceBelow < 160 && spaceAbove > spaceBelow) {
-        calculatedMaxHeight = Math.min(260, Math.max(100, spaceAbove - MENU_GAP));
+      // If space below is not enough for the items, and there is more space above:
+      // Open upward directly above / over the select box!
+      if (spaceBelow < neededHeight && spaceAbove > spaceBelow) {
+        calculatedMaxHeight = Math.min(neededHeight, Math.max(90, spaceAbove - MENU_GAP));
         menuY = fieldTopOnScreen - calculatedMaxHeight - MENU_GAP;
       } else {
-        // Standard behavior: open directly below the select box
-        calculatedMaxHeight = Math.min(260, Math.max(100, spaceBelow));
+        // Standard case: open directly below the select box
+        calculatedMaxHeight = Math.min(260, Math.max(90, spaceBelow));
         menuY = fieldBottomOnScreen + MENU_GAP;
       }
 
@@ -82,7 +90,7 @@ export function DropdownHost({ children, style }) {
         return next;
       });
     });
-  }, []);
+  }, [isInsideModal]);
 
   const updateRender = useCallback((render) => {
     setSession((prev) => {

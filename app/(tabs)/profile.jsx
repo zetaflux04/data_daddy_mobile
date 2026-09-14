@@ -121,7 +121,7 @@ export default function ProfileScreen() {
             },
         ]);
     };
-    return (<ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]} showsVerticalScrollIndicator={false}>
+    return (<ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 16) + 12, paddingBottom: Math.max(insets.bottom, 24) + 24 }]} showsVerticalScrollIndicator={false}>
       {/* Shop Profile Card */}
       <View style={styles.shopCard}>
         <View style={styles.shopAvatarWrapper}>

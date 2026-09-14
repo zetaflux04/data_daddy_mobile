@@ -13,6 +13,7 @@ const TITLE_STYLE = {
 
 export const AppHeader = ({
     title,
+    titleComponent,
     subtitle,
     showBack = true,
     onBack,
@@ -45,16 +46,20 @@ export const AppHeader = ({
                             <Ionicons name="chevron-back" size={24} color={titleColor} />
                         </Pressable>
                     ) : null}
-                    <View style={styles.titleTextWrap}>
-                        <Text style={[styles.title, { color: titleColor }]} numberOfLines={1}>
-                            {title}
-                        </Text>
-                        {subtitle ? (
-                            <Text style={styles.subtitle} numberOfLines={1}>
-                                {subtitle}
+                    {titleComponent ? (
+                        titleComponent
+                    ) : (
+                        <View style={styles.titleTextWrap}>
+                            <Text style={[styles.title, { color: titleColor }]} numberOfLines={1}>
+                                {title}
                             </Text>
-                        ) : null}
-                    </View>
+                            {subtitle ? (
+                                <Text style={styles.subtitle} numberOfLines={1}>
+                                    {subtitle}
+                                </Text>
+                            ) : null}
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.rightContainer}>

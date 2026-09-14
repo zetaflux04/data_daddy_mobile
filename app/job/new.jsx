@@ -577,7 +577,7 @@ export default function NewJobScreen() {
             <OutlinedTextInput
               label="Customer Full Name"
               required
-              placeholder="e.g. Ramesh Kumar"
+              placeholder="Raman Kasana"
               value={customerName}
               onChangeText={setCustomerName}
             />
@@ -585,7 +585,7 @@ export default function NewJobScreen() {
             <OutlinedTextInput
               label="Mobile Phone Number"
               required
-              placeholder="10-digit number (e.g. 9876543210)"
+              placeholder="9876543210"
               startAdornment="+91"
               keyboardType="phone-pad"
               maxLength={10}
@@ -650,7 +650,7 @@ export default function NewJobScreen() {
                     <OutlinedTextInput
                       label="Brand"
                       required
-                      placeholder="e.g. Apple"
+                      placeholder="Apple"
                       value={brand}
                       onChangeText={setBrand}
                     />
@@ -660,7 +660,7 @@ export default function NewJobScreen() {
                     <OutlinedTextInput
                       label="Model"
                       required
-                      placeholder="e.g. iPhone 13"
+                      placeholder="iPhone 13"
                       value={model}
                       onChangeText={setModel}
                     />
@@ -680,7 +680,7 @@ export default function NewJobScreen() {
                   <View style={{ flex: 1 }}>
                     <OutlinedTextInput
                       label="Passcode / PIN"
-                      placeholder="e.g. 1234"
+                      placeholder="1234"
                       value={passcode}
                       onChangeText={setPasscode}
                     />
@@ -764,8 +764,8 @@ export default function NewJobScreen() {
                 <View style={styles.twoCol}>
                   <View style={{ flex: 1 }}>
                     <OutlinedTextInput
-                      label="Estimated Cost (₹)"
-                      placeholder="e.g. 2500"
+                      label="Estimated Cost"
+                      placeholder="2500"
                       startAdornment="₹"
                       keyboardType="numeric"
                       returnKeyType="next"
@@ -779,8 +779,8 @@ export default function NewJobScreen() {
                   <View style={{ flex: 1 }}>
                     <OutlinedTextInput
                       ref={advancePaidInputRef}
-                      label="Advance Paid (₹)"
-                      placeholder="e.g. 500"
+                      label="Advance Paid"
+                      placeholder="500"
                       startAdornment="₹"
                       keyboardType="numeric"
                       returnKeyType="done"
@@ -846,7 +846,7 @@ export default function NewJobScreen() {
                   <OutlinedTextInput
                     label="Enter Custom Accessory Name"
                     required
-                    placeholder="e.g. OTG Adapter, Car Mount, Power Bank"
+                    placeholder="OTG Adapter, Car Mount, Power Bank"
                     value={customAccessory}
                     onChangeText={setCustomAccessory}
                   />
@@ -854,9 +854,9 @@ export default function NewJobScreen() {
               )}
 
               <OutlinedTextInput
-                label="Selling Price (₹)"
+                label="Selling Price"
                 required
-                placeholder="e.g. 299"
+                placeholder="299"
                 startAdornment="₹"
                 keyboardType="numeric"
                 returnKeyType="done"

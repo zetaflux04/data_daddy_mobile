@@ -685,7 +685,7 @@ export default function JobDetailScreen() {
         {/* Delivered Confirmation Modal */}
         <Modal visible={isDeliveryModalOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setIsDeliveryModalOpen(false)}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} style={styles.modalOverlay}>
-            <DropdownHost style={styles.deliveryOverlayHost}>
+            <DropdownHost insideModal style={styles.deliveryOverlayHost}>
             <Pressable style={styles.modalBackdrop} onPress={() => setIsDeliveryModalOpen(false)}/>
             <FloatingCloseButton onPress={() => setIsDeliveryModalOpen(false)}/>
             <View style={styles.modalCard}>
