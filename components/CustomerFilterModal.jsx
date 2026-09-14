@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
+import {
+  MaterialDatePickerModal,
+  formatDDMMYYYY,
+} from './MaterialDatePickerModal';
+import { CAME_IN_FILTER_OPTIONS } from './FilterModal';
 
 export const CUSTOMER_TYPE_OPTIONS = [
   { key: 'all', label: 'All Customers' },
@@ -28,6 +33,12 @@ export const CUSTOMER_SORT_OPTIONS = [
 export function CustomerFilterModal({
   visible,
   onClose,
+  selectedCameIn = 'any_time',
+  onSelectCameIn,
+  customStartDate,
+  onChangeCustomStartDate,
+  customEndDate,
+  onChangeCustomEndDate,
   selectedType = 'all',
   onSelectType,
   selectedSortBy = 'recent',
@@ -36,137 +47,279 @@ export function CustomerFilterModal({
   onApply,
 }) {
   const insets = useSafeAreaInsets();
+  const [activeDateField, setActiveDateField] = useState(null); // 'start' | 'end' | null
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+
+  const handleSetDate = (isoDate) => {
+    if (activeDateField === 'start') {
+      if (onChangeCustomStartDate) onChangeCustomStartDate(isoDate);
+    } else if (activeDateField === 'end') {
+      if (onChangeCustomEndDate) onChangeCustomEndDate(isoDate);
+    }
+    setIsDatePickerVisible(false);
+    setActiveDateField(null);
+  };
+
+  const handleClearDate = () => {
+    if (activeDateField === 'start') {
+      if (onChangeCustomStartDate) onChangeCustomStartDate(undefined);
+    } else if (activeDateField === 'end') {
+      if (onChangeCustomEndDate) onChangeCustomEndDate(undefined);
+    }
+    setIsDatePickerVisible(false);
+    setActiveDateField(null);
+  };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        {/* Backdrop pressable handlers so tapping outside closes modal */}
-        <Pressable
-          style={StyleSheet.absoluteFillObject}
-          onPress={onClose}
-          accessibilityLabel="Close customer filter"
-        />
-        <Pressable
-          style={styles.backdropFlex}
-          onPress={onClose}
-          accessibilityLabel="Close customer filter backdrop"
-        />
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          {/* Backdrop pressable handlers so tapping outside closes modal */}
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={onClose}
+            accessibilityLabel="Close customer filter"
+          />
+          <Pressable
+            style={styles.backdropFlex}
+            onPress={onClose}
+            accessibilityLabel="Close customer filter backdrop"
+          />
 
-        <View
-          style={[
-            styles.sheetContainer,
-            { paddingBottom: Math.max(insets.bottom, 16) },
-          ]}
-        >
-          {/* Drag Handle Indicator */}
-          <View style={styles.dragHandle} />
-
-          {/* Header Row: Filters & Clear all */}
-          <View style={styles.headerRow}>
-            <Text style={styles.headerTitle}>Filters</Text>
-            <Pressable
-              onPress={onClearAll}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Text style={styles.clearAllText}>Clear all</Text>
-            </Pressable>
-          </View>
-
-          {/* Scrollable Filter Options */}
-          <ScrollView
-            style={styles.scrollArea}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+          <View
+            style={[
+              styles.sheetContainer,
+              { paddingBottom: Math.max(insets.bottom, 16) },
+            ]}
           >
-            {/* CUSTOMER TYPE Section */}
-            <Text style={styles.sectionHeader}>CUSTOMER TYPE</Text>
-            <View style={styles.chipsRow}>
-              {CUSTOMER_TYPE_OPTIONS.map((item) => {
-                const isSelected = selectedType === item.key;
-                return (
-                  <Pressable
-                    key={item.key}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
-                    onPress={() => onSelectType(item.key)}
-                  >
-                    {isSelected && (
-                      <Ionicons
-                        name="checkmark"
-                        size={15}
-                        color="#FFFFFF"
-                        style={styles.checkIcon}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.chipText,
-                        isSelected && styles.chipTextSelected,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+            {/* Drag Handle Indicator */}
+            <View style={styles.dragHandle} />
+
+            {/* Header Row: Filters & Clear all */}
+            <View style={styles.headerRow}>
+              <Text style={styles.headerTitle}>Filters</Text>
+              <Pressable
+                onPress={onClearAll}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Text style={styles.clearAllText}>Clear all</Text>
+              </Pressable>
             </View>
 
-            {/* SORT BY Section */}
-            <Text style={styles.sectionHeader}>SORT BY</Text>
-            <View style={styles.chipsRow}>
-              {CUSTOMER_SORT_OPTIONS.map((item) => {
-                const isSelected = selectedSortBy === item.key;
-                return (
-                  <Pressable
-                    key={item.key}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
-                    onPress={() => onSelectSortBy(item.key)}
-                  >
-                    {isSelected && (
-                      <Ionicons
-                        name="checkmark"
-                        size={15}
-                        color="#FFFFFF"
-                        style={styles.checkIcon}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.chipText,
-                        isSelected && styles.chipTextSelected,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </ScrollView>
-
-          {/* Sticky Bottom Action Button */}
-          <View style={styles.footerContainer}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.applyButton,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
-              ]}
-              onPress={() => {
-                if (onApply) onApply();
-                onClose();
-              }}
+            {/* Scrollable Filter Options */}
+            <ScrollView
+              style={styles.scrollArea}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.applyButtonText}>Apply</Text>
-            </Pressable>
+              {/* CAME IN / DATE RANGE Section */}
+              {onSelectCameIn && (
+                <>
+                  <Text style={styles.sectionHeader}>CAME IN</Text>
+                  <View style={styles.chipsRow}>
+                    {CAME_IN_FILTER_OPTIONS.map((item) => {
+                      const isSelected = selectedCameIn === item.key;
+
+                      return (
+                        <Pressable
+                          key={item.key}
+                          style={[styles.chip, isSelected && styles.chipSelected]}
+                          onPress={() => onSelectCameIn(item.key)}
+                        >
+                          {isSelected && (
+                            <Ionicons
+                              name="checkmark"
+                              size={15}
+                              color="#FFFFFF"
+                              style={styles.checkIcon}
+                            />
+                          )}
+                          <Text
+                            style={[
+                              styles.chipText,
+                              isSelected && styles.chipTextSelected,
+                            ]}
+                          >
+                            {item.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* Custom Dates Box */}
+                  {selectedCameIn === 'custom' && (
+                    <View style={styles.customDateCard}>
+                      <View style={styles.dateInputsRow}>
+                        {/* From Field */}
+                        <View style={styles.dateInputCol}>
+                          <Text style={styles.dateInputLabel}>From</Text>
+                          <Pressable
+                            style={styles.datePickerBtn}
+                            onPress={() => {
+                              setActiveDateField('start');
+                              setIsDatePickerVisible(true);
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.datePickerBtnText,
+                                !customStartDate && styles.datePickerPlaceholder,
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {customStartDate
+                                ? formatDDMMYYYY(customStartDate)
+                                : ''}
+                            </Text>
+                            <Ionicons
+                              name="chevron-down"
+                              size={16}
+                              color="#64748B"
+                            />
+                          </Pressable>
+                        </View>
+
+                        {/* To Field */}
+                        <View style={styles.dateInputCol}>
+                          <Text style={styles.dateInputLabel}>To</Text>
+                          <Pressable
+                            style={styles.datePickerBtn}
+                            onPress={() => {
+                              setActiveDateField('end');
+                              setIsDatePickerVisible(true);
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.datePickerBtnText,
+                                !customEndDate && styles.datePickerPlaceholder,
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {customEndDate
+                                ? formatDDMMYYYY(customEndDate)
+                                : ''}
+                            </Text>
+                            <Ionicons
+                              name="chevron-down"
+                              size={16}
+                              color="#64748B"
+                            />
+                          </Pressable>
+                        </View>
+                      </View>
+
+                      <Text style={styles.dateHelpText}>
+                        Fill one side only for an open-ended range
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+
+              {/* CUSTOMER TYPE Section */}
+              <Text style={styles.sectionHeader}>CUSTOMER TYPE</Text>
+              <View style={styles.chipsRow}>
+                {CUSTOMER_TYPE_OPTIONS.map((item) => {
+                  const isSelected = selectedType === item.key;
+                  return (
+                    <Pressable
+                      key={item.key}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => onSelectType(item.key)}
+                    >
+                      {isSelected && (
+                        <Ionicons
+                          name="checkmark"
+                          size={15}
+                          color="#FFFFFF"
+                          style={styles.checkIcon}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.chipText,
+                          isSelected && styles.chipTextSelected,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* SORT BY Section */}
+              <Text style={styles.sectionHeader}>SORT BY</Text>
+              <View style={styles.chipsRow}>
+                {CUSTOMER_SORT_OPTIONS.map((item) => {
+                  const isSelected = selectedSortBy === item.key;
+                  return (
+                    <Pressable
+                      key={item.key}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => onSelectSortBy(item.key)}
+                    >
+                      {isSelected && (
+                        <Ionicons
+                          name="checkmark"
+                          size={15}
+                          color="#FFFFFF"
+                          style={styles.checkIcon}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.chipText,
+                          isSelected && styles.chipTextSelected,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            {/* Sticky Bottom Action Button */}
+            <View style={styles.footerContainer}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.applyButton,
+                  pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
+                ]}
+                onPress={() => {
+                  if (onApply) onApply();
+                  onClose();
+                }}
+              >
+                <Text style={styles.applyButtonText}>Apply</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Floating Date Picker Dialog over the Screen */}
+      <MaterialDatePickerModal
+        visible={isDatePickerVisible}
+        date={activeDateField === 'start' ? customStartDate : customEndDate}
+        onSet={handleSetDate}
+        onClear={handleClearDate}
+        onCancel={() => {
+          setIsDatePickerVisible(false);
+          setActiveDateField(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -269,6 +422,53 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  customDateCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  dateInputsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dateInputCol: {
+    flex: 1,
+  },
+  dateInputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  datePickerBtn: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 14,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  datePickerBtnText: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  datePickerPlaceholder: {
+    color: '#94A3B8',
+    fontWeight: '400',
+  },
+  dateHelpText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 12,
   },
   footerContainer: {
     paddingHorizontal: 22,

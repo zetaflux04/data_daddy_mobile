@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { TextInput as PaperTextInput } from 'react-native-paper';
 import { Colors } from '../constants/Colors';
 import { MaterialSelect } from './MaterialSelect';
-import { CustomDateRangeModal } from './CustomDateRangeModal';
-import { formatShortRange, todayISO } from '../utils/date';
+import { formatShortRange } from '../utils/date';
 
 const dateRangeOptions = [
   { key: 'all', label: 'All Time', icon: 'infinite-outline' },
@@ -24,23 +23,13 @@ export const HeaderFilterBar = ({
   hasActiveFilters = false,
   activeFilterCount = 0,
 }) => {
-  const [isCustomDateActive, setIsCustomDateActive] = useState(false);
-  const [tempStart, setTempStart] = useState(customStartDate || todayISO());
-  const [tempEnd, setTempEnd] = useState(customEndDate || todayISO());
-
   const handleTimeChange = (key) => {
     if (key === 'custom') {
-      setTempStart(customStartDate || todayISO());
-      setTempEnd(customEndDate || todayISO());
-      setIsCustomDateActive(true);
+      onDateRangeChange('custom', customStartDate, customEndDate);
+      if (onPressFilter) onPressFilter();
       return;
     }
     onDateRangeChange(key, undefined, undefined);
-  };
-
-  const handleApplyCustom = () => {
-    setIsCustomDateActive(false);
-    onDateRangeChange('custom', tempStart, tempEnd);
   };
 
   return (
@@ -56,8 +45,12 @@ export const HeaderFilterBar = ({
           label: opt.label,
         }))}
         displayValue={
-          selectedDateRange === 'custom' && customStartDate && customEndDate
-            ? formatShortRange(customStartDate, customEndDate)
+          selectedDateRange === 'custom' && (customStartDate || customEndDate)
+            ? customStartDate && customEndDate
+              ? formatShortRange(customStartDate, customEndDate)
+              : customStartDate
+              ? `From ${customStartDate}`
+              : `To ${customEndDate}`
             : undefined
         }
         onChange={handleTimeChange}
@@ -79,16 +72,6 @@ export const HeaderFilterBar = ({
           />
         </View>
       </Pressable>
-
-      <CustomDateRangeModal
-        visible={isCustomDateActive}
-        startDate={tempStart}
-        endDate={tempEnd}
-        onChangeStart={setTempStart}
-        onChangeEnd={setTempEnd}
-        onCancel={() => setIsCustomDateActive(false)}
-        onApply={handleApplyCustom}
-      />
     </View>
   );
 };

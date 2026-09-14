@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
+import {
+  MaterialDatePickerModal,
+  formatDDMMYYYY,
+} from './MaterialDatePickerModal';
 
 export const CAME_IN_FILTER_OPTIONS = [
   { key: 'any_time', label: 'Any time' },
@@ -45,6 +49,10 @@ export function FilterModal({
   onClose,
   selectedCameIn = 'any_time',
   onSelectCameIn,
+  customStartDate,
+  onChangeCustomStartDate,
+  customEndDate,
+  onChangeCustomEndDate,
   selectedDeviceType = 'all',
   onSelectDeviceType,
   showDeviceType = true,
@@ -57,233 +65,90 @@ export function FilterModal({
   onSelectSortBy,
   onClearAll,
   onApply,
-  onOpenCustomDates,
-  customDateLabel,
 }) {
   const insets = useSafeAreaInsets();
+  const [activeDateField, setActiveDateField] = useState(null); // 'start' | 'end' | null
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
-  const handleSelectCameIn = (key) => {
-    onSelectCameIn(key);
-    if (key === 'custom' && onOpenCustomDates) {
-      onOpenCustomDates();
+  const handleSetDate = (isoDate) => {
+    if (activeDateField === 'start') {
+      if (onChangeCustomStartDate) onChangeCustomStartDate(isoDate);
+    } else if (activeDateField === 'end') {
+      if (onChangeCustomEndDate) onChangeCustomEndDate(isoDate);
     }
+    setIsDatePickerVisible(false);
+    setActiveDateField(null);
+  };
+
+  const handleClearDate = () => {
+    if (activeDateField === 'start') {
+      if (onChangeCustomStartDate) onChangeCustomStartDate(undefined);
+    } else if (activeDateField === 'end') {
+      if (onChangeCustomEndDate) onChangeCustomEndDate(undefined);
+    }
+    setIsDatePickerVisible(false);
+    setActiveDateField(null);
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        {/* Backdrop pressable handlers so tapping outside closes modal */}
-        <Pressable
-          style={StyleSheet.absoluteFillObject}
-          onPress={onClose}
-          accessibilityLabel="Close filter"
-        />
-        <Pressable
-          style={styles.backdropFlex}
-          onPress={onClose}
-          accessibilityLabel="Close filter backdrop"
-        />
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          {/* Backdrop pressable handlers so tapping outside closes modal */}
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={onClose}
+            accessibilityLabel="Close filter"
+          />
+          <Pressable
+            style={styles.backdropFlex}
+            onPress={onClose}
+            accessibilityLabel="Close filter backdrop"
+          />
 
-        <View
-          style={[
-            styles.sheetContainer,
-            { paddingBottom: Math.max(insets.bottom, 16) },
-          ]}
-        >
-          {/* Drag Handle Indicator */}
-          <View style={styles.dragHandle} />
-
-          {/* Header Row: Filters & Clear all */}
-          <View style={styles.headerRow}>
-            <Text style={styles.headerTitle}>Filters</Text>
-            <Pressable
-              onPress={onClearAll}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Text style={styles.clearAllText}>Clear all</Text>
-            </Pressable>
-          </View>
-
-          {/* Scrollable Filter Options */}
-          <ScrollView
-            style={styles.scrollArea}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+          <View
+            style={[
+              styles.sheetContainer,
+              { paddingBottom: Math.max(insets.bottom, 16) },
+            ]}
           >
-            {/* CAME IN Section */}
-            <Text style={styles.sectionHeader}>CAME IN</Text>
-            <View style={styles.chipsRow}>
-              {CAME_IN_FILTER_OPTIONS.map((item) => {
-                const isSelected = selectedCameIn === item.key;
-                const displayLabel =
-                  item.key === 'custom' && customDateLabel
-                    ? customDateLabel
-                    : item.label;
+            {/* Drag Handle Indicator */}
+            <View style={styles.dragHandle} />
 
-                return (
-                  <Pressable
-                    key={item.key}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
-                    onPress={() => handleSelectCameIn(item.key)}
-                  >
-                    {isSelected && (
-                      <Ionicons
-                        name="checkmark"
-                        size={15}
-                        color="#FFFFFF"
-                        style={styles.checkIcon}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.chipText,
-                        isSelected && styles.chipTextSelected,
-                      ]}
-                    >
-                      {displayLabel}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+            {/* Header Row: Filters & Clear all */}
+            <View style={styles.headerRow}>
+              <Text style={styles.headerTitle}>Filters</Text>
+              <Pressable
+                onPress={onClearAll}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Text style={styles.clearAllText}>Clear all</Text>
+              </Pressable>
             </View>
 
-            {/* DEVICE TYPE Section (Only if showDeviceType) */}
-            {showDeviceType && (
-              <>
-                <Text style={styles.sectionHeader}>DEVICE TYPE</Text>
-                <View style={styles.chipsRow}>
-                  {DEVICE_TYPE_OPTIONS.map((item) => {
-                    const isSelected = selectedDeviceType === item.key;
-                    return (
-                      <Pressable
-                        key={item.key}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
-                        onPress={() => onSelectDeviceType(item.key)}
-                      >
-                        {isSelected && (
-                          <Ionicons
-                            name="checkmark"
-                            size={15}
-                            color="#FFFFFF"
-                            style={styles.checkIcon}
-                          />
-                        )}
-                        <Text
-                          style={[
-                            styles.chipText,
-                            isSelected && styles.chipTextSelected,
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </>
-            )}
+            {/* Scrollable Filter Options */}
+            <ScrollView
+              style={styles.scrollArea}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* CAME IN Section */}
+              <Text style={styles.sectionHeader}>CAME IN</Text>
+              <View style={styles.chipsRow}>
+                {CAME_IN_FILTER_OPTIONS.map((item) => {
+                  const isSelected = selectedCameIn === item.key;
 
-            {/* PAYMENT STATUS Section */}
-            <Text style={styles.sectionHeader}>PAYMENT STATUS</Text>
-            <View style={styles.chipsRow}>
-              {PAYMENT_STATUS_OPTIONS.map((item) => {
-                const isSelected = selectedPaymentStatus === item.key;
-                return (
-                  <Pressable
-                    key={item.key}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
-                    onPress={() => onSelectPaymentStatus(item.key)}
-                  >
-                    {isSelected && (
-                      <Ionicons
-                        name="checkmark"
-                        size={15}
-                        color="#FFFFFF"
-                        style={styles.checkIcon}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.chipText,
-                        isSelected && styles.chipTextSelected,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* TECHNICIAN Section */}
-            <Text style={styles.sectionHeader}>TECHNICIAN</Text>
-            <View style={styles.chipsRow}>
-              <Pressable
-                style={[
-                  styles.chip,
-                  selectedTechnician === 'anyone' && styles.chipSelected,
-                ]}
-                onPress={() => onSelectTechnician('anyone')}
-              >
-                {selectedTechnician === 'anyone' && (
-                  <Ionicons
-                    name="checkmark"
-                    size={15}
-                    color="#FFFFFF"
-                    style={styles.checkIcon}
-                  />
-                )}
-                <Text
-                  style={[
-                    styles.chipText,
-                    selectedTechnician === 'anyone' && styles.chipTextSelected,
-                  ]}
-                >
-                  Anyone
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.chip,
-                  selectedTechnician === 'not_assigned' && styles.chipSelected,
-                ]}
-                onPress={() => onSelectTechnician('not_assigned')}
-              >
-                {selectedTechnician === 'not_assigned' && (
-                  <Ionicons
-                    name="checkmark"
-                    size={15}
-                    color="#FFFFFF"
-                    style={styles.checkIcon}
-                  />
-                )}
-                <Text
-                  style={[
-                    styles.chipText,
-                    selectedTechnician === 'not_assigned' &&
-                      styles.chipTextSelected,
-                  ]}
-                >
-                  Not assigned
-                </Text>
-              </Pressable>
-
-              {technicians &&
-                technicians.map((tech) => {
-                  const techId = tech._id || tech.id;
-                  const isSelected = selectedTechnician === techId;
                   return (
                     <Pressable
-                      key={techId}
+                      key={item.key}
                       style={[styles.chip, isSelected && styles.chipSelected]}
-                      onPress={() => onSelectTechnician(techId)}
+                      onPress={() => onSelectCameIn(item.key)}
                     >
                       {isSelected && (
                         <Ionicons
@@ -299,64 +164,303 @@ export function FilterModal({
                           isSelected && styles.chipTextSelected,
                         ]}
                       >
-                        {tech.name || 'Technician'}
+                        {item.label}
                       </Text>
                     </Pressable>
                   );
                 })}
-            </View>
+              </View>
 
-            {/* SORT BY Section */}
-            <Text style={styles.sectionHeader}>SORT BY</Text>
-            <View style={styles.chipsRow}>
-              {SORT_FILTER_OPTIONS.map((item) => {
-                const isSelected = selectedSortBy === item.key;
-                return (
-                  <Pressable
-                    key={item.key}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
-                    onPress={() => onSelectSortBy(item.key)}
-                  >
-                    {isSelected && (
-                      <Ionicons
-                        name="checkmark"
-                        size={15}
-                        color="#FFFFFF"
-                        style={styles.checkIcon}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.chipText,
-                        isSelected && styles.chipTextSelected,
-                      ]}
+              {/* Custom Dates Box (From & To inputs as shown in reference) */}
+              {selectedCameIn === 'custom' && (
+                <View style={styles.customDateCard}>
+                  <View style={styles.dateInputsRow}>
+                    {/* From Field */}
+                    <View style={styles.dateInputCol}>
+                      <Text style={styles.dateInputLabel}>From</Text>
+                      <Pressable
+                        style={styles.datePickerBtn}
+                        onPress={() => {
+                          setActiveDateField('start');
+                          setIsDatePickerVisible(true);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.datePickerBtnText,
+                            !customStartDate && styles.datePickerPlaceholder,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {customStartDate
+                            ? formatDDMMYYYY(customStartDate)
+                            : ''}
+                        </Text>
+                        <Ionicons
+                          name="chevron-down"
+                          size={16}
+                          color="#64748B"
+                        />
+                      </Pressable>
+                    </View>
+
+                    {/* To Field */}
+                    <View style={styles.dateInputCol}>
+                      <Text style={styles.dateInputLabel}>To</Text>
+                      <Pressable
+                        style={styles.datePickerBtn}
+                        onPress={() => {
+                          setActiveDateField('end');
+                          setIsDatePickerVisible(true);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.datePickerBtnText,
+                            !customEndDate && styles.datePickerPlaceholder,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {customEndDate
+                            ? formatDDMMYYYY(customEndDate)
+                            : ''}
+                        </Text>
+                        <Ionicons
+                          name="chevron-down"
+                          size={16}
+                          color="#64748B"
+                        />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <Text style={styles.dateHelpText}>
+                    Fill one side only for an open-ended range
+                  </Text>
+                </View>
+              )}
+
+              {/* DEVICE TYPE Section (Only if showDeviceType) */}
+              {showDeviceType && (
+                <>
+                  <Text style={styles.sectionHeader}>DEVICE TYPE</Text>
+                  <View style={styles.chipsRow}>
+                    {DEVICE_TYPE_OPTIONS.map((item) => {
+                      const isSelected = selectedDeviceType === item.key;
+                      return (
+                        <Pressable
+                          key={item.key}
+                          style={[
+                            styles.chip,
+                            isSelected && styles.chipSelected,
+                          ]}
+                          onPress={() => onSelectDeviceType(item.key)}
+                        >
+                          {isSelected && (
+                            <Ionicons
+                              name="checkmark"
+                              size={15}
+                              color="#FFFFFF"
+                              style={styles.checkIcon}
+                            />
+                          )}
+                          <Text
+                            style={[
+                              styles.chipText,
+                              isSelected && styles.chipTextSelected,
+                            ]}
+                          >
+                            {item.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              {/* PAYMENT STATUS Section */}
+              <Text style={styles.sectionHeader}>PAYMENT STATUS</Text>
+              <View style={styles.chipsRow}>
+                {PAYMENT_STATUS_OPTIONS.map((item) => {
+                  const isSelected = selectedPaymentStatus === item.key;
+                  return (
+                    <Pressable
+                      key={item.key}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => onSelectPaymentStatus(item.key)}
                     >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </ScrollView>
+                      {isSelected && (
+                        <Ionicons
+                          name="checkmark"
+                          size={15}
+                          color="#FFFFFF"
+                          style={styles.checkIcon}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.chipText,
+                          isSelected && styles.chipTextSelected,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-          {/* Sticky Bottom Action Button */}
-          <View style={styles.footerContainer}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.applyButton,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
-              ]}
-              onPress={() => {
-                if (onApply) onApply();
-                onClose();
-              }}
-            >
-              <Text style={styles.applyButtonText}>Apply</Text>
-            </Pressable>
+              {/* TECHNICIAN Section */}
+              <Text style={styles.sectionHeader}>TECHNICIAN</Text>
+              <View style={styles.chipsRow}>
+                <Pressable
+                  style={[
+                    styles.chip,
+                    selectedTechnician === 'anyone' && styles.chipSelected,
+                  ]}
+                  onPress={() => onSelectTechnician('anyone')}
+                >
+                  {selectedTechnician === 'anyone' && (
+                    <Ionicons
+                      name="checkmark"
+                      size={15}
+                      color="#FFFFFF"
+                      style={styles.checkIcon}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selectedTechnician === 'anyone' &&
+                        styles.chipTextSelected,
+                    ]}
+                  >
+                    Anyone
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.chip,
+                    selectedTechnician === 'not_assigned' && styles.chipSelected,
+                  ]}
+                  onPress={() => onSelectTechnician('not_assigned')}
+                >
+                  {selectedTechnician === 'not_assigned' && (
+                    <Ionicons
+                      name="checkmark"
+                      size={15}
+                      color="#FFFFFF"
+                      style={styles.checkIcon}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selectedTechnician === 'not_assigned' &&
+                        styles.chipTextSelected,
+                    ]}
+                  >
+                    Not assigned
+                  </Text>
+                </Pressable>
+
+                {technicians &&
+                  technicians.map((tech) => {
+                    const techId = tech._id || tech.id;
+                    const isSelected = selectedTechnician === techId;
+                    return (
+                      <Pressable
+                        key={techId}
+                        style={[styles.chip, isSelected && styles.chipSelected]}
+                        onPress={() => onSelectTechnician(techId)}
+                      >
+                        {isSelected && (
+                          <Ionicons
+                            name="checkmark"
+                            size={15}
+                            color="#FFFFFF"
+                            style={styles.checkIcon}
+                          />
+                        )}
+                        <Text
+                          style={[
+                            styles.chipText,
+                            isSelected && styles.chipTextSelected,
+                          ]}
+                        >
+                          {tech.name || 'Technician'}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+              </View>
+
+              {/* SORT BY Section */}
+              <Text style={styles.sectionHeader}>SORT BY</Text>
+              <View style={styles.chipsRow}>
+                {SORT_FILTER_OPTIONS.map((item) => {
+                  const isSelected = selectedSortBy === item.key;
+                  return (
+                    <Pressable
+                      key={item.key}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => onSelectSortBy(item.key)}
+                    >
+                      {isSelected && (
+                        <Ionicons
+                          name="checkmark"
+                          size={15}
+                          color="#FFFFFF"
+                          style={styles.checkIcon}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.chipText,
+                          isSelected && styles.chipTextSelected,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            {/* Sticky Bottom Action Button */}
+            <View style={styles.footerContainer}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.applyButton,
+                  pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
+                ]}
+                onPress={() => {
+                  if (onApply) onApply();
+                  onClose();
+                }}
+              >
+                <Text style={styles.applyButtonText}>Apply</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Floating Date Picker Dialog over the Screen */}
+      <MaterialDatePickerModal
+        visible={isDatePickerVisible}
+        date={activeDateField === 'start' ? customStartDate : customEndDate}
+        onSet={handleSetDate}
+        onClear={handleClearDate}
+        onCancel={() => {
+          setIsDatePickerVisible(false);
+          setActiveDateField(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -459,6 +563,54 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  // Custom Dates Card
+  customDateCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  dateInputsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dateInputCol: {
+    flex: 1,
+  },
+  dateInputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  datePickerBtn: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 14,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  datePickerBtnText: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  datePickerPlaceholder: {
+    color: '#94A3B8',
+    fontWeight: '400',
+  },
+  dateHelpText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 12,
   },
   footerContainer: {
     paddingHorizontal: 22,

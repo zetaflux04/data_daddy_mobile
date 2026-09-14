@@ -16,7 +16,6 @@ import { JobCardItem } from '../../components/JobCardItem';
 import { Colors } from '../../constants/Colors';
 import { MaterialMultiSelect } from '../../components/MaterialMultiSelect';
 import { TextInput as PaperTextInput } from 'react-native-paper';
-import { CustomDateRangeModal } from '../../components/CustomDateRangeModal';
 import { FilterModal } from '../../components/FilterModal';
 import { formatShortRange, todayISO } from '../../utils/date';
 
@@ -46,12 +45,8 @@ export default function JobsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const [tempStart, setTempStart] = useState(todayISO());
-  const [tempEnd, setTempEnd] = useState(todayISO());
-
   // Filter Modal State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
 
   // Fetch Technicians for Filter
   useEffect(() => {
@@ -144,11 +139,21 @@ export default function JobsScreen() {
           const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
           return d >= startMonth;
         }
-        if (selectedDateRange === 'custom' && customStartDate && customEndDate) {
-          const start = new Date(customStartDate);
-          const end = new Date(customEndDate);
-          end.setHours(23, 59, 59, 999);
-          return d >= start && d <= end;
+        if (selectedDateRange === 'custom') {
+          if (customStartDate && customEndDate) {
+            const start = new Date(customStartDate);
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            return d >= start && d <= end;
+          } else if (customStartDate) {
+            const start = new Date(customStartDate);
+            return d >= start;
+          } else if (customEndDate) {
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            return d <= end;
+          }
+          return true;
         }
         return true;
       });
@@ -370,6 +375,10 @@ export default function JobsScreen() {
         onClose={() => setIsFilterModalOpen(false)}
         selectedCameIn={selectedDateRange}
         onSelectCameIn={setSelectedDateRange}
+        customStartDate={customStartDate}
+        onChangeCustomStartDate={setCustomStartDate}
+        customEndDate={customEndDate}
+        onChangeCustomEndDate={setCustomEndDate}
         selectedDeviceType={filterDeviceType}
         onSelectDeviceType={setFilterDeviceType}
         showDeviceType={activeTab === 'repair'}
@@ -384,36 +393,6 @@ export default function JobsScreen() {
         onApply={() => {
           setIsFilterModalOpen(false);
           fetchJobs();
-        }}
-        onOpenCustomDates={() => {
-          setTempStart(customStartDate || todayISO());
-          setTempEnd(customEndDate || todayISO());
-          setIsFilterModalOpen(false);
-          setTimeout(() => setIsCustomDateModalOpen(true), 300);
-        }}
-        customDateLabel={
-          customStartDate && customEndDate
-            ? formatShortRange(customStartDate, customEndDate)
-            : undefined
-        }
-      />
-
-      <CustomDateRangeModal
-        visible={isCustomDateModalOpen}
-        startDate={tempStart}
-        endDate={tempEnd}
-        onChangeStart={setTempStart}
-        onChangeEnd={setTempEnd}
-        onCancel={() => {
-          setIsCustomDateModalOpen(false);
-          setTimeout(() => setIsFilterModalOpen(true), 280);
-        }}
-        onApply={() => {
-          setSelectedDateRange('custom');
-          setCustomStartDate(tempStart);
-          setCustomEndDate(tempEnd);
-          setIsCustomDateModalOpen(false);
-          setTimeout(() => setIsFilterModalOpen(true), 280);
         }}
       />
     </View>

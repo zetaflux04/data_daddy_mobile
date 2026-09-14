@@ -38,7 +38,7 @@ export default function CustomersScreen() {
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedDateRange, setSelectedDateRange] = useState('all');
+  const [selectedDateRange, setSelectedDateRange] = useState('any_time');
   const [customStartDate, setCustomStartDate] = useState(undefined);
   const [customEndDate, setCustomEndDate] = useState(undefined);
   const [isLoading, setIsLoading] = useState(false);
@@ -132,17 +132,71 @@ export default function CustomersScreen() {
       list.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
     }
 
-    return list;
-  }, [customers, selectedStatus, customerFilterType, customerSortBy]);
+    // Date Range filtering
+    if (selectedDateRange && selectedDateRange !== 'any_time' && selectedDateRange !== 'all') {
+      const now = new Date();
+      list = list.filter((c) => {
+        const d = c.createdAt ? new Date(c.createdAt) : null;
+        if (!d || isNaN(d.getTime())) return true;
+        if (selectedDateRange === 'today') {
+          const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          return d >= startToday;
+        }
+        if (selectedDateRange === 'yesterday') {
+          const startYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+          const endYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          return d >= startYesterday && d < endYesterday;
+        }
+        if (selectedDateRange === 'last_7_days') {
+          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return d >= sevenDaysAgo;
+        }
+        if (selectedDateRange === 'this_month') {
+          const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          return d >= startMonth;
+        }
+        if (selectedDateRange === 'custom') {
+          if (customStartDate && customEndDate) {
+            const start = new Date(customStartDate);
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            return d >= start && d <= end;
+          } else if (customStartDate) {
+            const start = new Date(customStartDate);
+            return d >= start;
+          } else if (customEndDate) {
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            return d <= end;
+          }
+          return true;
+        }
+        return true;
+      });
+    }
 
-  const hasActiveFilters = customerFilterType !== 'all' || customerSortBy !== 'recent';
+    return list;
+  }, [customers, selectedStatus, customerFilterType, customerSortBy, selectedDateRange, customStartDate, customEndDate]);
+
+  const hasActiveFilters =
+    customerFilterType !== 'all' ||
+    customerSortBy !== 'recent' ||
+    (selectedDateRange !== 'any_time' && selectedDateRange !== 'all') ||
+    !!customStartDate ||
+    !!customEndDate;
+
   const activeFilterCount =
-    (customerFilterType !== 'all' ? 1 : 0) + (customerSortBy !== 'recent' ? 1 : 0);
+    (customerFilterType !== 'all' ? 1 : 0) +
+    (customerSortBy !== 'recent' ? 1 : 0) +
+    (selectedDateRange !== 'any_time' && selectedDateRange !== 'all' ? 1 : 0);
 
   const handleResetFilters = () => {
     setCustomerFilterType('all');
     setCustomerSortBy('recent');
     setSelectedStatus('all');
+    setSelectedDateRange('any_time');
+    setCustomStartDate(undefined);
+    setCustomEndDate(undefined);
   };
 
   const handleAddCustomer = async () => {
@@ -402,6 +456,12 @@ export default function CustomersScreen() {
       <CustomerFilterModal
         visible={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
+        selectedCameIn={selectedDateRange}
+        onSelectCameIn={setSelectedDateRange}
+        customStartDate={customStartDate}
+        onChangeCustomStartDate={setCustomStartDate}
+        customEndDate={customEndDate}
+        onChangeCustomEndDate={setCustomEndDate}
         selectedType={customerFilterType}
         onSelectType={setCustomerFilterType}
         selectedSortBy={customerSortBy}
