@@ -83,7 +83,7 @@ export default function SettingsScreen() {
         }
     };
     return (<View style={styles.container}>
-      <AppHeader title="Shop Settings"/>
+      <AppHeader title="Setting"/>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flexOne}>
         <ScrollView style={styles.flexOne} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]} showsVerticalScrollIndicator={false}>

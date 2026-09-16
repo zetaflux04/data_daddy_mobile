@@ -161,7 +161,9 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Business Operations</Text>
         <View style={styles.menuGroup}>
-          <MenuItem icon="pie-chart" iconBg="rgba(37, 99, 235, 0.12)" iconColor={Colors.primary} title="Profit & Loss" subtitle="Revenue, parts expenses, and margin" badge="Live P&L" badgeColor={Colors.primary} onPress={() => router.push('/analytics')}/>
+          <MenuItem icon="pie-chart" iconBg="rgba(37, 99, 235, 0.12)" iconColor={Colors.primary} title="Profit & Loss" subtitle="Revenue, net profit, and profit margin" badge="Live P&L" badgeColor={Colors.primary} onPress={() => router.push('/analytics')}/>
+          <View style={styles.divider}/>
+          <MenuItem icon="wallet-outline" iconBg="rgba(239, 68, 68, 0.12)" iconColor={Colors.rose} title="Shop Expenses" subtitle="Parts purchases, rent, salaries & bills" badge="Live" badgeColor={Colors.rose} onPress={() => router.push('/expenses')}/>
           <View style={styles.divider}/>
           <MenuItem icon="analytics-outline" iconBg="rgba(16, 185, 129, 0.12)" iconColor="#059669" title="Analytics" subtitle="Revenue, jobs, devices and daily trends" badge="Live" badgeColor="#059669" onPress={() => router.push('/insights')}/>
           <View style={styles.divider}/>
@@ -177,7 +179,7 @@ export default function ProfileScreen() {
         <View style={styles.menuGroup}>
           <MenuItem icon="notifications" iconBg="rgba(245, 158, 11, 0.12)" iconColor={Colors.amber} title="Notifications & Updates" subtitle="Admin announcements & repair alerts" badge="ALERTS" badgeColor={Colors.amber} onPress={() => router.push('/notifications')}/>
           <View style={styles.divider}/>
-          <MenuItem icon="settings-sharp" iconBg="#F1F5F9" iconColor="#334155" title="Shop Settings" subtitle="SMS notification templates & invoice info" onPress={() => router.push('/settings')}/>
+          <MenuItem icon="settings-sharp" iconBg="#F1F5F9" iconColor="#334155" title="Settings" subtitle="SMS notification templates & invoice info" onPress={() => router.push('/settings')}/>
         </View>
       </View>
 
@@ -185,6 +187,8 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Legal & Information</Text>
         <View style={styles.menuGroup}>
+          <MenuItem icon="information-circle-outline" iconBg="rgba(37, 99, 235, 0.12)" iconColor={Colors.primary} title="About Us" subtitle="App info, mission & Chipix details" onPress={() => router.push('/about')}/>
+          <View style={styles.divider}/>
           <MenuItem icon="shield-outline" iconBg="#F1F5F9" iconColor="#64748B" title="Privacy Policy" subtitle="Data protection and customer privacy" onPress={() => router.push('/privacy')}/>
           <View style={styles.divider}/>
           <MenuItem icon="document-text-outline" iconBg="#F1F5F9" iconColor="#64748B" title="Terms & Conditions" subtitle="Usage policy and service agreement" onPress={() => router.push('/terms')}/>

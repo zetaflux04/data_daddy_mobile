@@ -565,9 +565,9 @@ export const api = {
         return res.data?.customer;
     },
     // Expenses
-    async getExpenses() {
+    async getExpenses(params) {
         try {
-            const res = await apiClient.get('/expenses');
+            const res = await apiClient.get('/expenses', { params });
             return res.data?.expenses || [];
         }
         catch {
@@ -577,6 +577,10 @@ export const api = {
     async addExpense(data) {
         const res = await apiClient.post('/expenses', data);
         return res.data?.expense;
+    },
+    async deleteExpense(id) {
+        const res = await apiClient.delete(`/expenses/${id}`);
+        return res.data;
     },
     // Guides
     async getGuides(params) {

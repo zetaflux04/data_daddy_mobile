@@ -41,14 +41,12 @@ export function DropdownHost({ children, style, insideModal = false }) {
 
       const { width: screenWidth, height: screenHeight } = Dimensions.get('screen');
 
-      // On Android, in the root Activity, measureInWindow() measures below the status bar,
-      // while the translucent Modal starts at y = 0. We must add StatusBar.currentHeight.
-      // However, inside a Modal that already has statusBarTranslucent={true}, measureInWindow()
-      // is ALREADY in full-screen coordinates (starting at y = 0), so no offset is needed.
-      const statusBarOffset = (!isInsideModal && Platform.OS === 'android') ? (StatusBar.currentHeight || 0) : 0;
+      // In React Native with statusBarTranslucent={true} on the Modal, coordinates from
+      // trigger.measureInWindow(x, y, ...) are already aligned to the translucent Modal's (0, 0)
+      // coordinate space. Adding StatusBar.currentHeight caused an artificial vertical gap in built APKs.
       const fieldHeight = height > 12 ? height : FIELD_FALLBACK_HEIGHT;
 
-      const fieldTopOnScreen = y + statusBarOffset;
+      const fieldTopOnScreen = y;
       const fieldBottomOnScreen = fieldTopOnScreen + fieldHeight;
 
       // Available vertical space (leave 20dp margin at screen edges)

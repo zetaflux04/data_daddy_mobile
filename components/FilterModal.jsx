@@ -139,7 +139,7 @@ export function FilterModal({
               showsVerticalScrollIndicator={false}
             >
               {/* CAME IN Section */}
-              <Text style={styles.sectionHeader}>CAME IN</Text>
+              <Text style={styles.sectionHeader}>Time Period</Text>
               <View style={styles.chipsRow}>
                 {CAME_IN_FILTER_OPTIONS.map((item) => {
                   const isSelected = selectedCameIn === item.key;
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     marginTop: 12,
     marginBottom: 4,
   },
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     paddingHorizontal: 14,
-    height: 48,
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

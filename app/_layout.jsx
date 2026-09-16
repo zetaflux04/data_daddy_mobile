@@ -12,6 +12,7 @@ import React from 'react';
 import { TextInput } from 'react-native';
 import { CustomAlertProvider } from '../components/CustomAlert';
 import { DropdownHost } from '../components/DropdownHost';
+import { PortalHost } from '@rn-primitives/portal';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Colors } from '../constants/Colors';
@@ -59,6 +60,7 @@ function RootNavigation() {
     return (<>
       <StatusBar style="dark"/>
       <DropdownHost>
+      <PortalHost />
       <Stack screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: '#F8FAFC' },
@@ -85,6 +87,12 @@ function RootNavigation() {
             headerShown: false,
         }}/>
         <Stack.Screen name="analytics" options={{
+            headerShown: false,
+        }}/>
+        <Stack.Screen name="expenses" options={{
+            headerShown: false,
+        }}/>
+        <Stack.Screen name="about" options={{
             headerShown: false,
         }}/>
         <Stack.Screen name="insights" options={{
