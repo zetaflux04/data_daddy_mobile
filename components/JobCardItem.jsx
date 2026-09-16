@@ -147,9 +147,12 @@ export const JobCardItem = ({ job, onPress }) => {
                 {/* Middle Info Details */}
                 <View style={styles.infoCol}>
                     {/* Customer Name */}
-                    <Text style={styles.customerName} numberOfLines={1}>
-                        {job.customerSnapshot?.name || 'Customer'}
-                    </Text>
+                    <View style={styles.customerRow}>
+                        <Ionicons name="person-outline" size={13} color="#64748B" />
+                        <Text style={styles.customerName} numberOfLines={1}>
+                            {job.customerSnapshot?.name || 'Customer'}
+                        </Text>
+                    </View>
 
                     {/* Customer Phone */}
                     <View style={styles.metaRow}>
@@ -359,12 +362,18 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingRight: 8,
     },
+    customerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        // marginBottom: 2,
+    },
     customerName: {
         fontSize: 16,
         fontWeight: '800',
         color: '#0F172A',
-        marginBottom: 3,
         letterSpacing: -0.2,
+        flex: 1,
     },
     metaRow: {
         flexDirection: 'row',
