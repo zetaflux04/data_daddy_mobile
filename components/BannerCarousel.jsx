@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import { getBackendBaseUrl } from '../services/api';
 const { width } = Dimensions.get('window');
 const BANNER_WIDTH = width - 32;
 // Demo banners prepared for admin dashboard uploads
@@ -61,19 +62,43 @@ export const defaultBanners = [
         badgeBg: '#8B5CF6',
     },
 ];
-export const BannerCarousel = ({ banners = defaultBanners, autoPlayInterval = 4500, }) => {
+export const BannerCarousel = ({ banners, autoPlayInterval = 4500, }) => {
     const router = useRouter();
+    const [bannerList, setBannerList] = useState(banners || defaultBanners);
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef(null);
     const isInteracting = useRef(false);
+
+    useEffect(() => {
+        if (banners) {
+            setBannerList(banners);
+            return;
+        }
+        const fetchBanners = async () => {
+            try {
+                const baseUrl = getBackendBaseUrl();
+                const res = await fetch(`${baseUrl}/banners?platform=mobile`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.banners && data.banners.length > 0) {
+                        setBannerList(data.banners);
+                    }
+                }
+            } catch (e) {
+                // keep defaultBanners
+            }
+        };
+        fetchBanners();
+    }, [banners]);
+
     // Auto-scrolling carousel timer
     useEffect(() => {
-        if (banners.length <= 1)
+        if (bannerList.length <= 1)
             return;
         const timer = setInterval(() => {
             if (isInteracting.current)
                 return;
-            const nextIndex = (currentIndex + 1) % banners.length;
+            const nextIndex = (currentIndex + 1) % bannerList.length;
             flatListRef.current?.scrollToIndex({
                 index: nextIndex,
                 animated: true,
@@ -81,15 +106,15 @@ export const BannerCarousel = ({ banners = defaultBanners, autoPlayInterval = 45
             setCurrentIndex(nextIndex);
         }, autoPlayInterval);
         return () => clearInterval(timer);
-    }, [currentIndex, banners.length, autoPlayInterval]);
+    }, [currentIndex, bannerList.length, autoPlayInterval]);
     const onScroll = (event) => {
         const slideIndex = Math.round(event.nativeEvent.contentOffset.x / BANNER_WIDTH);
-        if (slideIndex !== currentIndex && slideIndex >= 0 && slideIndex < banners.length) {
+        if (slideIndex !== currentIndex && slideIndex >= 0 && slideIndex < bannerList.length) {
             setCurrentIndex(slideIndex);
         }
     };
     return (<View style={styles.container}>
-      <FlatList ref={flatListRef} data={banners} keyExtractor={(item) => item._id} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={16} onTouchStart={() => {
+      <FlatList ref={flatListRef} data={bannerList} keyExtractor={(item) => item._id} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={16} onTouchStart={() => {
             isInteracting.current = true;
         }} onTouchEnd={() => {
             setTimeout(() => {
