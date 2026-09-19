@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
@@ -26,8 +27,8 @@ import { Colors } from '../../constants/Colors';
 import { QRCodeView } from '../../components/QRCodeView';
 
 const WhatsAppDoodleBg = ({ isDark, style }) => {
-  const bgColor = isDark ? '#0B141A' : '#EAE5DF';
-  const iconColor = isDark ? '#1C2E38' : '#D0C8BC';
+  const bgColor = isDark ? '#0B141A' : '#E5E7EB';
+  const iconColor = isDark ? '#1C2E38' : '#D1D5DB';
 
   return (
     <View style={[styles.doodleContainer, { backgroundColor: bgColor }, style]}>
@@ -86,6 +87,7 @@ const MOOD_STORAGE_KEY = '@user_profile_mood';
 const WhatsAppListItem = ({
   icon,
   iconType = 'vector', // 'vector' | 'circleBadge'
+  iconFamily = 'ionicons', // 'ionicons' | 'materialCommunity'
   badgeText,
   badgeColor,
   title,
@@ -132,6 +134,8 @@ const WhatsAppListItem = ({
           >
             <Text style={styles.circleBadgeText}>{badgeText || '₹'}</Text>
           </View>
+        ) : iconFamily === 'materialCommunity' ? (
+          <MaterialCommunityIcons name={icon} size={22} color={iconColor} />
         ) : (
           <Ionicons name={icon} size={22} color={iconColor} />
         )}
@@ -181,6 +185,8 @@ export default function ProfileScreen() {
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [isSubscriptionModalVisible, setIsSubscriptionModalVisible] = useState(false);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
+  const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
+  const [tempThemeMode, setTempThemeMode] = useState(themeMode);
 
   useEffect(() => {
     refreshShopProfile().catch(() => {});
@@ -295,15 +301,12 @@ export default function ProfileScreen() {
 
   return (
     <ProfileErrorBoundary>
-      <View style={[styles.rootContainer, { backgroundColor: isDark ? '#0B141A' : '#EAE5DF' }]}>
+      <View style={[styles.rootContainer, { backgroundColor: isDark ? '#0B141A' : '#E5E7EB' }]}>
         <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 24) + 80 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
         {/* ================= HEADER SECTION WITH DOODLE BACKGROUND ================= */}
         <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) }]}>
           {/* Subtle WhatsApp Vector Doodle Background */}
@@ -432,6 +435,7 @@ export default function ProfileScreen() {
             {
               backgroundColor: isDark ? '#0B141A' : '#FFFFFF',
               borderTopColor: isDark ? '#1F2C34' : 'transparent',
+              paddingBottom: Math.max(insets.bottom, 16) + 90,
             },
           ]}
         >
@@ -557,167 +561,23 @@ export default function ProfileScreen() {
           />
           <View style={[styles.indentedDivider, { backgroundColor: dividerColor }]} />
 
-          {/* 11. Theme & Appearance Section */}
-          <View style={styles.appearanceSection}>
-            <View style={styles.appearanceHeaderRow}>
-              <View style={styles.appearanceIconBox}>
-                <Ionicons
-                  name={isDark ? 'moon' : 'sunny'}
-                  size={20}
-                  color={isDark ? '#3B82F6' : '#F59E0B'}
-                />
-              </View>
-              <View style={styles.appearanceTextWrap}>
-                <Text style={[styles.appearanceTitle, { color: isDark ? '#E9EDEF' : '#111B21' }]}>
-                  Appearance & Clarity
-                </Text>
-                <Text style={[styles.appearanceSub, { color: isDark ? '#8696A0' : '#667781' }]}>
-                  {themeMode === 'system'
-                    ? `System default (${effectiveTheme === 'dark' ? 'Dark' : 'Light'})`
-                    : `${themeMode === 'dark' ? 'Dark mode' : 'Light mode'} active`}
-                </Text>
-              </View>
-            </View>
-
-            {/* 3 WhatsApp-style Pill Segment Options */}
-            <View
-              style={[
-                styles.themePillsContainer,
-                {
-                  backgroundColor: isDark ? '#111B21' : '#F0F2F5',
-                  borderColor: isDark ? '#202C33' : '#E9EDEF',
-                },
-              ]}
-            >
-              {/* System Option */}
-              <Pressable
-                style={[
-                  styles.themePillBtn,
-                  themeMode === 'system' && [
-                    styles.themePillBtnActive,
-                    { backgroundColor: isDark ? '#202C33' : '#FFFFFF' },
-                  ],
-                ]}
-                onPress={() => setThemeMode('system')}
-              >
-                <Ionicons
-                  name="phone-portrait-outline"
-                  size={15}
-                  color={
-                    themeMode === 'system'
-                      ? isDark
-                        ? '#E9EDEF'
-                        : '#111B21'
-                      : isDark
-                      ? '#8696A0'
-                      : '#667781'
-                  }
-                />
-                <Text
-                  style={[
-                    styles.themePillText,
-                    {
-                      color:
-                        themeMode === 'system'
-                          ? isDark
-                            ? '#E9EDEF'
-                            : '#111B21'
-                          : isDark
-                          ? '#8696A0'
-                          : '#667781',
-                      fontWeight: themeMode === 'system' ? '700' : '500',
-                    },
-                  ]}
-                >
-                  System
-                </Text>
-              </Pressable>
-
-              {/* Light Option */}
-              <Pressable
-                style={[
-                  styles.themePillBtn,
-                  themeMode === 'light' && [
-                    styles.themePillBtnActive,
-                    { backgroundColor: isDark ? '#202C33' : '#FFFFFF' },
-                  ],
-                ]}
-                onPress={() => setThemeMode('light')}
-              >
-                <Ionicons
-                  name="sunny"
-                  size={15}
-                  color={
-                    themeMode === 'light'
-                      ? '#F59E0B'
-                      : isDark
-                      ? '#8696A0'
-                      : '#667781'
-                  }
-                />
-                <Text
-                  style={[
-                    styles.themePillText,
-                    {
-                      color:
-                        themeMode === 'light'
-                          ? isDark
-                            ? '#E9EDEF'
-                            : '#111B21'
-                          : isDark
-                          ? '#8696A0'
-                          : '#667781',
-                      fontWeight: themeMode === 'light' ? '700' : '500',
-                    },
-                  ]}
-                >
-                  Light
-                </Text>
-              </Pressable>
-
-              {/* Dark Option */}
-              <Pressable
-                style={[
-                  styles.themePillBtn,
-                  themeMode === 'dark' && [
-                    styles.themePillBtnActive,
-                    { backgroundColor: isDark ? '#202C33' : '#FFFFFF' },
-                  ],
-                ]}
-                onPress={() => setThemeMode('dark')}
-              >
-                <Ionicons
-                  name="moon"
-                  size={15}
-                  color={
-                    themeMode === 'dark'
-                      ? '#3B82F6'
-                      : isDark
-                      ? '#8696A0'
-                      : '#667781'
-                  }
-                />
-                <Text
-                  style={[
-                    styles.themePillText,
-                    {
-                      color:
-                        themeMode === 'dark'
-                          ? isDark
-                            ? '#E9EDEF'
-                            : '#111B21'
-                          : isDark
-                          ? '#8696A0'
-                          : '#667781',
-                      fontWeight: themeMode === 'dark' ? '700' : '500',
-                    },
-                  ]}
-                >
-                  Dark
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+          {/* 11. Theme Option */}
+          <WhatsAppListItem
+            icon="color-palette-outline"
+            title="Theme"
+            subtitle={
+              themeMode === 'system'
+                ? 'System default'
+                : themeMode === 'dark'
+                ? 'Dark'
+                : 'Light'
+            }
+            onPress={() => {
+              setTempThemeMode(themeMode);
+              setIsThemeModalVisible(true);
+            }}
+            isDark={isDark}
+          />
           <View style={[styles.indentedDivider, { backgroundColor: dividerColor }]} />
 
           {/* 12. Sign Out */}
@@ -1164,6 +1024,91 @@ export default function ProfileScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* ================= MODAL 5: CHOOSE THEME (WHATSAPP POP-UP) ================= */}
+      <Modal
+        visible={isThemeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsThemeModalVisible(false)}
+      >
+        <Pressable
+          style={styles.themeModalBackdrop}
+          onPress={() => setIsThemeModalVisible(false)}
+        >
+          <Pressable
+            style={[
+              styles.themeModalCard,
+              {
+                backgroundColor: isDark ? '#1F2C34' : '#FFFFFF',
+              },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={[styles.themeModalTitle, { color: isDark ? '#E9EDEF' : '#111B21' }]}>
+              Choose theme
+            </Text>
+
+            {[
+              { key: 'system', label: 'System default' },
+              { key: 'light', label: 'Light' },
+              { key: 'dark', label: 'Dark' },
+            ].map((option) => {
+              const isSelected = tempThemeMode === option.key;
+              const themeAccent = isDark ? '#60A5FA' : Colors.primary;
+              return (
+                <Pressable
+                  key={option.key}
+                  style={styles.themeRadioRow}
+                  onPress={() => setTempThemeMode(option.key)}
+                >
+                  <View
+                    style={[
+                      styles.themeRadioOuter,
+                      {
+                        borderColor: isSelected
+                          ? themeAccent
+                          : isDark
+                          ? '#8696A0'
+                          : '#667781',
+                      },
+                    ]}
+                  >
+                    {isSelected ? (
+                      <View style={[styles.themeRadioInner, { backgroundColor: themeAccent }]} />
+                    ) : null}
+                  </View>
+                  <Text style={[styles.themeRadioLabel, { color: isDark ? '#E9EDEF' : '#111B21' }]}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+
+            <View style={styles.themeModalActions}>
+              <Pressable
+                onPress={() => setIsThemeModalVisible(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
+              >
+                <Text style={[styles.themeModalActionBtnText, { color: isDark ? '#8696A0' : '#64748B' }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setThemeMode(tempThemeMode);
+                  setIsThemeModalVisible(false);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
+              >
+                <Text style={[styles.themeModalActionBtnText, { color: isDark ? '#60A5FA' : Colors.primary }]}>
+                  OK
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   </ProfileErrorBoundary>
   );
@@ -1329,9 +1274,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     borderTopWidth: 1,
     paddingTop: 12,
-    paddingBottom: 24,
     marginTop: -6,
-    minHeight: 500,
+    flexGrow: 1,
   },
 
   /* LIST ITEM */
@@ -1396,66 +1340,77 @@ const styles = StyleSheet.create({
     marginLeft: 74,
   },
 
-  /* APPEARANCE / THEME SELECTOR */
-  appearanceSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  appearanceHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  appearanceIconBox: {
-    width: 38,
+  /* THEME MODAL (WHATSAPP "CHOOSE THEME" DIALOG) */
+  themeModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    padding: 24,
   },
-  appearanceTextWrap: {
-    flex: 1,
+  themeModalCard: {
+    width: '100%',
+    maxWidth: 320,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    paddingBottom: 20,
+    elevation: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
   },
-  appearanceTitle: {
+  themeModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
+    letterSpacing: -0.2,
+  },
+  themeRadioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  themeRadioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeRadioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
+  },
+  themeRadioLabel: {
     fontSize: 16,
     fontWeight: '500',
+    marginLeft: 16,
   },
-  appearanceSub: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  themePillsContainer: {
+  themeModalActions: {
     flexDirection: 'row',
-    borderRadius: 14,
-    padding: 4,
-    borderWidth: 1,
-    marginLeft: 54,
-  },
-  themePillBtn: {
-    flex: 1,
-    flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 10,
-    gap: 6,
+    marginTop: 20,
+    gap: 24,
   },
-  themePillBtnActive: {
-    elevation: 2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 2,
-  },
-  themePillText: {
-    fontSize: 13,
+  themeModalActionBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.primary,
+    letterSpacing: 0.2,
   },
 
   /* FOOTER */
   footerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 36,
-    paddingBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 4,
   },
   footerMetafyText: {
     fontSize: 11,

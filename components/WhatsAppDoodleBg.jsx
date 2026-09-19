@@ -3,8 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export const WhatsAppDoodleBg = ({ isDark, style }) => {
-  const bgColor = isDark ? '#0B141A' : '#EAE5DF';
-  const iconColor = isDark ? '#1C2E38' : '#D0C8BC';
+  const bgColor = isDark ? '#0B141A' : '#E5E7EB';
+  const iconColor = isDark ? '#1C2E38' : '#D1D5DB';
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }, style]}>
