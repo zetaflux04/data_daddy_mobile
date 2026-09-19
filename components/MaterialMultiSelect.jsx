@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { TextInput, Checkbox } from 'react-native-paper';
 import { Colors } from '../constants/Colors';
 import { useDropdownHost } from './DropdownHost';
+import { useTheme } from '../context/ThemeContext';
 
 function normalizeOptions(options) {
   return (options || []).map((opt) =>
@@ -28,6 +29,16 @@ export function MaterialMultiSelect({
   inputStyle,
   renderValue,
 }) {
+  let colors = null;
+  let isDark = false;
+  try {
+    const theme = useTheme();
+    colors = theme.colors;
+    isDark = theme.isDark;
+  } catch {
+    // fallback
+  }
+
   const host = useDropdownHost();
   const triggerRef = useRef(null);
   const openRef = useRef(false);
@@ -65,21 +76,30 @@ export function MaterialMultiSelect({
   const renderMenu = () =>
     normalized.map((opt) => {
       const isSelected = selectedRef.current.includes(opt.value);
+      const selectedBg = isDark ? 'rgba(96, 165, 250, 0.15)' : '#EFF6FF';
+      const selectedTextColor = isDark ? '#60A5FA' : Colors.primary;
+      const normalTextColor = colors?.text || '#0F172A';
+      const subTextColor = colors?.textSecondary || '#64748B';
+
       return (
         <Pressable
           key={String(opt.value)}
-          style={[styles.menuItem, isSelected && styles.menuItemSelected]}
+          style={[
+            styles.menuItem,
+            { backgroundColor: colors?.cardElevated || (isDark ? '#202C33' : '#FFFFFF') },
+            isSelected && { backgroundColor: selectedBg },
+          ]}
           onPress={() => toggleValue(opt.value)}
         >
           <Checkbox
             status={isSelected ? 'checked' : 'unchecked'}
-            color={Colors.primary}
+            color={selectedTextColor}
           />
           <View style={styles.menuItemTextWrap}>
-            <Text style={[styles.menuItemText, isSelected && styles.menuItemTextSelected]}>
+            <Text style={[styles.menuItemText, { color: isSelected ? selectedTextColor : normalTextColor }, isSelected && { fontWeight: '700' }]}>
               {opt.label}
             </Text>
-            {opt.subtitle ? <Text style={styles.menuItemSub}>{opt.subtitle}</Text> : null}
+            {opt.subtitle ? <Text style={[styles.menuItemSub, { color: subTextColor }]}>{opt.subtitle}</Text> : null}
           </View>
         </Pressable>
       );
@@ -107,6 +127,9 @@ export function MaterialMultiSelect({
     });
   };
 
+  const inputBg = colors?.inputBg || (isDark ? '#202C33' : '#FFFFFF');
+  const activeColor = isDark ? '#60A5FA' : Colors.primary;
+
   return (
     <View style={[styles.container, style]}>
       <Pressable ref={triggerRef} collapsable={false} disabled={disabled} onPress={toggle}>
@@ -119,9 +142,18 @@ export function MaterialMultiSelect({
             placeholder={placeholder}
             editable={false}
             error={!!error}
-            right={<TextInput.Icon icon={open ? 'menu-up' : 'menu-down'} />}
-            style={[styles.input, inputStyle]}
+            textColor={colors?.text}
+            outlineColor={colors?.border}
+            activeOutlineColor={activeColor}
+            right={<TextInput.Icon icon={open ? 'menu-up' : 'menu-down'} iconColor={colors?.textSecondary} />}
+            style={[styles.input, { backgroundColor: inputBg }, inputStyle]}
             outlineStyle={styles.outline}
+            theme={{
+              colors: {
+                onSurfaceVariant: colors?.textSecondary,
+                text: colors?.text,
+              },
+            }}
           />
         </View>
       </Pressable>

@@ -24,6 +24,7 @@ import { FloatingCloseButton } from '../../components/FloatingCloseButton';
 import { OutlinedTextInput } from '../../components/OutlinedTextInput';
 import { AppHeader } from '../../components/AppHeader';
 import { CustomerFilterModal } from '../../components/CustomerFilterModal';
+import { useTheme } from '../../context/ThemeContext';
 
 const customerStatusTabs = [
   { key: 'all', label: 'All' },
@@ -35,6 +36,7 @@ const customerStatusTabs = [
 export default function CustomersScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const { colors, isDark } = useTheme();
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -84,6 +86,7 @@ export default function CustomersScreen() {
       header: () => (
         <AppHeader
           title="Customer Directory"
+          subtitle="Client contacts, dues & history"
           rightAction={
             <Pressable
               onPress={() => setIsAddModalVisible(true)}
@@ -280,21 +283,21 @@ export default function CustomersScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+      <View style={[styles.searchContainer, { backgroundColor: colors.card, borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
+        <View style={[styles.searchBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+          <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Search by customer name or phone..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={colors.textMuted}
             value={search}
             onChangeText={setSearch}
           />
           {search.length > 0 && (
             <Pressable onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={18} color="#94A3B8" />
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
             </Pressable>
           )}
         </View>
@@ -312,7 +315,7 @@ export default function CustomersScreen() {
       />
 
       {/* Customer Status Filter Chips (Solid blue active pill, gray inactive) */}
-      <View style={styles.filterScrollWrapper}>
+      <View style={[styles.filterScrollWrapper, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -326,13 +329,19 @@ export default function CustomersScreen() {
                 onPress={() => setSelectedStatus(tab.key)}
                 style={[
                   styles.filterChip,
-                  isSelected && styles.filterChipSelected,
+                  {
+                    backgroundColor: isSelected ? Colors.primary : (isDark ? '#202C33' : '#F1F5F9'),
+                    borderColor: isSelected ? Colors.primary : (isDark ? '#202C33' : 'transparent'),
+                  },
                 ]}
               >
                 <Text
                   style={[
                     styles.filterChipText,
-                    isSelected && styles.filterChipTextSelected,
+                    {
+                      color: isSelected ? '#FFFFFF' : (isDark ? '#8696A0' : '#475569'),
+                      fontWeight: isSelected ? '700' : '500',
+                    },
                   ]}
                 >
                   {tab.label}
@@ -352,23 +361,31 @@ export default function CustomersScreen() {
         onRefresh={fetchCustomers}
         renderItem={({ item }) => {
           const isFetchingThis = fetchingCustomerId === item._id;
+          const cardBlue = isDark ? '#60A5FA' : Colors.primary;
           return (
-            <View style={styles.customerCard}>
+            <View style={[styles.customerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Pressable
                 style={({ pressed }) => [styles.cardHeader, pressed && styles.cardHeaderPressed]}
                 onPress={() => handleCustomerJobPress(item)}
               >
-                <View style={styles.avatarCircle}>
-                  <Text style={styles.avatarInitial}>
+                <View style={[
+                  styles.avatarCircle,
+                  {
+                    backgroundColor: isDark ? 'rgba(96, 165, 250, 0.14)' : '#EEF2FF',
+                    borderWidth: isDark ? 1 : 0,
+                    borderColor: isDark ? 'rgba(96, 165, 250, 0.28)' : 'transparent',
+                  }
+                ]}>
+                  <Text style={[styles.avatarInitial, { color: cardBlue }]}>
                     {item.name.charAt(0).toUpperCase()}
                   </Text>
                 </View>
 
                 <View style={styles.customerDetails}>
-                  <Text style={styles.customerName}>{item.name}</Text>
-                  <Text style={styles.customerPhone}>+91 {item.phone}</Text>
+                  <Text style={[styles.customerName, { color: colors.text }]}>{item.name}</Text>
+                  <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>+91 {item.phone}</Text>
                   {item.address ? (
-                    <Text style={styles.customerAddress} numberOfLines={1}>
+                    <Text style={[styles.customerAddress, { color: colors.textSecondary }]} numberOfLines={1}>
                       📍 {item.address}
                     </Text>
                   ) : null}
@@ -377,41 +394,45 @@ export default function CustomersScreen() {
                 <Pressable
                   style={({ pressed }) => [
                     styles.orderCountBadge,
-                    pressed && styles.orderCountBadgePressed,
+                    {
+                      backgroundColor: isDark ? 'rgba(96, 165, 250, 0.12)' : '#EEF2FF',
+                      borderColor: isDark ? 'rgba(96, 165, 250, 0.28)' : '#C7D2FE',
+                    },
+                    pressed && (isDark ? { backgroundColor: 'rgba(96, 165, 250, 0.2)' } : styles.orderCountBadgePressed),
                   ]}
                   onPress={() => handleCustomerJobPress(item)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   {isFetchingThis ? (
-                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <ActivityIndicator size="small" color={cardBlue} />
                   ) : (
                     <>
-                      <Ionicons name="clipboard-outline" size={13} color={Colors.primary} />
-                      <Text style={styles.orderCountText}>
+                      <Ionicons name="clipboard-outline" size={13} color={cardBlue} />
+                      <Text style={[styles.orderCountText, { color: cardBlue }]}>
                         {item.totalOrdersCount || 0} {item.totalOrdersCount === 1 ? 'Job' : 'Jobs'}
                       </Text>
-                      <Ionicons name="chevron-forward" size={12} color={Colors.primary} />
+                      <Ionicons name="chevron-forward" size={12} color={cardBlue} />
                     </>
                   )}
                 </Pressable>
               </Pressable>
 
-              <View style={styles.cardFooter}>
-                <Pressable style={styles.actionButton} onPress={() => openCall(item.phone)}>
-                  <Ionicons name="call" size={14} color="#0284C7" />
-                  <Text style={styles.actionButtonText}>Call</Text>
+              <View style={[styles.cardFooter, { borderTopColor: isDark ? '#202C33' : '#F1F5F9' }]}>
+                <Pressable style={[styles.actionButton, { backgroundColor: isDark ? '#202C33' : '#F0F9FF' }]} onPress={() => openCall(item.phone)}>
+                  <Ionicons name="call" size={14} color={cardBlue} />
+                  <Text style={[styles.actionButtonText, { color: cardBlue }]}>Call</Text>
                 </Pressable>
 
                 <Pressable
-                  style={[styles.actionButton, styles.whatsappButton]}
+                  style={[styles.actionButton, styles.whatsappButton, { backgroundColor: isDark ? 'rgba(37, 211, 102, 0.15)' : '#F0FDF4' }]}
                   onPress={() => openWhatsApp(item.phone)}
                 >
-                  <Ionicons name="logo-whatsapp" size={14} color="#16A34A" />
-                  <Text style={[styles.actionButtonText, { color: '#16A34A' }]}>WhatsApp</Text>
+                  <Ionicons name="logo-whatsapp" size={14} color={isDark ? '#25D366' : '#16A34A'} />
+                  <Text style={[styles.actionButtonText, { color: isDark ? '#25D366' : '#16A34A' }]}>WhatsApp</Text>
                 </Pressable>
 
                 <Pressable
-                  style={[styles.actionButton, styles.newJobForCustButton]}
+                  style={[styles.actionButton, styles.newJobForCustButton, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.15)' : '#EFF6FF' }]}
                   onPress={() =>
                     router.push({
                       pathname: '/job/new',
@@ -419,8 +440,8 @@ export default function CustomersScreen() {
                     })
                   }
                 >
-                  <Ionicons name="add-circle" size={14} color={Colors.primary} />
-                  <Text style={[styles.actionButtonText, { color: Colors.primary }]}>New Job</Text>
+                  <Ionicons name="add-circle" size={14} color={cardBlue} />
+                  <Text style={[styles.actionButtonText, { color: cardBlue }]}>New Job</Text>
                 </Pressable>
               </View>
             </View>
@@ -789,18 +810,22 @@ const styles = StyleSheet.create({
   },
   customerName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
+    letterSpacing: -0.2,
     color: '#0F172A',
     marginBottom: 2,
   },
   customerPhone: {
     fontSize: 13,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '400',
+    letterSpacing: -0.1,
   },
   customerAddress: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#94A3B8',
+    fontWeight: '400',
+    letterSpacing: -0.1,
     marginTop: 2,
   },
   orderCountBadge: {
@@ -992,8 +1017,9 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   jobItemDeviceName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '500',
+    letterSpacing: -0.2,
     color: '#0F172A',
     marginBottom: 4,
   },

@@ -11,12 +11,23 @@ import {
   StatusBar,
 } from 'react-native';
 import { usePathname } from 'expo-router';
+import { useTheme } from '../context/ThemeContext';
 
 const DropdownHostContext = createContext(null);
 const FIELD_FALLBACK_HEIGHT = 44;
 const MENU_GAP = 4;
 
 export function DropdownHost({ children, style, insideModal = false }) {
+  let colors = null;
+  let isDark = false;
+  try {
+    const theme = useTheme();
+    colors = theme.colors;
+    isDark = theme.isDark;
+  } catch {
+    // fallback
+  }
+
   const pathname = usePathname();
   const parentHost = useContext(DropdownHostContext);
   const isInsideModal = Boolean(insideModal || parentHost);
@@ -165,8 +176,10 @@ export function DropdownHost({ children, style, insideModal = false }) {
                 style={[
                   styles.menu,
                   {
-                    top: session.anchor.y,
+                    backgroundColor: colors?.cardElevated || (isDark ? '#202C33' : '#FFFFFF'),
+                    borderColor: colors?.border || (isDark ? '#202C33' : '#CBD5E1'),
                     left: session.anchor.x,
+                    top: session.anchor.y,
                     width: session.anchor.width,
                     ...(session.anchor.maxHeight ? { maxHeight: session.anchor.maxHeight } : {}),
                   },

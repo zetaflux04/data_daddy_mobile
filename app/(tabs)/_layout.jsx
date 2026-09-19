@@ -9,10 +9,12 @@ import { S3Image } from '../../components/S3Image';
 import { MaterialBadge } from '../../components/MaterialBadge';
 import { AppHeader } from '../../components/AppHeader';
 import { CustomTabBar } from '../../components/CustomTabBar';
+import { useTheme } from '../../context/ThemeContext';
 
 function DashboardHeaderTitle() {
     const router = useRouter();
     const { shop } = useAuth();
+    const { colors } = useTheme();
     const [avatarFailed, setAvatarFailed] = useState(false);
     const urls = shop?.logoUrl ? resolveImageUrls(shop.logoUrl) : null;
 
@@ -27,7 +29,7 @@ function DashboardHeaderTitle() {
                     <S3Image
                         uri={urls.uri}
                         proxyUri={urls.proxyUri}
-                        style={styles.headerAvatarImg}
+                        style={[styles.headerAvatarImg, { borderColor: colors.border }]}
                         resizeMode="cover"
                         onAllFailed={() => setAvatarFailed(true)}
                     />
@@ -41,9 +43,9 @@ function DashboardHeaderTitle() {
             </View>
 
             <View style={styles.headerShopInfo}>
-                <Text style={styles.headerGreeting}>Welcome back, 👋</Text>
+                <Text style={[styles.headerGreeting, { color: colors.textSecondary }]}>Welcome back, 👋</Text>
                 <View style={styles.headerNameRow}>
-                    <Text style={styles.headerShopName} numberOfLines={1}>
+                    <Text style={[styles.headerShopName, { color: colors.text }]} numberOfLines={1}>
                         {shop?.name || 'Chipix'}
                     </Text>
                     <View style={styles.headerProPill}>
@@ -58,6 +60,7 @@ function DashboardHeaderTitle() {
 
 export default function TabLayout() {
     const router = useRouter();
+    const { colors } = useTheme();
     const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
@@ -110,14 +113,14 @@ export default function TabLayout() {
                                         style={({ pressed }) => [styles.headerIconBtn, { opacity: pressed ? 0.7 : 1 }]}
                                         accessibilityLabel="Global Search"
                                     >
-                                        <Ionicons name="search-outline" size={20} color="#0F172A" />
+                                        <Ionicons name="search-outline" size={20} color={colors.text} />
                                     </Pressable>
                                     <Pressable
                                         onPress={() => router.push('/notifications')}
                                         style={({ pressed }) => [styles.headerIconBtn, { opacity: pressed ? 0.7 : 1 }]}
                                     >
                                         <MaterialBadge badgeContent={unreadCount} color="error">
-                                            <Ionicons name="notifications-outline" size={20} color="#0F172A" />
+                                            <Ionicons name="notifications-outline" size={20} color={colors.text} />
                                         </MaterialBadge>
                                     </Pressable>
                                 </View>
@@ -136,6 +139,7 @@ export default function TabLayout() {
                     header: () => (
                         <AppHeader
                             title="Job Cards"
+                            subtitle="Active repairs, status & intake"
                             rightAction={
                                 <Pressable
                                     onPress={() => router.push('/job/new')}
@@ -156,7 +160,7 @@ export default function TabLayout() {
                 name="customers"
                 options={{
                     title: 'Customers',
-                    header: () => <AppHeader title="Customer Directory" />,
+                    header: () => <AppHeader title="Customer Directory" subtitle="Client contacts, dues & history" />,
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
                     ),
@@ -217,9 +221,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     headerGreeting: {
-        fontSize: 10.5,
+        fontSize: 13,
         color: '#64748B',
-        fontWeight: '600',
+        fontWeight: '400',
         letterSpacing: -0.1,
     },
     headerNameRow: {
@@ -229,8 +233,8 @@ const styles = StyleSheet.create({
         marginTop: 1,
     },
     headerShopName: {
-        fontSize: 14.5,
-        fontWeight: '800',
+        fontSize: 16,
+        fontWeight: '700',
         color: '#0F172A',
         letterSpacing: -0.2,
         flexShrink: 1,

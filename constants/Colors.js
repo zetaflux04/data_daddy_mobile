@@ -30,32 +30,58 @@ export const Colors = {
         badge: ['#EFF6FF', '#DBEAFE'],
     },
     light: {
-        text: '#0F172A',
-        textSecondary: '#64748B',
-        textMuted: '#94A3B8',
-        background: '#F8FAFC',
+        text: '#111B21', // WhatsApp high-contrast obsidian
+        textSecondary: '#667781', // WhatsApp readable neutral slate
+        textMuted: '#8696A0', // WhatsApp muted gray
+        background: '#F0F2F5', // WhatsApp neutral clean backdrop
         card: '#FFFFFF',
         cardElevated: '#FFFFFF',
-        border: '#E2E8F0',
-        borderSubtle: '#F1F5F9',
+        border: '#E9EDEF', // WhatsApp subtle hairline border
+        borderSubtle: '#F0F2F5',
+        divider: '#E9EDEF',
+        inputBg: '#F0F2F5',
+        iconBoxBg: '#F0F2F5',
+        iconColor: '#54656F',
+        surfaceVariant: '#F0F2F5',
+        chipBg: '#F0F2F5',
         tint: '#2563EB',
-        tabIconDefault: '#94A3B8',
+        primaryText: '#2563EB',
+        tabIconDefault: '#54656F',
         tabIconSelected: '#2563EB',
-        cardShadow: 'rgba(15, 23, 42, 0.06)',
+        tabBarBg: '#FFFFFF',
+        tabPillBg: '#EFF6FF',
+        blueBg: '#EFF6FF',
+        blueBorder: '#BFDBFE',
+        cardShadow: 'rgba(17, 27, 33, 0.04)',
+        doodleBg: '#EFEAE2',
+        doodleStroke: '#DDD6C9',
     },
     dark: {
-        text: '#F8FAFC',
-        textSecondary: '#94A3B8',
-        textMuted: '#64748B',
-        background: '#0B1120',
-        card: '#131D31',
-        cardElevated: '#1E293B',
-        border: '#1E293B',
-        borderSubtle: '#172033',
-        tint: '#3B82F6',
-        tabIconDefault: '#64748B',
-        tabIconSelected: '#3B82F6',
-        cardShadow: 'rgba(0, 0, 0, 0.3)',
+        text: '#E9EDEF', // WhatsApp crisp near-white (95% luminance)
+        textSecondary: '#8696A0', // WhatsApp crisp silver slate
+        textMuted: '#667781',
+        background: '#0B141A', // WhatsApp signature deep pitch dark
+        card: '#111B21', // WhatsApp surface sheet
+        cardElevated: '#202C33', // WhatsApp elevated container
+        border: '#202C33', // WhatsApp clean border
+        borderSubtle: '#182229',
+        divider: '#202C33',
+        inputBg: '#202C33',
+        iconBoxBg: '#202C33',
+        iconColor: '#8696A0',
+        surfaceVariant: '#202C33',
+        chipBg: '#202C33',
+        tint: '#60A5FA', // High-contrast sky blue for dark mode
+        primaryText: '#60A5FA', // Highly readable blue text on dark backgrounds
+        tabIconDefault: '#8696A0',
+        tabIconSelected: '#60A5FA',
+        tabBarBg: '#111B21',
+        tabPillBg: 'rgba(96, 165, 250, 0.18)',
+        blueBg: 'rgba(96, 165, 250, 0.14)',
+        blueBorder: 'rgba(96, 165, 250, 0.28)',
+        cardShadow: 'rgba(0, 0, 0, 0.4)',
+        doodleBg: '#0B141A',
+        doodleStroke: '#1A2730',
     },
 };
 export default Colors;

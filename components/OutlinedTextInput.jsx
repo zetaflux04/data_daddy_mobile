@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, HelperText } from 'react-native-paper';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * Material outlined TextField (React Native Paper).
@@ -22,15 +23,31 @@ export const OutlinedTextInput = forwardRef(({
   inputStyle,
   required,
   dense = true,
-  outlineColor = '#CBD5E1',
+  outlineColor,
   activeOutlineColor,
   outlineStyle,
   ...rest
 }, ref) => {
+  let isDark = false;
+  let colors = null;
+  try {
+    const theme = useTheme();
+    isDark = theme.isDark;
+    colors = theme.colors;
+  } catch {
+    // fallback if outside ThemeProvider
+  }
+
   const displayLabel = label
     ? `${label}${required ? ' *' : ''}`
     : undefined;
   const lines = maxRows || (multiline ? Math.max(numberOfLines, 3) : numberOfLines);
+
+  const defaultOutlineColor = isDark ? '#2A3942' : '#CBD5E1';
+  const defaultActiveOutline = isDark ? '#60A5FA' : Colors.primary;
+  const inputBgColor = isDark ? '#202C33' : '#FFFFFF';
+  const textColor = isDark ? '#E9EDEF' : '#0F172A';
+  const placeholderColor = isDark ? '#8696A0' : '#94A3B8';
 
   const left =
     startAdornment == null
@@ -39,7 +56,7 @@ export const OutlinedTextInput = forwardRef(({
         ? (
           <TextInput.Affix
             text={startAdornment}
-            textStyle={styles.affixText}
+            textStyle={[styles.affixText, isDark && { color: '#8696A0' }]}
           />
         )
         : startAdornment;
@@ -48,7 +65,7 @@ export const OutlinedTextInput = forwardRef(({
     endAdornment == null
       ? undefined
       : typeof endAdornment === 'string'
-        ? <TextInput.Affix text={endAdornment} />
+        ? <TextInput.Affix text={endAdornment} textStyle={isDark ? { color: '#8696A0' } : undefined} />
         : endAdornment;
 
   return (
@@ -61,28 +78,40 @@ export const OutlinedTextInput = forwardRef(({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        placeholderTextColor={placeholderColor}
+        textColor={textColor}
         multiline={multiline}
         numberOfLines={multiline ? lines : 1}
         error={!!error}
-        outlineColor={outlineColor}
-        activeOutlineColor={error ? undefined : (activeOutlineColor || '#64748B')}
-        cursorColor={Colors.primary}
-        selectionColor="rgba(37, 99, 235, 0.25)"
+        outlineColor={outlineColor || defaultOutlineColor}
+        activeOutlineColor={error ? undefined : (activeOutlineColor || defaultActiveOutline)}
+        cursorColor={isDark ? '#60A5FA' : Colors.primary}
+        selectionColor={isDark ? 'rgba(96, 165, 250, 0.3)' : 'rgba(37, 99, 235, 0.25)'}
         left={left}
         right={right}
         style={[
           styles.input,
+          { backgroundColor: inputBgColor },
           multiline && { minHeight: 76 },
         ]}
         contentStyle={[
           multiline ? styles.multilineContent : undefined,
+          { color: textColor },
           inputStyle,
         ]}
         outlineStyle={[
           styles.outline,
-          !error && styles.outlineNormal,
+          !error && { borderColor: outlineColor || defaultOutlineColor },
           outlineStyle,
         ]}
+        theme={{
+          colors: {
+            onSurfaceVariant: isDark ? '#8696A0' : '#64748B',
+            text: textColor,
+            background: inputBgColor,
+            primary: isDark ? '#60A5FA' : Colors.primary,
+          },
+        }}
         {...rest}
       />
       {error && typeof error === 'string' ? (
@@ -106,11 +135,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   outline: {
-    borderRadius: 4,
+    borderRadius: 8,
     overflow: 'visible',
-  },
-  outlineNormal: {
-    borderColor: '#CBD5E1',
     borderWidth: 1,
   },
   affixText: {

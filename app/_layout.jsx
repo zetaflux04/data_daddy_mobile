@@ -2,10 +2,11 @@ import { useFonts } from 'expo-font';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { SplashScreenView } from '../components/SplashScreenView';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import React from 'react';
@@ -13,23 +14,10 @@ import { TextInput } from 'react-native';
 import { CustomAlertProvider } from '../components/CustomAlert';
 import { DropdownHost } from '../components/DropdownHost';
 import { PortalHost } from '@rn-primitives/portal';
-import { PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { PaperProvider, MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Colors } from '../constants/Colors';
 
-const paperTheme = {
-    ...MD3LightTheme,
-    colors: {
-        ...MD3LightTheme.colors,
-        primary: Colors.primary,
-        secondary: Colors.accent,
-        error: Colors.rose,
-        background: Colors.light.background,
-        surface: '#FFFFFF',
-        outline: '#CBD5E1',
-        onSurfaceVariant: '#64748B',
-    },
-};
 // Ensure default placeholder text color is never overridden to white in dark mode
 if (TextInput.defaultProps == null) {
     TextInput.defaultProps = {};
@@ -40,9 +28,11 @@ export const unstable_settings = {
     initialRouteName: '(tabs)',
 };
 SplashScreen.preventAutoHideAsync();
+
 function RootNavigation() {
     const router = useRouter();
     const { hasCompletedOnboarding, user } = useAuth();
+    const { isDark, colors } = useTheme();
     const [splashFinished, setSplashFinished] = useState(false);
     useEffect(() => {
         if (!splashFinished || hasCompletedOnboarding === null)
@@ -58,12 +48,12 @@ function RootNavigation() {
         setSplashFinished(true);
     };
     return (<>
-      <StatusBar style="dark"/>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <DropdownHost>
       <PortalHost />
       <Stack screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: '#F8FAFC' },
+            contentStyle: { backgroundColor: colors.background },
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }}/>
         <Stack.Screen name="onboarding" options={{
@@ -125,6 +115,43 @@ function RootNavigation() {
       </DropdownHost>
     </>);
 }
+
+function AppWithTheme() {
+    const { isDark, colors } = useTheme();
+
+    const paperTheme = useMemo(() => {
+        const baseTheme = isDark ? MD3DarkTheme : MD3LightTheme;
+        return {
+            ...baseTheme,
+            colors: {
+                ...baseTheme.colors,
+                primary: Colors.primary,
+                secondary: Colors.accent,
+                error: Colors.rose,
+                background: colors.background,
+                surface: colors.card,
+                outline: colors.border,
+                onSurfaceVariant: colors.textSecondary,
+            },
+        };
+    }, [isDark, colors]);
+
+    return (
+      <PaperProvider
+        theme={paperTheme}
+        settings={{
+          icon: (props) => <MaterialCommunityIcons {...props} />,
+        }}
+      >
+        <CustomAlertProvider>
+          <AuthProvider>
+            <RootNavigation />
+          </AuthProvider>
+        </CustomAlertProvider>
+      </PaperProvider>
+    );
+}
+
 export default function RootLayout() {
     const [loaded, error] = useFonts({
         SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -144,17 +171,8 @@ export default function RootLayout() {
         return null;
     }
     return (<SafeAreaProvider>
-      <PaperProvider
-        theme={paperTheme}
-        settings={{
-          icon: (props) => <MaterialCommunityIcons {...props} />,
-        }}
-      >
-        <CustomAlertProvider>
-          <AuthProvider>
-            <RootNavigation />
-          </AuthProvider>
-        </CustomAlertProvider>
-      </PaperProvider>
+      <ThemeProvider>
+        <AppWithTheme />
+      </ThemeProvider>
     </SafeAreaProvider>);
 }

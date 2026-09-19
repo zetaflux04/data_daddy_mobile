@@ -13,11 +13,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 
 export default function AnalyticsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { isDark, colors } = useTheme();
   const [summary, setSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -50,8 +52,8 @@ export default function AnalyticsScreen() {
   const expenseRatio = revenue > 0 ? Math.min(100, Math.round((expenseTotal / revenue) * 100)) : 0;
 
   return (
-    <View style={styles.container}>
-      <AppHeader title="Profit & Loss" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppHeader title="Finances" subtitle="Profit & Loss, collected dues & invoices" />
 
       <ScrollView
         style={styles.scrollArea}
@@ -64,19 +66,21 @@ export default function AnalyticsScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            colors={[Colors.primary]}
+            colors={[isDark ? '#60A5FA' : Colors.primary]}
+            progressBackgroundColor={isDark ? '#202C33' : '#FFFFFF'}
+            tintColor={isDark ? '#60A5FA' : Colors.primary}
           />
         }
       >
         {isLoading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={Colors.primary} />
-            <Text style={styles.loadingText}>Calculating financials...</Text>
+            <ActivityIndicator size="small" color={isDark ? '#60A5FA' : Colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Calculating financials...</Text>
           </View>
         ) : (
           <>
             {/* Net Profit Hero Card */}
-            <View style={styles.heroCard}>
+            <View style={[styles.heroCard, { backgroundColor: isDark ? '#111B21' : '#0F172A', borderColor: isDark ? '#2A3942' : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
               <Text style={styles.heroSub}>Shop Net Profit (This Month)</Text>
               <Text style={styles.heroValue}>₹{netProfit.toLocaleString('en-IN')}</Text>
 
@@ -92,22 +96,22 @@ export default function AnalyticsScreen() {
             </View>
 
             {/* Revenue vs Expense Comparison Card */}
-            <View style={styles.compareCard}>
-              <Text style={styles.cardHeaderTitle}>Revenue vs Expenses</Text>
+            <View style={[styles.compareCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.cardHeaderTitle, { color: colors.text }]}>Revenue vs Expenses</Text>
 
               <View style={styles.barItem}>
                 <View style={styles.barLabelRow}>
                   <View style={styles.legendDotRow}>
-                    <View style={[styles.legendDot, { backgroundColor: Colors.primary }]} />
-                    <Text style={styles.barLabel}>Total Collected Revenue</Text>
+                    <View style={[styles.legendDot, { backgroundColor: isDark ? '#60A5FA' : Colors.primary }]} />
+                    <Text style={[styles.barLabel, { color: colors.textSecondary }]}>Total Collected Revenue</Text>
                   </View>
-                  <Text style={[styles.barAmount, { color: Colors.primary }]}>
+                  <Text style={[styles.barAmount, { color: isDark ? '#60A5FA' : Colors.primary }]}>
                     ₹{revenue.toLocaleString('en-IN')}
                   </Text>
                 </View>
-                <View style={styles.progressTrack}>
+                <View style={[styles.progressTrack, { backgroundColor: isDark ? '#202C33' : '#F1F5F9' }]}>
                   <View
-                    style={[styles.progressBar, { width: '100%', backgroundColor: Colors.primary }]}
+                    style={[styles.progressBar, { width: '100%', backgroundColor: isDark ? '#60A5FA' : Colors.primary }]}
                   />
                 </View>
               </View>
@@ -116,13 +120,13 @@ export default function AnalyticsScreen() {
                 <View style={styles.barLabelRow}>
                   <View style={styles.legendDotRow}>
                     <View style={[styles.legendDot, { backgroundColor: Colors.rose }]} />
-                    <Text style={styles.barLabel}>Total Shop Expenses & Parts</Text>
+                    <Text style={[styles.barLabel, { color: colors.textSecondary }]}>Total Shop Expenses & Parts</Text>
                   </View>
                   <Text style={[styles.barAmount, { color: Colors.rose }]}>
                     ₹{expenseTotal.toLocaleString('en-IN')}
                   </Text>
                 </View>
-                <View style={styles.progressTrack}>
+                <View style={[styles.progressTrack, { backgroundColor: isDark ? '#202C33' : '#F1F5F9' }]}>
                   <View
                     style={[
                       styles.progressBar,
@@ -138,30 +142,30 @@ export default function AnalyticsScreen() {
 
             {/* Financial Health Metrics */}
             <View style={styles.metricsRow}>
-              <View style={styles.metricCard}>
-                <View style={[styles.metricIconBox, { backgroundColor: 'rgba(37, 99, 235, 0.1)' }]}>
-                  <Ionicons name="cash-outline" size={18} color={Colors.primary} />
+              <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={[styles.metricIconBox, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.18)' : 'rgba(37, 99, 235, 0.1)' }]}>
+                  <Ionicons name="cash-outline" size={18} color={isDark ? '#60A5FA' : Colors.primary} />
                 </View>
-                <Text style={styles.metricVal}>₹{revenue.toLocaleString('en-IN')}</Text>
-                <Text style={styles.metricLabel}>Gross Income</Text>
+                <Text style={[styles.metricVal, { color: colors.text }]}>₹{revenue.toLocaleString('en-IN')}</Text>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Gross Income</Text>
               </View>
 
-              <View style={styles.metricCard}>
-                <View style={[styles.metricIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+              <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={[styles.metricIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
                   <Ionicons name="card-outline" size={18} color={Colors.rose} />
                 </View>
                 <Text style={[styles.metricVal, { color: Colors.rose }]}>
                   ₹{expenseTotal.toLocaleString('en-IN')}
                 </Text>
-                <Text style={styles.metricLabel}>Total Outflow</Text>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Total Outflow</Text>
               </View>
 
-              <View style={styles.metricCard}>
-                <View style={[styles.metricIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+              <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={[styles.metricIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
                   <Ionicons name="pie-chart-outline" size={18} color="#059669" />
                 </View>
                 <Text style={[styles.metricVal, { color: '#059669' }]}>{marginPct}%</Text>
-                <Text style={styles.metricLabel}>Profit Ratio</Text>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Profit Ratio</Text>
               </View>
             </View>
 
@@ -169,22 +173,23 @@ export default function AnalyticsScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.expensesBanner,
+                { backgroundColor: colors.card, borderColor: colors.border },
                 { opacity: pressed ? 0.88 : 1 },
               ]}
               onPress={() => router.push('/expenses')}
             >
-              <View style={styles.bannerIconBox}>
+              <View style={[styles.bannerIconBox, isDark && { backgroundColor: 'rgba(239, 68, 68, 0.18)' }]}>
                 <Ionicons name="wallet" size={22} color={Colors.rose} />
               </View>
               <View style={styles.bannerTextBox}>
-                <Text style={styles.bannerTitle}>Manage Shop Expenses</Text>
-                <Text style={styles.bannerSub}>
+                <Text style={[styles.bannerTitle, { color: colors.text }]}>Manage Shop Expenses</Text>
+                <Text style={[styles.bannerSub, { color: colors.textSecondary }]}>
                   Record parts purchases, rent, staff salaries & bills
                 </Text>
               </View>
-              <View style={styles.bannerBtn}>
-                <Text style={styles.bannerBtnText}>Open</Text>
-                <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+              <View style={[styles.bannerBtn, isDark && { backgroundColor: '#202C33' }]}>
+                <Text style={[styles.bannerBtnText, isDark && { color: '#60A5FA' }]}>Open</Text>
+                <Ionicons name="chevron-forward" size={14} color={isDark ? '#60A5FA' : Colors.primary} />
               </View>
             </Pressable>
           </>

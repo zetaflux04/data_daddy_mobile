@@ -3,61 +3,73 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader } from '../components/AppHeader';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
+
 export default function PrivacyPolicyScreen() {
     const insets = useSafeAreaInsets();
-    return (<View style={styles.container}>
-      <AppHeader title="Privacy Policy"/>
+    const { isDark, colors } = useTheme();
 
-      <ScrollView style={styles.scrollArea} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.badgeRow}>
-          <View style={styles.dateBadge}>
-            <Text style={styles.dateBadgeText}>Last updated: August 2026</Text>
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <AppHeader title="Privacy Policy" subtitle="Data protection, customer repair privacy" />
+
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.badgeRow}>
+            <View style={[styles.dateBadge, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.15)' : '#EEF2FF' }]}>
+              <Text style={[styles.dateBadgeText, { color: isDark ? '#60A5FA' : Colors.primary }]}>
+                Last updated: August 2026
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <Text style={styles.intro}>
-          Welcome to <Text style={styles.bold}>Metafy</Text>. We are committed to protecting the privacy and confidentiality of repair shop owners, technicians, and their customer data.
-        </Text>
+          <Text style={[styles.intro, { color: colors.textSecondary }]}>
+            Welcome to <Text style={[styles.bold, { color: colors.text }]}>Metafy</Text>. We are committed to protecting the privacy and confidentiality of repair shop owners, technicians, and their customer data.
+          </Text>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.heading}>1. Information We Collect</Text>
-          <Text style={styles.paragraph}>
-            • <Text style={styles.bold}>Shop & Account Details:</Text> Shop business name, owner name, mobile contact number, and physical store address.
-          </Text>
-          <Text style={styles.paragraph}>
-            • <Text style={styles.bold}>Repair Job Information:</Text> Customer contact details (name and phone), device brand, model, serial/IMEI numbers, reported hardware/software issues, passcode pattern, and repair progress.
-          </Text>
-          <Text style={styles.paragraph}>
-            • <Text style={styles.bold}>Telephony & SMS Logs:</Text> Logs of automated transactional SMS sent to customers for order intake, repair completion, and invoice delivery.
-          </Text>
-        </View>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.heading, { color: colors.text }]}>1. Information We Collect</Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              • <Text style={[styles.bold, { color: colors.text }]}>Shop & Account Details:</Text> Shop business name, owner name, mobile contact number, and physical store address.
+            </Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              • <Text style={[styles.bold, { color: colors.text }]}>Repair Job Information:</Text> Customer contact details (name and phone), device brand, model, serial/IMEI numbers, reported hardware/software issues, passcode pattern, and repair progress.
+            </Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              • <Text style={[styles.bold, { color: colors.text }]}>Telephony & SMS Logs:</Text> Logs of automated transactional SMS sent to customers for order intake, repair completion, and invoice delivery.
+            </Text>
+          </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.heading}>2. How We Use Information</Text>
-          <Text style={styles.paragraph}>
-            Your data is strictly used to maintain your shop's digital registers, calculate profit & loss, send customer job card status alerts, and authenticate technician accounts.
-          </Text>
-          <Text style={styles.highlightText}>
-            We NEVER sell, trade, or monetize your customer database or shop financials to third parties.
-          </Text>
-        </View>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.heading, { color: colors.text }]}>2. How We Use Information</Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              Your data is strictly used to maintain your shop's digital registers, calculate profit & loss, send customer job card status alerts, and authenticate technician accounts.
+            </Text>
+            <Text style={[styles.highlightText, { color: isDark ? '#34D399' : '#059669' }]}>
+              We NEVER sell, trade, or monetize your customer database or shop financials to third parties.
+            </Text>
+          </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.heading}>3. Data Security & Storage</Text>
-          <Text style={styles.paragraph}>
-            All communications are encrypted in transit via industry-standard HTTPS/TLS protocols. Technician guides, schematics, and invoices are hosted privately on secure cloud storage with short-lived pre-signed access tokens.
-          </Text>
-        </View>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.heading, { color: colors.text }]}>3. Data Security & Storage</Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              All communications are encrypted in transit via industry-standard HTTPS/TLS protocols. Technician guides, schematics, and invoices are hosted privately on secure cloud storage with short-lived pre-signed access tokens.
+            </Text>
+          </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.heading}>4. Contact Us</Text>
-          <Text style={styles.paragraph}>
-            If you have questions or privacy inquiries, please contact our support team at:
-          </Text>
-          <Text style={styles.emailText}>support@datadaddy.in</Text>
-        </View>
-      </ScrollView>
-    </View>);
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.heading, { color: colors.text }]}>4. Contact Us</Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              If you have questions or privacy inquiries, please contact our support team at:
+            </Text>
+            <Text style={[styles.emailText, { color: isDark ? '#60A5FA' : Colors.primary }]}>support@datadaddy.in</Text>
+          </View>
+        </ScrollView>
+      </View>
+    );
 }
 const styles = StyleSheet.create({
     container: {

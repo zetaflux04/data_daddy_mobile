@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import {
   addDaysISO,
   daysInMonth,
@@ -24,6 +25,7 @@ const buildGrid = (year, monthIndex) => {
 };
 
 export const CalendarDateRange = ({ startDate, endDate, onChangeStart, onChangeEnd }) => {
+  const { isDark, colors } = useTheme();
   const today = todayISO();
   const start = startDate || today;
   const end = endDate || today;
@@ -83,44 +85,48 @@ export const CalendarDateRange = ({ startDate, endDate, onChangeStart, onChangeE
           value={start}
           active={activeField === 'start'}
           onPress={() => setActiveField('start')}
+          isDark={isDark}
+          colors={colors}
         />
         <View style={styles.fieldsDivider}>
-          <Ionicons name="arrow-forward" size={14} color="#94A3B8" />
+          <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />
         </View>
         <DateField
           label="End date"
           value={end}
           active={activeField === 'end'}
           onPress={() => setActiveField('end')}
+          isDark={isDark}
+          colors={colors}
         />
       </View>
 
-      <Text style={styles.hint}>
+      <Text style={[styles.hint, { color: colors.textSecondary }]}>
         {activeField === 'start' ? 'Tap a date to set the start' : 'Tap a date to set the end'}
       </Text>
 
-      <View style={styles.calendarCard}>
+      <View style={[styles.calendarCard, { backgroundColor: isDark ? '#111B21' : '#F8FAFC', borderColor: colors.border }]}>
         <View style={styles.monthNav}>
           <Pressable
             onPress={() => shiftMonth(-1)}
             hitSlop={10}
             style={({ pressed }) => [styles.navBtn, { opacity: pressed ? 0.6 : 1 }]}
           >
-            <Ionicons name="chevron-back" size={18} color="#334155" />
+            <Ionicons name="chevron-back" size={18} color={colors.text} />
           </Pressable>
-          <Text style={styles.monthTitle}>{monthTitle}</Text>
+          <Text style={[styles.monthTitle, { color: colors.text }]}>{monthTitle}</Text>
           <Pressable
             onPress={() => shiftMonth(1)}
             hitSlop={10}
             style={({ pressed }) => [styles.navBtn, { opacity: pressed ? 0.6 : 1 }]}
           >
-            <Ionicons name="chevron-forward" size={18} color="#334155" />
+            <Ionicons name="chevron-forward" size={18} color={colors.text} />
           </Pressable>
         </View>
 
         <View style={styles.weekRow}>
           {WEEKDAYS.map((day, index) => (
-            <Text key={`${day}-${index}`} style={styles.weekday}>
+            <Text key={`${day}-${index}`} style={[styles.weekday, { color: colors.textSecondary }]}>
               {day}
             </Text>
           ))}
@@ -137,6 +143,7 @@ export const CalendarDateRange = ({ startDate, endDate, onChangeStart, onChangeE
             const inRange = iso > start && iso < end;
             const isToday = iso === today;
             const isEdge = isStart || isEnd;
+            const fillBg = isDark ? 'rgba(96, 165, 250, 0.2)' : '#EEF2FF';
 
             return (
               <Pressable
@@ -144,14 +151,15 @@ export const CalendarDateRange = ({ startDate, endDate, onChangeStart, onChangeE
                 onPress={() => handleSelectDay(day)}
                 style={styles.dayCell}
               >
-                {inRange ? <View style={styles.rangeFill} /> : null}
-                {isStart && start !== end ? <View style={styles.rangeFillStart} /> : null}
-                {isEnd && start !== end ? <View style={styles.rangeFillEnd} /> : null}
-                <View style={[styles.dayInner, isEdge && styles.dayInnerSelected]}>
+                {inRange ? <View style={[styles.rangeFill, { backgroundColor: fillBg }]} /> : null}
+                {isStart && start !== end ? <View style={[styles.rangeFillStart, { backgroundColor: fillBg }]} /> : null}
+                {isEnd && start !== end ? <View style={[styles.rangeFillEnd, { backgroundColor: fillBg }]} /> : null}
+                <View style={[styles.dayInner, isEdge && [styles.dayInnerSelected, { backgroundColor: isDark ? '#2563EB' : Colors.primary }]]}>
                   <Text
                     style={[
                       styles.dayText,
-                      isToday && !isEdge && styles.dayTextToday,
+                      { color: colors.text },
+                      isToday && !isEdge && [styles.dayTextToday, { color: isDark ? '#60A5FA' : Colors.primary }],
                       isEdge && styles.dayTextSelected,
                     ]}
                   >
@@ -165,30 +173,37 @@ export const CalendarDateRange = ({ startDate, endDate, onChangeStart, onChangeE
       </View>
 
       <View style={styles.presetsRow}>
-        <Pressable style={styles.presetChip} onPress={() => applyPreset(6)}>
-          <Text style={styles.presetText}>Last 7 Days</Text>
+        <Pressable
+          style={[styles.presetChip, { backgroundColor: isDark ? '#202C33' : '#F1F5F9', borderColor: colors.border, borderWidth: isDark ? 1 : 0 }]}
+          onPress={() => applyPreset(6)}
+        >
+          <Text style={[styles.presetText, { color: isDark ? '#E9EDEF' : '#475569' }]}>Last 7 Days</Text>
         </Pressable>
-        <Pressable style={styles.presetChip} onPress={() => applyPreset(29)}>
-          <Text style={styles.presetText}>Last 30 Days</Text>
+        <Pressable
+          style={[styles.presetChip, { backgroundColor: isDark ? '#202C33' : '#F1F5F9', borderColor: colors.border, borderWidth: isDark ? 1 : 0 }]}
+          onPress={() => applyPreset(29)}
+        >
+          <Text style={[styles.presetText, { color: isDark ? '#E9EDEF' : '#475569' }]}>Last 30 Days</Text>
         </Pressable>
       </View>
     </View>
   );
 };
 
-const DateField = ({ label, value, active, onPress }) => (
+const DateField = ({ label, value, active, onPress, isDark, colors }) => (
   <Pressable
     onPress={onPress}
     style={({ pressed }) => [
       styles.dateField,
-      active && styles.dateFieldActive,
+      { backgroundColor: isDark ? '#202C33' : '#F8FAFC', borderColor: colors.border },
+      active && [styles.dateFieldActive, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.18)' : '#EEF2FF', borderColor: isDark ? '#60A5FA' : '#C7D2FE' }],
       { opacity: pressed ? 0.88 : 1 },
     ]}
   >
-    <Text style={[styles.dateFieldLabel, active && styles.dateFieldLabelActive]}>{label}</Text>
+    <Text style={[styles.dateFieldLabel, { color: colors.textSecondary }, active && [styles.dateFieldLabelActive, { color: isDark ? '#60A5FA' : Colors.primary }]]}>{label}</Text>
     <View style={styles.dateFieldValueRow}>
-      <Ionicons name="calendar-outline" size={16} color={active ? Colors.primary : '#64748B'} />
-      <Text style={[styles.dateFieldValue, active && styles.dateFieldValueActive]}>
+      <Ionicons name="calendar-outline" size={16} color={active ? (isDark ? '#60A5FA' : Colors.primary) : colors.textSecondary} />
+      <Text style={[styles.dateFieldValue, { color: colors.text }, active && [styles.dateFieldValueActive, { color: isDark ? '#60A5FA' : Colors.primary }]]}>
         {formatDisplayDate(value)}
       </Text>
     </View>

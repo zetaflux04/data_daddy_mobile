@@ -4,6 +4,7 @@ import { TextInput as PaperTextInput } from 'react-native-paper';
 import { Colors } from '../constants/Colors';
 import { MaterialSelect } from './MaterialSelect';
 import { formatShortRange } from '../utils/date';
+import { useTheme } from '../context/ThemeContext';
 
 const dateRangeOptions = [
   { key: 'all', label: 'All Time', icon: 'infinite-outline' },
@@ -23,6 +24,8 @@ export const HeaderFilterBar = ({
   hasActiveFilters = false,
   activeFilterCount = 0,
 }) => {
+  const { colors, isDark } = useTheme();
+
   const handleTimeChange = (key) => {
     if (key === 'custom') {
       onDateRangeChange('custom', customStartDate, customEndDate);
@@ -32,11 +35,14 @@ export const HeaderFilterBar = ({
     onDateRangeChange(key, undefined, undefined);
   };
 
+  const inputBg = isDark ? '#202C33' : '#FFFFFF';
+  const activeColor = isDark ? '#60A5FA' : Colors.primary;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
       <MaterialSelect
         style={styles.timeSelect}
-        inputStyle={styles.sharedInput}
+        inputStyle={[styles.sharedInput, { backgroundColor: inputBg }]}
         label="Time"
         value={selectedDateRange}
         placeholder="All Time"
@@ -64,11 +70,18 @@ export const HeaderFilterBar = ({
             label="Filter"
             value={activeFilterCount > 0 ? String(activeFilterCount) : ''}
             editable={false}
-            outlineColor={hasActiveFilters ? Colors.primary : undefined}
-            activeOutlineColor={Colors.primary}
-            right={<PaperTextInput.Icon icon="filter-variant" />}
-            style={styles.sharedInput}
+            textColor={colors.text}
+            outlineColor={hasActiveFilters ? activeColor : colors.border}
+            activeOutlineColor={activeColor}
+            right={<PaperTextInput.Icon icon="filter-variant" iconColor={hasActiveFilters ? activeColor : colors.textSecondary} />}
+            style={[styles.sharedInput, { backgroundColor: inputBg }]}
             outlineStyle={styles.filterOutline}
+            theme={{
+              colors: {
+                onSurfaceVariant: colors.textSecondary,
+                text: colors.text,
+              },
+            }}
           />
         </View>
       </Pressable>

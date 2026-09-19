@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { LineAreaChart } from './charts/LineAreaChart';
 import { DonutChart } from './charts/DonutChart';
 
@@ -13,6 +14,7 @@ const timeFilterOptions = [
 ];
 
 export const DashboardChartsSection = ({ summary, onPressJobs, onPressRevenue, }) => {
+    const { colors, isDark } = useTheme();
     const [selectedTimeFilter, setSelectedTimeFilter] = useState('today');
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
@@ -93,66 +95,76 @@ export const DashboardChartsSection = ({ summary, onPressJobs, onPressRevenue, }
     const currentFilterLabel = timeFilterOptions.find((opt) => opt.key === selectedTimeFilter)?.label || 'Today';
 
     return (<View style={styles.sectionWrapper}>
-      <Pressable style={styles.card} onPress={onPressRevenue}>
+      <Pressable
+        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, shadowColor: isDark ? '#000000' : '#0F172A' }]}
+        onPress={onPressRevenue}
+      >
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Revenue Overview</Text>
-          <Pressable style={styles.dropdownBtn} onPress={() => setIsFilterModalOpen(true)}>
-            <Text style={styles.dropdownBtnText}>{currentFilterLabel}</Text>
-            <Ionicons name="chevron-down" size={13} color="#475569"/>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Revenue Overview</Text>
+          <Pressable
+            style={[styles.dropdownBtn, { backgroundColor: isDark ? '#202C33' : '#F1F5F9' }]}
+            onPress={() => setIsFilterModalOpen(true)}
+          >
+            <Text style={[styles.dropdownBtnText, { color: colors.textSecondary }]}>{currentFilterLabel}</Text>
+            <Ionicons name="chevron-down" size={13} color={colors.textSecondary}/>
           </Pressable>
         </View>
 
         <View style={styles.revenueRow}>
-          <Text style={styles.revenueAmount}>
+          <Text style={[styles.revenueAmount, { color: colors.text }]}>
             ₹{displayRevenue.toLocaleString('en-IN')}
           </Text>
           <View style={[
             styles.trendBadge,
-            growthPct < 0 && { backgroundColor: '#FEF2F2' },
+            { backgroundColor: growthPct < 0 ? (isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2') : (isDark ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5') },
         ]}>
-            <Ionicons name={growthPct >= 0 ? 'arrow-up' : 'arrow-down'} size={11} color={growthPct >= 0 ? '#059669' : Colors.rose}/>
+            <Ionicons name={growthPct >= 0 ? 'arrow-up' : 'arrow-down'} size={11} color={growthPct >= 0 ? (isDark ? '#34D399' : '#059669') : Colors.rose}/>
             <Text style={[
             styles.trendText,
-            growthPct < 0 && { color: Colors.rose },
+            { color: growthPct < 0 ? Colors.rose : (isDark ? '#34D399' : '#059669') },
         ]}>
               {growthPct >= 0 ? `+${growthPct}%` : `${growthPct}%`} {vsLabel}
             </Text>
           </View>
         </View>
 
-        <LineAreaChart data={currentRevenueData} gradientId="revenueGradientLive"/>
+        <LineAreaChart data={currentRevenueData} gradientId="revenueGradientLive" isDark={isDark} />
       </Pressable>
 
-      <Pressable style={styles.card} onPress={onPressJobs}>
+      <Pressable
+        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, shadowColor: isDark ? '#000000' : '#0F172A' }]}
+        onPress={onPressJobs}
+      >
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Job Status Overview</Text>
-          <View style={styles.liveTagBadge}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Job Status Overview</Text>
+          <View style={[styles.liveTagBadge, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5' }]}>
             <View style={styles.liveDot}/>
-            <Text style={styles.liveTagText}>LIVE</Text>
+            <Text style={[styles.liveTagText, { color: isDark ? '#34D399' : '#059669' }]}>LIVE</Text>
           </View>
         </View>
 
-        <DonutChart items={statusItems} centerNumber={totalJobs} centerLabel="Total Jobs"/>
+        <DonutChart items={statusItems} centerNumber={totalJobs} centerLabel="Total Jobs" isDark={isDark} />
       </Pressable>
 
       <Modal visible={isFilterModalOpen} transparent animationType="fade" onRequestClose={() => setIsFilterModalOpen(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setIsFilterModalOpen(false)}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalHeading}>Select Revenue Timeframe</Text>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#202C33' : '#FFFFFF', borderColor: colors.border, borderWidth: isDark ? 1 : 0 }]}>
+            <Text style={[styles.modalHeading, { color: colors.text }]}>Select Revenue Timeframe</Text>
             {timeFilterOptions.map((opt) => (<Pressable key={opt.key} style={[
                 styles.optionRow,
-                selectedTimeFilter === opt.key && styles.optionRowActive,
+                selectedTimeFilter === opt.key && (isDark ? { backgroundColor: 'rgba(96, 165, 250, 0.15)' } : styles.optionRowActive),
             ]} onPress={() => {
                 setSelectedTimeFilter(opt.key);
                 setIsFilterModalOpen(false);
             }}>
                 <Text style={[
                 styles.optionText,
-                selectedTimeFilter === opt.key && styles.optionTextActive,
+                { color: colors.textSecondary },
+                selectedTimeFilter === opt.key && { color: isDark ? '#60A5FA' : Colors.primary, fontWeight: '800' },
             ]}>
                   {opt.label}
                 </Text>
-                {selectedTimeFilter === opt.key && (<Ionicons name="checkmark" size={18} color={Colors.primary}/>)}
+                {selectedTimeFilter === opt.key && (<Ionicons name="checkmark" size={18} color={isDark ? '#60A5FA' : Colors.primary}/>)}
               </Pressable>))}
           </View>
         </Pressable>

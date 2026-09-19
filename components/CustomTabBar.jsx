@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 const TAB_CONFIG = [
   {
@@ -43,6 +44,7 @@ const TAB_CONFIG = [
 export function CustomTabBar({ state, descriptors, navigation }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
@@ -87,6 +89,9 @@ export function CustomTabBar({ state, descriptors, navigation }) {
       }
     };
 
+    const activeColor = colors.tint || Colors.primary;
+    const inactiveColor = colors.tabIconDefault || (isDark ? '#8696A0' : '#54656F');
+
     return (
       <Pressable
         key={item.name}
@@ -94,15 +99,19 @@ export function CustomTabBar({ state, descriptors, navigation }) {
         style={styles.tabBtn}
         hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
       >
-        <Ionicons
-          name={isFocused ? item.iconFocused : item.iconDefault}
-          size={22}
-          color={isFocused ? Colors.primary : '#64748B'}
-        />
+        <View style={styles.tabIconBox}>
+          <Ionicons
+            name={isFocused ? item.iconFocused : item.iconDefault}
+            size={24}
+            color={isFocused ? activeColor : inactiveColor}
+          />
+        </View>
         <Text
           style={[
             styles.tabLabel,
-            isFocused ? styles.tabLabelFocused : styles.tabLabelMuted,
+            isFocused
+              ? [styles.tabLabelFocused, { color: activeColor }]
+              : [styles.tabLabelMuted, { color: inactiveColor }],
           ]}
           numberOfLines={1}
         >
@@ -117,7 +126,13 @@ export function CustomTabBar({ state, descriptors, navigation }) {
       <View
         style={[
           styles.fixedBar,
-          { paddingBottom: Math.max(insets.bottom, 8) },
+          {
+            backgroundColor: isDark ? '#111B21' : '#FFFFFF',
+            borderTopColor: isDark ? '#202C33' : '#E9EDEF',
+            shadowColor: isDark ? '#000000' : '#0F172A',
+            shadowOpacity: isDark ? 0.35 : 0.04,
+            paddingBottom: Math.max(insets.bottom, 8),
+          },
         ]}
       >
         {/* Tab 1: Dashboard */}
@@ -159,44 +174,47 @@ const styles = StyleSheet.create({
   },
   fixedBar: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#E9EDEF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingTop: 8,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
+    paddingTop: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 8,
   },
   tabBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 2,
+  },
+  tabIconBox: {
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 11,
-    marginTop: 3,
+    marginTop: 2,
     letterSpacing: -0.1,
   },
   tabLabelFocused: {
-    color: Colors.primary,
     fontWeight: '700',
   },
   tabLabelMuted: {
-    color: '#64748B',
     fontWeight: '500',
   },
   centerPlusBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',

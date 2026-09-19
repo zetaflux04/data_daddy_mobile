@@ -5,10 +5,32 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBadge } from './StatusBadge';
 import { S3Image } from './S3Image';
 import { resolveImageUrls } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 
 export const JobCardItem = ({ job, onPress }) => {
     const router = useRouter();
     const [imgFailed, setImgFailed] = useState(false);
+
+    let themeColors = null;
+    let isDark = false;
+    try {
+        const theme = useTheme();
+        themeColors = theme.colors;
+        isDark = theme.isDark;
+    } catch {
+        themeColors = null;
+    }
+
+    const cardBg = themeColors?.card ?? '#FFFFFF';
+    const cardBorder = themeColors?.border ?? '#E2E8F0';
+    const customerNameColor = themeColors?.text ?? '#0F172A';
+    const deviceTextColor = themeColors?.textSecondary ?? '#334155';
+    const footerValColor = themeColors?.text ?? '#0F172A';
+    const footerLabelColor = themeColors?.textMuted ?? '#94A3B8';
+    const footerBorderColor = themeColors?.borderSubtle ?? '#F1F5F9';
+    const editBtnBg = isDark ? '#1E293B' : '#F1F5F9';
+    const editBtnColor = themeColors?.textSecondary ?? '#475569';
+    const fallbackImgBg = isDark ? '#1E293B' : '#F1F5F9';
 
     const createdDate = job.createdAt
         ? new Date(job.createdAt).toLocaleDateString('en-GB', {
@@ -43,18 +65,43 @@ export const JobCardItem = ({ job, onPress }) => {
 
     const getDeviceStyle = () => {
         if (job.orderType === 'accessory') {
-            return { bg: '#FDF4FF', border: '#F5D0FE', color: '#A855F7', icon: 'cube-outline' };
+            return {
+                bg: isDark ? 'rgba(168, 85, 247, 0.15)' : '#FDF4FF',
+                border: isDark ? 'rgba(168, 85, 247, 0.3)' : '#F5D0FE',
+                color: isDark ? '#C084FC' : '#A855F7',
+                icon: 'cube-outline',
+            };
         }
         if (job.deviceType === 'smartwatch') {
-            return { bg: '#ECFDF5', border: '#A7F3D0', color: '#059669', icon: 'watch-outline' };
+            return {
+                bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5',
+                border: isDark ? 'rgba(16, 185, 129, 0.3)' : '#A7F3D0',
+                color: isDark ? '#34D399' : '#059669',
+                icon: 'watch-outline',
+            };
         }
         if (job.deviceType === 'laptop') {
-            return { bg: '#EFF6FF', border: '#BFDBFE', color: '#2563EB', icon: 'laptop-outline' };
+            return {
+                bg: isDark ? 'rgba(96, 165, 250, 0.15)' : '#EFF6FF',
+                border: isDark ? 'rgba(96, 165, 250, 0.3)' : '#BFDBFE',
+                color: isDark ? '#60A5FA' : '#2563EB',
+                icon: 'laptop-outline',
+            };
         }
         if (job.deviceType === 'tablet') {
-            return { bg: '#F0F9FF', border: '#BAE6FD', color: '#0284C7', icon: 'tablet-portrait-outline' };
+            return {
+                bg: isDark ? 'rgba(56, 189, 248, 0.15)' : '#F0F9FF',
+                border: isDark ? 'rgba(56, 189, 248, 0.3)' : '#BAE6FD',
+                color: isDark ? '#38BDF8' : '#0284C7',
+                icon: 'tablet-portrait-outline',
+            };
         }
-        return { bg: '#EFF6FF', border: '#BFDBFE', color: '#2563EB', icon: 'phone-portrait-outline' };
+        return {
+            bg: isDark ? 'rgba(96, 165, 250, 0.15)' : '#EFF6FF',
+            border: isDark ? 'rgba(96, 165, 250, 0.3)' : '#BFDBFE',
+            color: isDark ? '#60A5FA' : '#2563EB',
+            icon: 'phone-portrait-outline',
+        };
     };
 
     const deviceStyle = getDeviceStyle();
@@ -89,13 +136,19 @@ export const JobCardItem = ({ job, onPress }) => {
             onPress={onPress}
             style={({ pressed }) => [
                 styles.card,
-                { opacity: pressed ? 0.95 : 1, transform: [{ scale: pressed ? 0.995 : 1 }] },
+                {
+                    backgroundColor: cardBg,
+                    borderColor: cardBorder,
+                    shadowColor: isDark ? '#000000' : '#0F172A',
+                    opacity: pressed ? 0.95 : 1,
+                    transform: [{ scale: pressed ? 0.995 : 1 }],
+                },
             ]}
         >
             {/* 1. Top Bar: Job ID Pill (Left) & Status Badge + Standalone Edit & WhatsApp Icons (Right) */}
             <View style={styles.topRow}>
-                <View style={styles.jobIdPill}>
-                    <Text style={styles.jobIdText}>{job.jobId}</Text>
+                <View style={[styles.jobIdPill, isDark && { backgroundColor: 'rgba(96, 165, 250, 0.18)' }]}>
+                    <Text style={[styles.jobIdText, isDark && { color: '#60A5FA' }]}>{job.jobId}</Text>
                 </View>
 
                 <View style={styles.topActionsRow}>
@@ -117,7 +170,7 @@ export const JobCardItem = ({ job, onPress }) => {
                             onPress={handleEditPress}
                             style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
                         >
-                            <Ionicons name="create-outline" size={18} color="#2563EB" />
+                            <Ionicons name="create-outline" size={18} color={isDark ? '#60A5FA' : '#2563EB'} />
                         </Pressable>
                     )}
 
@@ -149,7 +202,7 @@ export const JobCardItem = ({ job, onPress }) => {
                     {/* Customer Name */}
                     <View style={styles.customerRow}>
                         <Ionicons name="person-outline" size={13} color="#64748B" />
-                        <Text style={styles.customerName} numberOfLines={1}>
+                        <Text style={[styles.customerName, { color: customerNameColor }]} numberOfLines={1}>
                             {job.customerSnapshot?.name || 'Customer'}
                         </Text>
                     </View>
@@ -165,16 +218,16 @@ export const JobCardItem = ({ job, onPress }) => {
                     {/* Device Name */}
                     <View style={styles.metaRow}>
                         <Ionicons name={deviceStyle.icon} size={13} color="#64748B" />
-                        <Text style={styles.deviceNameText} numberOfLines={1}>
+                        <Text style={[styles.deviceNameText, { color: deviceTextColor }]} numberOfLines={1}>
                             {deviceName}
                         </Text>
                     </View>
 
                     {/* Repaired by Badge */}
                     {repairedByName ? (
-                        <View style={styles.repairedByChip}>
-                            <Ionicons name="construct-outline" size={11} color="#0284C7" />
-                            <Text style={styles.repairedByText} numberOfLines={2}>
+                        <View style={[styles.repairedByChip, isDark && { backgroundColor: '#202C33' }]}>
+                            <Ionicons name="construct-outline" size={11} color={isDark ? '#60A5FA' : '#0284C7'} />
+                            <Text style={[styles.repairedByText, isDark && { color: '#60A5FA' }]} numberOfLines={2}>
                                 Repaired by: {repairedByName}
                             </Text>
                         </View>
@@ -182,7 +235,7 @@ export const JobCardItem = ({ job, onPress }) => {
                 </View>
 
                 {/* Right: Uploaded Photo at Job Creation */}
-                <View style={styles.imageContainer}>
+                <View style={[styles.imageContainer, isDark && { backgroundColor: '#0B141A', borderColor: '#202C33' }]}>
                     {photoUrls?.uri && !imgFailed ? (
                         <S3Image
                             uri={photoUrls.uri}
@@ -192,7 +245,7 @@ export const JobCardItem = ({ job, onPress }) => {
                             onAllFailed={() => setImgFailed(true)}
                         />
                     ) : (
-                        <View style={styles.fallbackImgBox}>
+                        <View style={[styles.fallbackImgBox, { backgroundColor: fallbackImgBg }]}>
                             <Ionicons
                                 name={
                                     job.deviceType === 'laptop'
@@ -206,7 +259,7 @@ export const JobCardItem = ({ job, onPress }) => {
                                         : 'phone-portrait-outline'
                                 }
                                 size={30}
-                                color="#94A3B8"
+                                color={isDark ? '#8696A0' : '#94A3B8'}
                             />
                         </View>
                     )}
@@ -214,7 +267,7 @@ export const JobCardItem = ({ job, onPress }) => {
             </View>
 
             {/* 3. Bottom Footer Row: Sized According to Space Occupied (Due Amount | Job Date | Service Type) */}
-            <View style={styles.bottomFooterRow}>
+            <View style={[styles.bottomFooterRow, { borderTopColor: footerBorderColor }]}>
                 {/* 1. Due Amount / Fully Paid (Takes space occupied) */}
                 <View style={styles.footerDueBlock}>
                     {isFullyPaid ? (
@@ -233,14 +286,14 @@ export const JobCardItem = ({ job, onPress }) => {
                         </>
                     ) : (
                         <>
-                            <View style={[styles.dueCircleIcon, hasDue && { backgroundColor: '#EF4444' }]}>
+                            <View style={[styles.dueCircleIcon, { backgroundColor: isDark ? '#60A5FA' : '#2563EB' }, hasDue && { backgroundColor: '#EF4444' }]}>
                                 <Text style={styles.dueCircleText}>₹</Text>
                             </View>
                             <View style={styles.footerTextColAuto}>
                                 <Text style={styles.footerLabel} numberOfLines={1}>
                                     Due Amount
                                 </Text>
-                                <Text style={[styles.footerValDue, hasDue && { color: '#EF4444' }]} numberOfLines={1}>
+                                <Text style={[styles.footerValDue, { color: footerValColor }, hasDue && { color: '#EF4444' }]} numberOfLines={1}>
                                     ₹{dueAmount.toLocaleString('en-IN')}
                                 </Text>
                             </View>
@@ -248,7 +301,7 @@ export const JobCardItem = ({ job, onPress }) => {
                     )}
                 </View>
 
-                <View style={styles.footerDivider} />
+                <View style={[styles.footerDivider, { backgroundColor: footerBorderColor }]} />
 
                 {/* 2. Job Date (Takes space occupied) */}
                 <View style={styles.footerDateBlock}>
@@ -257,13 +310,13 @@ export const JobCardItem = ({ job, onPress }) => {
                         <Text style={styles.footerLabel} numberOfLines={1}>
                             Job Date
                         </Text>
-                        <Text style={styles.footerValText} numberOfLines={1}>
+                        <Text style={[styles.footerValText, { color: footerValColor }]} numberOfLines={1}>
                             {createdDate}
                         </Text>
                     </View>
                 </View>
 
-                <View style={styles.footerDivider} />
+                <View style={[styles.footerDivider, { backgroundColor: footerBorderColor }]} />
 
                 {/* 3. Service Type (Takes remaining space according to content) */}
                 <View style={styles.footerServiceBlock}>
@@ -272,7 +325,7 @@ export const JobCardItem = ({ job, onPress }) => {
                         <Text style={styles.footerLabel} numberOfLines={1} ellipsizeMode="tail">
                             Service Type
                         </Text>
-                        <Text style={styles.footerValText} numberOfLines={1} ellipsizeMode="tail">
+                        <Text style={[styles.footerValText, { color: footerValColor }]} numberOfLines={1} ellipsizeMode="tail">
                             {serviceTypeText}
                         </Text>
                     </View>
@@ -370,8 +423,7 @@ const styles = StyleSheet.create({
     },
     customerName: {
         fontSize: 16,
-        fontWeight: '800',
-        color: '#0F172A',
+        fontWeight: '500',
         letterSpacing: -0.2,
         flex: 1,
     },
@@ -379,17 +431,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 5,
-        marginTop: 3,
+        marginTop: 2,
     },
     phoneText: {
-        fontSize: 12.5,
-        color: '#64748B',
-        fontWeight: '500',
+        fontSize: 13,
+        fontWeight: '400',
+        letterSpacing: -0.1,
     },
     deviceNameText: {
-        fontSize: 12.5,
-        color: '#334155',
-        fontWeight: '600',
+        fontSize: 13,
+        fontWeight: '400',
+        letterSpacing: -0.1,
         flex: 1,
     },
     repairedByChip: {

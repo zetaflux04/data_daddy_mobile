@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import {
   MaterialDatePickerModal,
   formatDDMMYYYY,
@@ -67,6 +68,7 @@ export function FilterModal({
   onApply,
 }) {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const [activeDateField, setActiveDateField] = useState(null); // 'start' | 'end' | null
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
@@ -115,20 +117,23 @@ export function FilterModal({
           <View
             style={[
               styles.sheetContainer,
-              { paddingBottom: Math.max(insets.bottom, 16) },
+              {
+                backgroundColor: isDark ? '#111B21' : '#FFFFFF',
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
             ]}
           >
             {/* Drag Handle Indicator */}
-            <View style={styles.dragHandle} />
+            <View style={[styles.dragHandle, isDark && { backgroundColor: '#202C33' }]} />
 
             {/* Header Row: Filters & Clear all */}
-            <View style={styles.headerRow}>
-              <Text style={styles.headerTitle}>Filters</Text>
+            <View style={[styles.headerRow, { borderBottomColor: isDark ? '#202C33' : '#F8FAFC' }]}>
+              <Text style={[styles.headerTitle, { color: isDark ? '#E9EDEF' : '#0F172A' }]}>Filters</Text>
               <Pressable
                 onPress={onClearAll}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Text style={styles.clearAllText}>Clear all</Text>
+                <Text style={[styles.clearAllText, { color: isDark ? '#60A5FA' : Colors.primary }]}>Clear all</Text>
               </Pressable>
             </View>
 
@@ -139,7 +144,7 @@ export function FilterModal({
               showsVerticalScrollIndicator={false}
             >
               {/* CAME IN Section */}
-              <Text style={styles.sectionHeader}>Time Period</Text>
+              <Text style={[styles.sectionHeader, { color: isDark ? '#8696A0' : '#64748B' }]}>Time Period</Text>
               <View style={styles.chipsRow}>
                 {CAME_IN_FILTER_OPTIONS.map((item) => {
                   const isSelected = selectedCameIn === item.key;
@@ -147,7 +152,13 @@ export function FilterModal({
                   return (
                     <Pressable
                       key={item.key}
-                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: isSelected ? Colors.primary : (isDark ? '#202C33' : '#FFFFFF'),
+                          borderColor: isSelected ? Colors.primary : (isDark ? '#2A3942' : '#E2E8F0'),
+                        },
+                      ]}
                       onPress={() => onSelectCameIn(item.key)}
                     >
                       {isSelected && (
@@ -161,6 +172,7 @@ export function FilterModal({
                       <Text
                         style={[
                           styles.chipText,
+                          { color: isSelected ? '#FFFFFF' : (isDark ? '#E9EDEF' : '#475569') },
                           isSelected && styles.chipTextSelected,
                         ]}
                       >
@@ -173,13 +185,13 @@ export function FilterModal({
 
               {/* Custom Dates Box (From & To inputs as shown in reference) */}
               {selectedCameIn === 'custom' && (
-                <View style={styles.customDateCard}>
+                <View style={[styles.customDateCard, isDark && { backgroundColor: '#202C33', borderColor: '#2A3942' }]}>
                   <View style={styles.dateInputsRow}>
                     {/* From Field */}
                     <View style={styles.dateInputCol}>
-                      <Text style={styles.dateInputLabel}>From</Text>
+                      <Text style={[styles.dateInputLabel, isDark && { color: '#8696A0' }]}>From</Text>
                       <Pressable
-                        style={styles.datePickerBtn}
+                        style={[styles.datePickerBtn, isDark && { backgroundColor: '#111B21', borderColor: '#2A3942' }]}
                         onPress={() => {
                           setActiveDateField('start');
                           setIsDatePickerVisible(true);
@@ -188,6 +200,7 @@ export function FilterModal({
                         <Text
                           style={[
                             styles.datePickerBtnText,
+                            isDark && { color: '#E9EDEF' },
                             !customStartDate && styles.datePickerPlaceholder,
                           ]}
                           numberOfLines={1}
@@ -199,16 +212,16 @@ export function FilterModal({
                         <Ionicons
                           name="chevron-down"
                           size={16}
-                          color="#64748B"
+                          color={isDark ? '#8696A0' : '#64748B'}
                         />
                       </Pressable>
                     </View>
 
                     {/* To Field */}
                     <View style={styles.dateInputCol}>
-                      <Text style={styles.dateInputLabel}>To</Text>
+                      <Text style={[styles.dateInputLabel, isDark && { color: '#8696A0' }]}>To</Text>
                       <Pressable
-                        style={styles.datePickerBtn}
+                        style={[styles.datePickerBtn, isDark && { backgroundColor: '#111B21', borderColor: '#2A3942' }]}
                         onPress={() => {
                           setActiveDateField('end');
                           setIsDatePickerVisible(true);
@@ -217,6 +230,7 @@ export function FilterModal({
                         <Text
                           style={[
                             styles.datePickerBtnText,
+                            isDark && { color: '#E9EDEF' },
                             !customEndDate && styles.datePickerPlaceholder,
                           ]}
                           numberOfLines={1}
@@ -228,13 +242,13 @@ export function FilterModal({
                         <Ionicons
                           name="chevron-down"
                           size={16}
-                          color="#64748B"
+                          color={isDark ? '#8696A0' : '#64748B'}
                         />
                       </Pressable>
                     </View>
                   </View>
 
-                  <Text style={styles.dateHelpText}>
+                  <Text style={[styles.dateHelpText, isDark && { color: '#8696A0' }]}>
                     Fill one side only for an open-ended range
                   </Text>
                 </View>
@@ -243,7 +257,7 @@ export function FilterModal({
               {/* DEVICE TYPE Section (Only if showDeviceType) */}
               {showDeviceType && (
                 <>
-                  <Text style={styles.sectionHeader}>DEVICE TYPE</Text>
+                  <Text style={[styles.sectionHeader, { color: isDark ? '#8696A0' : '#64748B' }]}>DEVICE TYPE</Text>
                   <View style={styles.chipsRow}>
                     {DEVICE_TYPE_OPTIONS.map((item) => {
                       const isSelected = selectedDeviceType === item.key;
@@ -252,7 +266,10 @@ export function FilterModal({
                           key={item.key}
                           style={[
                             styles.chip,
-                            isSelected && styles.chipSelected,
+                            {
+                              backgroundColor: isSelected ? Colors.primary : (isDark ? '#202C33' : '#FFFFFF'),
+                              borderColor: isSelected ? Colors.primary : (isDark ? '#2A3942' : '#E2E8F0'),
+                            },
                           ]}
                           onPress={() => onSelectDeviceType(item.key)}
                         >
@@ -267,6 +284,7 @@ export function FilterModal({
                           <Text
                             style={[
                               styles.chipText,
+                              { color: isSelected ? '#FFFFFF' : (isDark ? '#E9EDEF' : '#475569') },
                               isSelected && styles.chipTextSelected,
                             ]}
                           >
@@ -280,14 +298,20 @@ export function FilterModal({
               )}
 
               {/* PAYMENT STATUS Section */}
-              <Text style={styles.sectionHeader}>PAYMENT STATUS</Text>
+              <Text style={[styles.sectionHeader, { color: isDark ? '#8696A0' : '#64748B' }]}>PAYMENT STATUS</Text>
               <View style={styles.chipsRow}>
                 {PAYMENT_STATUS_OPTIONS.map((item) => {
                   const isSelected = selectedPaymentStatus === item.key;
                   return (
                     <Pressable
                       key={item.key}
-                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: isSelected ? Colors.primary : (isDark ? '#202C33' : '#FFFFFF'),
+                          borderColor: isSelected ? Colors.primary : (isDark ? '#2A3942' : '#E2E8F0'),
+                        },
+                      ]}
                       onPress={() => onSelectPaymentStatus(item.key)}
                     >
                       {isSelected && (
@@ -301,6 +325,7 @@ export function FilterModal({
                       <Text
                         style={[
                           styles.chipText,
+                          { color: isSelected ? '#FFFFFF' : (isDark ? '#E9EDEF' : '#475569') },
                           isSelected && styles.chipTextSelected,
                         ]}
                       >
@@ -312,12 +337,15 @@ export function FilterModal({
               </View>
 
               {/* TECHNICIAN Section */}
-              <Text style={styles.sectionHeader}>TECHNICIAN</Text>
+              <Text style={[styles.sectionHeader, { color: isDark ? '#8696A0' : '#64748B' }]}>TECHNICIAN</Text>
               <View style={styles.chipsRow}>
                 <Pressable
                   style={[
                     styles.chip,
-                    selectedTechnician === 'anyone' && styles.chipSelected,
+                    {
+                      backgroundColor: selectedTechnician === 'anyone' ? Colors.primary : (isDark ? '#202C33' : '#FFFFFF'),
+                      borderColor: selectedTechnician === 'anyone' ? Colors.primary : (isDark ? '#2A3942' : '#E2E8F0'),
+                    },
                   ]}
                   onPress={() => onSelectTechnician('anyone')}
                 >
@@ -332,8 +360,8 @@ export function FilterModal({
                   <Text
                     style={[
                       styles.chipText,
-                      selectedTechnician === 'anyone' &&
-                        styles.chipTextSelected,
+                      { color: selectedTechnician === 'anyone' ? '#FFFFFF' : (isDark ? '#E9EDEF' : '#475569') },
+                      selectedTechnician === 'anyone' && styles.chipTextSelected,
                     ]}
                   >
                     Anyone
@@ -343,7 +371,10 @@ export function FilterModal({
                 <Pressable
                   style={[
                     styles.chip,
-                    selectedTechnician === 'not_assigned' && styles.chipSelected,
+                    {
+                      backgroundColor: selectedTechnician === 'not_assigned' ? Colors.primary : (isDark ? '#202C33' : '#FFFFFF'),
+                      borderColor: selectedTechnician === 'not_assigned' ? Colors.primary : (isDark ? '#2A3942' : '#E2E8F0'),
+                    },
                   ]}
                   onPress={() => onSelectTechnician('not_assigned')}
                 >
@@ -358,8 +389,8 @@ export function FilterModal({
                   <Text
                     style={[
                       styles.chipText,
-                      selectedTechnician === 'not_assigned' &&
-                        styles.chipTextSelected,
+                      { color: selectedTechnician === 'not_assigned' ? '#FFFFFF' : (isDark ? '#E9EDEF' : '#475569') },
+                      selectedTechnician === 'not_assigned' && styles.chipTextSelected,
                     ]}
                   >
                     Not assigned
@@ -373,7 +404,13 @@ export function FilterModal({
                     return (
                       <Pressable
                         key={techId}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
+                        style={[
+                          styles.chip,
+                          {
+                            backgroundColor: isSelected ? Colors.primary : (isDark ? '#202C33' : '#FFFFFF'),
+                            borderColor: isSelected ? Colors.primary : (isDark ? '#2A3942' : '#E2E8F0'),
+                          },
+                        ]}
                         onPress={() => onSelectTechnician(techId)}
                       >
                         {isSelected && (
@@ -387,6 +424,7 @@ export function FilterModal({
                         <Text
                           style={[
                             styles.chipText,
+                            { color: isSelected ? '#FFFFFF' : (isDark ? '#E9EDEF' : '#475569') },
                             isSelected && styles.chipTextSelected,
                           ]}
                         >
@@ -398,14 +436,20 @@ export function FilterModal({
               </View>
 
               {/* SORT BY Section */}
-              <Text style={styles.sectionHeader}>SORT BY</Text>
+              <Text style={[styles.sectionHeader, { color: isDark ? '#8696A0' : '#64748B' }]}>SORT BY</Text>
               <View style={styles.chipsRow}>
                 {SORT_FILTER_OPTIONS.map((item) => {
                   const isSelected = selectedSortBy === item.key;
                   return (
                     <Pressable
                       key={item.key}
-                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: isSelected ? Colors.primary : (isDark ? '#202C33' : '#FFFFFF'),
+                          borderColor: isSelected ? Colors.primary : (isDark ? '#2A3942' : '#E2E8F0'),
+                        },
+                      ]}
                       onPress={() => onSelectSortBy(item.key)}
                     >
                       {isSelected && (
@@ -419,6 +463,7 @@ export function FilterModal({
                       <Text
                         style={[
                           styles.chipText,
+                          { color: isSelected ? '#FFFFFF' : (isDark ? '#E9EDEF' : '#475569') },
                           isSelected && styles.chipTextSelected,
                         ]}
                       >
@@ -431,7 +476,7 @@ export function FilterModal({
             </ScrollView>
 
             {/* Sticky Bottom Action Button */}
-            <View style={styles.footerContainer}>
+            <View style={[styles.footerContainer, { backgroundColor: isDark ? '#111B21' : '#FFFFFF', borderTopColor: isDark ? '#202C33' : '#F1F5F9' }]}>
               <Pressable
                 style={({ pressed }) => [
                   styles.applyButton,

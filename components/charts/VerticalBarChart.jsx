@@ -9,6 +9,7 @@ export const VerticalBarChart = ({
     height = 120,
     color = Colors.primary,
     emptyLabel = 'No data in this range',
+    isDark = false,
 }) => {
     const points = Array.isArray(data) ? data : [];
     const maxVal = Math.max(...points.map((p) => Number(p[valueKey]) || 0), 0);
@@ -16,7 +17,7 @@ export const VerticalBarChart = ({
     if (!points.length || maxVal === 0) {
         return (
             <View style={[styles.emptyWrap, { height }]}>
-                <Text style={styles.emptyText}>{emptyLabel}</Text>
+                <Text style={[styles.emptyText, isDark && { color: '#8696A0' }]}>{emptyLabel}</Text>
             </View>
         );
     }
@@ -58,7 +59,7 @@ export const VerticalBarChart = ({
             </Svg>
             <View style={styles.xAxisRow}>
                 {labels.map((pt, idx) => (
-                    <Text key={`${pt.day}-l-${idx}`} style={styles.xAxisLabel}>{pt.day}</Text>
+                    <Text key={`${pt.day}-l-${idx}`} style={[styles.xAxisLabel, isDark && { color: '#8696A0' }]}>{pt.day}</Text>
                 ))}
             </View>
         </View>

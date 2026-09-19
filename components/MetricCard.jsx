@@ -3,10 +3,31 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
+
 export const MetricCard = ({ title, value, subtitle, icon, accentColor = Colors.primary, onPress, }) => {
+    let themeColors = null;
+    let isDark = false;
+    try {
+        const theme = useTheme();
+        themeColors = theme.colors;
+        isDark = theme.isDark;
+    } catch {
+        themeColors = null;
+    }
+
+    const cardBg = themeColors?.card ?? '#FFFFFF';
+    const cardBorder = themeColors?.border ?? '#E2E8F0';
+    const titleColor = themeColors?.textSecondary ?? '#64748B';
+    const valueColor = themeColors?.text ?? '#0F172A';
+    const subtitleColor = themeColors?.textSecondary ?? '#64748B';
+
     return (<Pressable onPress={onPress} style={({ pressed }) => [
             styles.card,
             {
+                backgroundColor: cardBg,
+                borderColor: cardBorder,
+                shadowColor: isDark ? '#000000' : '#0F172A',
                 opacity: pressed && onPress ? 0.92 : 1,
                 transform: [{ scale: pressed && onPress ? 0.98 : 1 }],
             },
@@ -17,20 +38,20 @@ export const MetricCard = ({ title, value, subtitle, icon, accentColor = Colors.
           <View style={[styles.iconCircle, { backgroundColor: `${accentColor}18` }]}>
             <Ionicons name={icon} size={18} color={accentColor}/>
           </View>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, { color: titleColor }]} numberOfLines={1}>
             {title}
           </Text>
         </View>
 
         {/* Large Value */}
-        <Text style={styles.value} numberOfLines={1}>
+        <Text style={[styles.value, { color: valueColor }]} numberOfLines={1}>
           {value}
         </Text>
 
         {/* Subtitle with bullet dot */}
         {subtitle ? (<View style={styles.subtitleRow}>
             <View style={[styles.bulletDot, { backgroundColor: accentColor }]}/>
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <Text style={[styles.subtitle, { color: subtitleColor }]} numberOfLines={1}>
               {subtitle}
             </Text>
           </View>) : null}
@@ -80,19 +101,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     title: {
-        fontSize: 11,
-        fontWeight: '800',
+        fontSize: 13,
+        fontWeight: '500',
         color: '#64748B',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: -0.1,
         flex: 1,
     },
     value: {
-        fontSize: 24,
-        fontWeight: '900',
+        fontSize: 22,
+        fontWeight: '700',
         color: '#0F172A',
-        letterSpacing: -0.6,
-        marginBottom: 6,
+        letterSpacing: -0.2,
+        marginBottom: 4,
         marginTop: 2,
     },
     subtitleRow: {
@@ -106,9 +126,10 @@ const styles = StyleSheet.create({
         borderRadius: 2.5,
     },
     subtitle: {
-        fontSize: 11,
+        fontSize: 13,
         color: '#64748B',
-        fontWeight: '600',
+        fontWeight: '400',
+        letterSpacing: -0.1,
         flex: 1,
     },
     waveContainer: {

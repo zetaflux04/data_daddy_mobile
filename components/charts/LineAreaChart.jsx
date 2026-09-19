@@ -8,6 +8,7 @@ export const LineAreaChart = ({
     valueKey = 'amount',
     emptyLabel = 'No data in this range',
     gradientId = 'lineAreaGradient',
+    isDark = false,
 }) => {
     const chartWidth = 310;
     const paddingLeft = 36;
@@ -64,45 +65,49 @@ export const LineAreaChart = ({
         ? pointsData.filter((_, i) => i % Math.ceil(pointsData.length / 7) === 0 || i === pointsData.length - 1)
         : pointsData;
 
+    const gridStroke = isDark ? '#202C33' : '#F1F5F9';
+    const chartLineColor = isDark ? '#60A5FA' : '#2563EB';
+    const axisLabelColor = isDark ? '#8696A0' : '#94A3B8';
+
     return (
         <View style={styles.lineChartWrapper}>
             <Svg width="100%" height={height} viewBox={`0 0 ${chartWidth} ${height}`}>
                 <Defs>
                     <SvgLinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                        <Stop offset="0%" stopColor="#3B82F6" stopOpacity="0.28"/>
-                        <Stop offset="100%" stopColor="#3B82F6" stopOpacity="0.0"/>
+                        <Stop offset="0%" stopColor={chartLineColor} stopOpacity={isDark ? 0.35 : 0.28}/>
+                        <Stop offset="100%" stopColor={chartLineColor} stopOpacity="0.0"/>
                     </SvgLinearGradient>
                 </Defs>
                 {[yStep1, yStep2, yStep3, 0].map((levelVal) => {
                     const y = paddingTop + plotHeight - (levelVal / maxVal) * plotHeight;
                     return (
                         <G key={levelVal}>
-                            <Line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1"/>
+                            <Line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke={gridStroke} strokeDasharray="3 3" strokeWidth="1"/>
                         </G>
                     );
                 })}
                 {areaPath ? <Path d={areaPath} fill={`url(#${gradientId})`}/> : null}
                 {linePath ? (
-                    <Path d={linePath} stroke="#2563EB" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                    <Path d={linePath} stroke={chartLineColor} strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
                 ) : null}
                 {points.map((pt, idx) => (
                     <G key={idx}>
-                        <Circle cx={pt.x} cy={pt.y} r={3.5} fill="#2563EB" stroke="#FFFFFF" strokeWidth={1.5}/>
+                        <Circle cx={pt.x} cy={pt.y} r={3.5} fill={chartLineColor} stroke={isDark ? '#111B21' : '#FFFFFF'} strokeWidth={1.5}/>
                     </G>
                 ))}
             </Svg>
             <View style={styles.xAxisRow}>
                 {xLabels.map((pt, idx) => (
-                    <Text key={`${pt.day}-${idx}`} style={styles.xAxisLabel}>
+                    <Text key={`${pt.day}-${idx}`} style={[styles.xAxisLabel, { color: axisLabelColor }]}>
                         {pt.day}
                     </Text>
                 ))}
             </View>
             <View style={styles.yAxisOverlay}>
-                <Text style={styles.yAxisLabel}>{formatK(yStep1)}</Text>
-                <Text style={styles.yAxisLabel}>{formatK(yStep2)}</Text>
-                <Text style={styles.yAxisLabel}>{formatK(yStep3)}</Text>
-                <Text style={styles.yAxisLabel}>0</Text>
+                <Text style={[styles.yAxisLabel, { color: axisLabelColor }]}>{formatK(yStep1)}</Text>
+                <Text style={[styles.yAxisLabel, { color: axisLabelColor }]}>{formatK(yStep2)}</Text>
+                <Text style={[styles.yAxisLabel, { color: axisLabelColor }]}>{formatK(yStep3)}</Text>
+                <Text style={[styles.yAxisLabel, { color: axisLabelColor }]}>0</Text>
             </View>
         </View>
     );

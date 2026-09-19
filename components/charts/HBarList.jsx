@@ -8,11 +8,12 @@ export const HBarList = ({
     formatValue,
     emptyLabel = 'No data in this range',
     accentColor = Colors.primary,
+    isDark = false,
 }) => {
     if (!items.length) {
         return (
             <View style={styles.emptyWrap}>
-                <Text style={styles.emptyText}>{emptyLabel}</Text>
+                <Text style={[styles.emptyText, isDark && { color: '#8696A0' }]}>{emptyLabel}</Text>
             </View>
         );
     }
@@ -28,12 +29,12 @@ export const HBarList = ({
                 return (
                     <View key={item.key || item.label || idx} style={styles.row}>
                         <View style={styles.labelRow}>
-                            <Text style={styles.label} numberOfLines={1}>{item.label}</Text>
-                            <Text style={styles.value}>
+                            <Text style={[styles.label, isDark && { color: '#8696A0' }]} numberOfLines={1}>{item.label}</Text>
+                            <Text style={[styles.value, isDark && { color: '#E9EDEF' }]}>
                                 {formatValue ? formatValue(item) : value}
                             </Text>
                         </View>
-                        <View style={styles.track}>
+                        <View style={[styles.track, isDark && { backgroundColor: '#202C33' }]}>
                             <View style={[styles.fill, { width: `${widthPct}%`, backgroundColor: color }]}/>
                         </View>
                     </View>

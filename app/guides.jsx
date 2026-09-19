@@ -4,11 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { AppHeader } from '../components/AppHeader';
 const brands = ['All', 'Apple', 'Samsung', 'Dell', 'OnePlus', 'Xiaomi'];
 export default function GuidesScreen() {
     const insets = useSafeAreaInsets();
+    const { isDark, colors } = useTheme();
     const { shop } = useAuth();
     const [guides, setGuides] = useState([]);
     const [selectedBrand, setSelectedBrand] = useState('All');
@@ -28,25 +30,39 @@ export default function GuidesScreen() {
     const handleOpenGuide = (guide) => {
         setActiveGuideModal(guide);
     };
-    return (<View style={styles.container}>
-      <AppHeader title="Technician Guides"/>
+    return (<View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppHeader title="Technician Guides" subtitle="Hardware schematics, boardviews & fix videos" />
 
       {/* Search Header */}
-      <View style={styles.searchHeader}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }}/>
-          <TextInput style={styles.searchInput} placeholder="Search guides, schematics, boardviews..." placeholderTextColor="#94A3B8" value={search} onChangeText={setSearch}/>
+      <View style={[styles.searchHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <View style={[styles.searchBox, { backgroundColor: isDark ? '#202C33' : '#F1F5F9', borderColor: colors.border, borderWidth: isDark ? 1 : 0 }]}>
+          <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: 8 }}/>
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search guides, schematics, boardviews..."
+            placeholderTextColor={colors.textMuted}
+            value={search}
+            onChangeText={setSearch}
+          />
           {search.length > 0 && (<Pressable onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={18} color="#94A3B8"/>
+              <Ionicons name="close-circle" size={18} color={colors.textMuted}/>
             </Pressable>)}
         </View>
       </View>
 
       {/* Brand Horizontal Filter */}
-      <View style={styles.brandsWrapper}>
+      <View style={[styles.brandsWrapper, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandsScroll}>
-          {brands.map((b) => (<Pressable key={b} style={[styles.brandChip, selectedBrand === b && styles.brandChipActive]} onPress={() => setSelectedBrand(b)}>
-              <Text style={[styles.brandChipText, selectedBrand === b && styles.brandChipTextActive]}>
+          {brands.map((b) => (<Pressable
+            key={b}
+            style={[
+              styles.brandChip,
+              { backgroundColor: isDark ? '#202C33' : '#F1F5F9', borderColor: colors.border, borderWidth: isDark ? 1 : 0 },
+              selectedBrand === b && styles.brandChipActive
+            ]}
+            onPress={() => setSelectedBrand(b)}
+          >
+              <Text style={[styles.brandChipText, { color: selectedBrand === b ? '#FFFFFF' : colors.textSecondary }, selectedBrand === b && styles.brandChipTextActive]}>
                 {b}
               </Text>
             </Pressable>))}
@@ -54,99 +70,131 @@ export default function GuidesScreen() {
       </View>
 
       {/* Guides List */}
-      <FlatList data={guides} keyExtractor={(item) => item._id} contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: Math.max(insets.bottom, 16) + 16 },
-        ]} ListEmptyComponent={<View style={styles.emptyState}>
-            <View style={styles.emptyIconBox}>
-              <Ionicons name="book-outline" size={32} color="#94A3B8"/>
+      <FlatList
+        data={guides}
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 16 },
+        ]}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <View style={[styles.emptyIconBox, { backgroundColor: isDark ? '#202C33' : '#F1F5F9' }]}>
+              <Ionicons name="book-outline" size={32} color={colors.textMuted}/>
             </View>
-            <Text style={styles.emptyTitle}>No Guides Found</Text>
-            <Text style={styles.emptySubtitle}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Guides Found</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
               Try searching with another device model or brand keyword.
             </Text>
-          </View>} renderItem={({ item }) => (<Pressable style={({ pressed }) => [styles.guideCard, { opacity: pressed ? 0.92 : 1 }]} onPress={() => handleOpenGuide(item)}>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <Pressable
+            style={({ pressed }) => [
+              styles.guideCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              { opacity: pressed ? 0.92 : 1 }
+            ]}
+            onPress={() => handleOpenGuide(item)}
+          >
             <View style={styles.guideTopRow}>
               <View style={styles.badgeRow}>
-                <View style={styles.brandBadge}>
-                  <Text style={styles.brandBadgeText}>{item.brand}</Text>
+                <View style={[styles.brandBadge, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.18)' : '#EEF2FF' }]}>
+                  <Text style={[styles.brandBadgeText, { color: isDark ? '#60A5FA' : Colors.primary }]}>{item.brand}</Text>
                 </View>
-                <View style={styles.difficultyBadge}>
-                  <Text style={styles.diffText}>{item.difficulty.toUpperCase()}</Text>
+                <View style={[styles.difficultyBadge, { backgroundColor: isDark ? '#202C33' : '#F1F5F9' }]}>
+                  <Text style={[styles.diffText, { color: colors.textSecondary }]}>{item.difficulty.toUpperCase()}</Text>
                 </View>
               </View>
 
-              {item.isPremium && (<View style={styles.proTag}>
+              {item.isPremium && (
+                <View style={[styles.proTag, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7' }]}>
                   <Ionicons name="star" size={12} color="#F59E0B"/>
-                  <Text style={styles.proTagText}>PRO ACCESS</Text>
-                </View>)}
+                  <Text style={[styles.proTagText, { color: isDark ? '#F59E0B' : '#B45309' }]}>PRO ACCESS</Text>
+                </View>
+              )}
             </View>
 
-            <Text style={styles.guideTitle}>{item.title}</Text>
-            <Text style={styles.guideSummary} numberOfLines={2}>
+            <Text style={[styles.guideTitle, { color: colors.text }]}>{item.title}</Text>
+            <Text style={[styles.guideSummary, { color: colors.textSecondary }]} numberOfLines={2}>
               {item.summary}
             </Text>
 
-            <View style={styles.guideFooter}>
+            <View style={[styles.guideFooter, { borderTopColor: colors.border }]}>
               <View style={styles.featureItem}>
-                <Ionicons name="videocam-outline" size={15} color={Colors.primary}/>
-                <Text style={styles.featureText}>Video Walkthrough</Text>
+                <Ionicons name="videocam-outline" size={15} color={isDark ? '#60A5FA' : Colors.primary}/>
+                <Text style={[styles.featureText, { color: colors.textSecondary }]}>Video Walkthrough</Text>
               </View>
 
               <View style={styles.featureItem}>
                 <Ionicons name="document-text-outline" size={15} color={Colors.emerald}/>
-                <Text style={styles.featureText}>Schematic PDF</Text>
+                <Text style={[styles.featureText, { color: colors.textSecondary }]}>Schematic PDF</Text>
               </View>
 
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8"/>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted}/>
             </View>
-          </Pressable>)}/>
+          </Pressable>
+        )}
+      />
 
       {/* Guide Detail & Step-by-Step Reader Modal */}
-      {activeGuideModal && (<Modal visible={!!activeGuideModal} animationType="slide" onRequestClose={() => setActiveGuideModal(null)}>
-          <View style={styles.readerContainer}>
-            <View style={[styles.readerHeader, { paddingTop: Math.max(insets.top, 16) + 8 }]}>
-              <Text style={styles.readerBrand}>{activeGuideModal.brand} • {activeGuideModal.model}</Text>
+      {activeGuideModal && (
+        <Modal visible={!!activeGuideModal} animationType="slide" onRequestClose={() => setActiveGuideModal(null)}>
+          <View style={[styles.readerContainer, { backgroundColor: colors.background }]}>
+            <View style={[styles.readerHeader, { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: Math.max(insets.top, 16) + 8 }]}>
+              <Text style={[styles.readerBrand, { color: colors.textSecondary }]}>{activeGuideModal.brand} • {activeGuideModal.model}</Text>
               <Pressable onPress={() => setActiveGuideModal(null)} style={styles.readerCloseBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                <Ionicons name="close" size={24} color="#0F172A"/>
+                <Ionicons name="close" size={24} color={colors.text}/>
               </Pressable>
             </View>
 
-            <ScrollView contentContainerStyle={[
+            <ScrollView
+              contentContainerStyle={[
                 styles.readerContent,
                 { paddingBottom: Math.max(insets.bottom, 24) + 20 },
-            ]} showsVerticalScrollIndicator={false}>
-              <Text style={styles.readerTitle}>{activeGuideModal.title}</Text>
-              <Text style={styles.readerSummary}>{activeGuideModal.summary}</Text>
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={[styles.readerTitle, { color: colors.text }]}>{activeGuideModal.title}</Text>
+              <Text style={[styles.readerSummary, { color: colors.textSecondary }]}>{activeGuideModal.summary}</Text>
 
               {/* Media Downloads Box */}
-              <View style={styles.mediaBox}>
-                <Text style={styles.mediaBoxTitle}>Schematics & Video Assets</Text>
+              <View style={[styles.mediaBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.mediaBoxTitle, { color: colors.text }]}>Schematics & Video Assets</Text>
                 <View style={styles.mediaRow}>
-                  <Pressable style={styles.mediaBtn} onPress={() => Alert.alert('Schematic Ready', 'Secure AWS S3 / CloudFront verified. Opening schematic boardview viewer.')}>
-                    <Ionicons name="document-attach" size={18} color={Colors.primary}/>
-                    <Text style={styles.mediaBtnText}>Open Schematic PDF</Text>
+                  <Pressable
+                    style={[styles.mediaBtn, { backgroundColor: isDark ? '#202C33' : '#EFF6FF' }]}
+                    onPress={() => Alert.alert('Schematic Ready', 'Secure AWS S3 / CloudFront verified. Opening schematic boardview viewer.')}
+                  >
+                    <Ionicons name="document-attach" size={18} color={isDark ? '#60A5FA' : Colors.primary}/>
+                    <Text style={[styles.mediaBtnText, { color: isDark ? '#60A5FA' : Colors.primary }]}>Open Schematic PDF</Text>
                   </Pressable>
-                  <Pressable style={[styles.mediaBtn, { backgroundColor: '#F0FDF4' }]} onPress={() => Alert.alert('Video Tutorial Ready', 'Streaming walkthrough securely from AWS S3 storage.')}>
+                  <Pressable
+                    style={[styles.mediaBtn, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#F0FDF4' }]}
+                    onPress={() => Alert.alert('Video Tutorial Ready', 'Streaming walkthrough securely from AWS S3 storage.')}
+                  >
                     <Ionicons name="play-circle" size={18} color={Colors.emerald}/>
                     <Text style={[styles.mediaBtnText, { color: Colors.emerald }]}>Play Video</Text>
                   </Pressable>
                 </View>
               </View>
 
-              <Text style={styles.stepsHeading}>Step-by-Step Disassembly & Fix</Text>
-              {activeGuideModal.steps?.map((step) => (<View key={step.stepNumber} style={styles.stepCard}>
-                  <View style={styles.stepNumCircle}>
-                    <Text style={styles.stepNumText}>{step.stepNumber}</Text>
+              <Text style={[styles.stepsHeading, { color: colors.text }]}>Step-by-Step Disassembly & Fix</Text>
+              {activeGuideModal.steps?.map((step) => (
+                <View key={step.stepNumber} style={[styles.stepCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={[styles.stepNumCircle, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.2)' : Colors.primary }]}>
+                    <Text style={[styles.stepNumText, { color: isDark ? '#60A5FA' : '#FFFFFF' }]}>{step.stepNumber}</Text>
                   </View>
                   <View style={styles.stepContent}>
-                    <Text style={styles.stepTitle}>{step.title}</Text>
-                    <Text style={styles.stepDesc}>{step.description}</Text>
+                    <Text style={[styles.stepTitle, { color: colors.text }]}>{step.title}</Text>
+                    <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>{step.description}</Text>
                   </View>
-                </View>))}
+                </View>
+              ))}
             </ScrollView>
           </View>
-        </Modal>)}
+        </Modal>
+      )}
     </View>);
 }
 const styles = StyleSheet.create({

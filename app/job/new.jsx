@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { api, resolveImageUrls } from '../../services/api';
 import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../context/ThemeContext';
 import { AppHeader } from '../../components/AppHeader';
 import { S3Image } from '../../components/S3Image';
 import { OutlinedTextInput } from '../../components/OutlinedTextInput';
@@ -49,6 +50,7 @@ export default function NewJobScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { isDark, colors } = useTheme();
     const isEditing = Boolean(params.editJobId);
     const [isLoadingEdit, setIsLoadingEdit] = useState(isEditing);
 
@@ -524,11 +526,11 @@ export default function NewJobScreen() {
 
     if (isLoadingEdit) {
         return (
-            <View style={styles.container}>
+            <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <AppHeader title="Edit Job Card" />
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityIndicator size="large" color={Colors.primary} />
-                    <Text style={{ marginTop: 12, color: '#64748B', fontWeight: '600' }}>Loading job details...</Text>
+                    <ActivityIndicator size="large" color={isDark ? '#60A5FA' : Colors.primary} />
+                    <Text style={{ marginTop: 12, color: colors.textSecondary, fontWeight: '600' }}>Loading job details...</Text>
                 </View>
             </View>
         );
@@ -538,7 +540,7 @@ export default function NewJobScreen() {
         ? (orderType === 'accessory' ? 'Edit Accessory Sale' : 'Edit Job Card')
         : (orderType === 'accessory' ? 'Record Accessory Sale' : 'New Job Card');
 
-    return (<View style={styles.container}>
+    return (<View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader title={headerTitle}/>
 
       <KeyboardAvoidingView
@@ -561,9 +563,9 @@ export default function NewJobScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* SMS Notice Banner */}
-          <View style={styles.smsNotice}>
-            <Ionicons name="chatbox-ellipses" size={18} color="#0369A1"/>
-            <Text style={styles.smsNoticeText}>
+          <View style={[styles.smsNotice, isDark && { backgroundColor: 'rgba(96, 165, 250, 0.12)', borderColor: 'rgba(96, 165, 250, 0.28)' }]}>
+            <Ionicons name="chatbox-ellipses" size={18} color={isDark ? '#60A5FA' : '#0369A1'}/>
+            <Text style={[styles.smsNoticeText, isDark && { color: '#E9EDEF' }]}>
               {orderType === 'repair'
             ? 'Customer will automatically receive an SMS with Job ID and shop contact number upon saving.'
             : 'Accessory sale will be recorded directly with full payment. No SMS will be sent.'}
@@ -571,8 +573,8 @@ export default function NewJobScreen() {
           </View>
 
           {/* Customer Section */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionHeader}>1. Customer Information</Text>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionHeader, { color: colors.text }]}>1. Customer Information</Text>
 
             <OutlinedTextInput
               label="Customer Full Name"
@@ -595,31 +597,31 @@ export default function NewJobScreen() {
           </View>
 
           {/* Order Type Tab Switcher */}
-          <View style={styles.tabContainer}>
-            <Text style={styles.sectionHeader}>2. Order Type</Text>
+          <View style={[styles.tabContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionHeader, { color: colors.text }]}>2. Order Type</Text>
             {isEditing ? (
-              <View style={styles.orderTypeLockedPill}>
+              <View style={[styles.orderTypeLockedPill, isDark && { backgroundColor: '#202C33', borderColor: '#2A3942' }]}>
                 <Ionicons
                   name={orderType === 'accessory' ? 'bag-handle-outline' : 'construct-outline'}
                   size={16}
-                  color={Colors.primary}
+                  color={isDark ? '#60A5FA' : Colors.primary}
                 />
-                <Text style={styles.orderTypeLockedText}>
+                <Text style={[styles.orderTypeLockedText, isDark && { color: '#60A5FA' }]}>
                   {orderType === 'accessory' ? 'Accessory Sale' : 'Repair Job'}
                 </Text>
-                <Text style={styles.orderTypeLockedHint}>Order type cannot be changed after creation</Text>
+                <Text style={[styles.orderTypeLockedHint, isDark && { color: '#8696A0' }]}>Order type cannot be changed after creation</Text>
               </View>
             ) : (
-              <View style={styles.tabRow}>
+              <View style={[styles.tabRow, isDark && { backgroundColor: '#202C33' }]}>
                 <Pressable style={[styles.tabButton, orderType === 'repair' && styles.tabButtonActive]} onPress={() => handleOrderTypeChange('repair')}>
-                  <Ionicons name="construct-outline" size={18} color={orderType === 'repair' ? '#FFFFFF' : '#64748B'}/>
-                  <Text style={[styles.tabButtonText, orderType === 'repair' && styles.tabButtonTextActive]}>
+                  <Ionicons name="construct-outline" size={18} color={orderType === 'repair' ? '#FFFFFF' : (isDark ? '#8696A0' : '#64748B')}/>
+                  <Text style={[styles.tabButtonText, { color: orderType === 'repair' ? '#FFFFFF' : (isDark ? '#8696A0' : '#64748B') }, orderType === 'repair' && styles.tabButtonTextActive]}>
                     Repair
                   </Text>
                 </Pressable>
                 <Pressable style={[styles.tabButton, orderType === 'accessory' && styles.tabButtonActive]} onPress={() => handleOrderTypeChange('accessory')}>
-                  <Ionicons name="bag-handle-outline" size={18} color={orderType === 'accessory' ? '#FFFFFF' : '#64748B'}/>
-                  <Text style={[styles.tabButtonText, orderType === 'accessory' && styles.tabButtonTextActive]}>
+                  <Ionicons name="bag-handle-outline" size={18} color={orderType === 'accessory' ? '#FFFFFF' : (isDark ? '#8696A0' : '#64748B')}/>
+                  <Text style={[styles.tabButtonText, { color: orderType === 'accessory' ? '#FFFFFF' : (isDark ? '#8696A0' : '#64748B') }, orderType === 'accessory' && styles.tabButtonTextActive]}>
                     Accessories
                   </Text>
                 </Pressable>
@@ -629,16 +631,34 @@ export default function NewJobScreen() {
 
           {/* Repair Form */}
           {orderType === 'repair' && (<>
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionHeader}>3. Device Details</Text>
+              <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.sectionHeader, { color: colors.text }]}>3. Device Details</Text>
 
-                <Text style={styles.fieldLabel}>Device Type</Text>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Device Type</Text>
                 <View style={styles.deviceTypeRow}>
                   {deviceTypes.map((dt) => {
                 const isSelected = deviceType === dt.type;
-                return (<Pressable key={dt.type} style={[styles.deviceTypeChip, isSelected && styles.deviceTypeChipSelected]} onPress={() => setDeviceType(dt.type)}>
-                        <Ionicons name={dt.icon} size={16} color={isSelected ? Colors.primary : '#64748B'}/>
-                        <Text style={[styles.deviceTypeLabel, isSelected && styles.deviceTypeLabelSelected]}>
+                return (<Pressable
+                  key={dt.type}
+                  style={[
+                    styles.deviceTypeChip,
+                    isDark && { backgroundColor: '#202C33', borderColor: '#2A3942' },
+                    isSelected && [styles.deviceTypeChipSelected, isDark && { backgroundColor: 'rgba(96, 165, 250, 0.18)', borderColor: '#60A5FA' }],
+                  ]}
+                  onPress={() => setDeviceType(dt.type)}
+                >
+                        <Ionicons
+                          name={dt.icon}
+                          size={16}
+                          color={isSelected ? (isDark ? '#60A5FA' : Colors.primary) : (isDark ? '#8696A0' : '#64748B')}
+                        />
+                        <Text
+                          style={[
+                            styles.deviceTypeLabel,
+                            isDark && { color: '#8696A0' },
+                            isSelected && [styles.deviceTypeLabelSelected, isDark && { color: '#60A5FA' }],
+                          ]}
+                        >
                           {dt.label}
                         </Text>
                       </Pressable>);
@@ -718,10 +738,10 @@ export default function NewJobScreen() {
                 {/* Device Photos (Max 3 photos) */}
                 <View style={{ marginTop: 14 }}>
                   <View style={styles.photoHeaderRow}>
-                    <Text style={[styles.fieldLabel, { marginTop: 0, marginBottom: 0 }]}>
+                    <Text style={[styles.fieldLabel, { color: colors.textSecondary, marginTop: 0, marginBottom: 0 }]}>
                       Product Photos ({photos.length}/3)
                     </Text>
-                    <Text style={styles.photoSubLabel}>Max 3 photos for repair records</Text>
+                    <Text style={[styles.photoSubLabel, { color: colors.textSecondary }]}>Max 3 photos for repair records</Text>
                   </View>
 
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
@@ -731,8 +751,8 @@ export default function NewJobScreen() {
                 const urls = resolveImageUrls(photoUrl);
                 const displayUri = localUri || urls?.uri || photoUrl;
                 const proxyFallback = urls?.proxyUri;
-                return (<Pressable key={idx} style={styles.photoThumbWrapper} onPress={() => setPreviewImage(displayUri)}>
-                          <S3Image uri={displayUri} proxyUri={proxyFallback} style={styles.photoThumb} resizeMode="cover"/>
+                return (<Pressable key={idx} style={[styles.photoThumbWrapper, isDark && { borderColor: '#2A3942' }]} onPress={() => setPreviewImage(displayUri)}>
+                          <S3Image uri={displayUri} proxyUri={proxyFallback} style={[styles.photoThumb, isDark && { backgroundColor: '#202C33' }]} resizeMode="cover"/>
                           <Pressable style={styles.photoDeleteBtn} onPress={(e) => { e.stopPropagation?.(); handleRemovePhoto(idx); }}>
                             <Ionicons name="close" size={14} color="#FFFFFF"/>
                           </Pressable>
@@ -742,10 +762,18 @@ export default function NewJobScreen() {
                         </Pressable>);
             })}
 
-                    {photos.length < 3 && (<Pressable style={[styles.addPhotoBtn, isUploadingPhoto && styles.addPhotoBtnDisabled]} disabled={isUploadingPhoto} onPress={handlePickPhoto}>
-                        {isUploadingPhoto ? (<ActivityIndicator size="small" color={Colors.primary}/>) : (<>
-                            <Ionicons name="camera" size={24} color={Colors.primary}/>
-                            <Text style={styles.addPhotoText}>+ Add Photo</Text>
+                    {photos.length < 3 && (<Pressable
+                      style={[
+                        styles.addPhotoBtn,
+                        isDark && { backgroundColor: '#202C33', borderColor: '#60A5FA' },
+                        isUploadingPhoto && styles.addPhotoBtnDisabled,
+                      ]}
+                      disabled={isUploadingPhoto}
+                      onPress={handlePickPhoto}
+                    >
+                        {isUploadingPhoto ? (<ActivityIndicator size="small" color={isDark ? '#60A5FA' : Colors.primary}/>) : (<>
+                            <Ionicons name="camera" size={24} color={isDark ? '#60A5FA' : Colors.primary}/>
+                            <Text style={[styles.addPhotoText, isDark && { color: '#60A5FA' }]}>+ Add Photo</Text>
                           </>)}
                       </Pressable>)}
                   </ScrollView>
@@ -754,12 +782,12 @@ export default function NewJobScreen() {
 
               {/* Cost & Payment Section — Repair */}
               <View
-                style={styles.sectionCard}
+                style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onLayout={(e) => {
                   costSectionY.current = e.nativeEvent.layout.y;
                 }}
               >
-                <Text style={styles.sectionHeader}>4. Cost Estimation & Advance</Text>
+                <Text style={[styles.sectionHeader, { color: colors.text }]}>4. Cost Estimation & Advance</Text>
 
                 <View style={styles.twoCol}>
                   <View style={{ flex: 1 }}>
@@ -802,12 +830,21 @@ export default function NewJobScreen() {
                   </Text>)}
 
                 {Number(advancePaid) > 0 && (<View style={{ marginTop: 10 }}>
-                    <Text style={styles.fieldLabel}>Advance Payment Mode</Text>
+                    <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Advance Payment Mode</Text>
                     <View style={styles.deviceTypeRow}>
-                      {['cash', 'upi', 'card'].map((m) => (<Pressable key={m} style={[styles.deviceTypeChip, paymentMode === m && styles.deviceTypeChipSelected]} onPress={() => setPaymentMode(m)}>
+                      {['cash', 'upi', 'card'].map((m) => (<Pressable
+                        key={m}
+                        style={[
+                          styles.deviceTypeChip,
+                          isDark && { backgroundColor: '#202C33', borderColor: '#2A3942' },
+                          paymentMode === m && [styles.deviceTypeChipSelected, isDark && { backgroundColor: 'rgba(96, 165, 250, 0.18)', borderColor: '#60A5FA' }],
+                        ]}
+                        onPress={() => setPaymentMode(m)}
+                      >
                           <Text style={[
                         styles.deviceTypeLabel,
-                        paymentMode === m && styles.deviceTypeLabelSelected,
+                        isDark && { color: '#8696A0' },
+                        paymentMode === m && [styles.deviceTypeLabelSelected, isDark && { color: '#60A5FA' }],
                     ]}>
                             {m.toUpperCase()}
                           </Text>
@@ -820,12 +857,12 @@ export default function NewJobScreen() {
           {/* Accessory Form — Clean 2-Field Flow Without Advance Field */}
           {orderType === 'accessory' && (
             <View
-              style={styles.sectionCard}
+              style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onLayout={(e) => {
                 accessorySectionY.current = e.nativeEvent.layout.y;
               }}
             >
-              <Text style={styles.sectionHeader}>3. Accessory Details</Text>
+              <Text style={[styles.sectionHeader, { color: colors.text }]}>3. Accessory Details</Text>
 
               <MaterialMultiSelect
                 label="Product / Accessory Name"
@@ -869,10 +906,10 @@ export default function NewJobScreen() {
               {/* Product Image Option (Max 1 photo) */}
               <View style={{ marginTop: 14 }}>
                 <View style={styles.photoHeaderRow}>
-                  <Text style={[styles.fieldLabel, { marginTop: 0, marginBottom: 0 }]}>
+                  <Text style={[styles.fieldLabel, { color: colors.textSecondary, marginTop: 0, marginBottom: 0 }]}>
                     Product Image {accessoryPhoto ? '(1/1)' : '(Optional)'}
                   </Text>
-                  <Text style={styles.photoSubLabel}>1 photo limit for product record</Text>
+                  <Text style={[styles.photoSubLabel, { color: colors.textSecondary }]}>1 photo limit for product record</Text>
                 </View>
 
                 {accessoryPhoto ? (
@@ -884,8 +921,8 @@ export default function NewJobScreen() {
                       const displayUri = localUri || urls?.uri || photoUrl;
                       const proxyFallback = urls?.proxyUri;
                       return (
-                        <Pressable style={styles.photoThumbWrapper} onPress={() => setPreviewImage(displayUri)}>
-                          <S3Image uri={displayUri} proxyUri={proxyFallback} style={styles.photoThumb} resizeMode="cover" />
+                        <Pressable style={[styles.photoThumbWrapper, isDark && { borderColor: '#2A3942' }]} onPress={() => setPreviewImage(displayUri)}>
+                          <S3Image uri={displayUri} proxyUri={proxyFallback} style={[styles.photoThumb, isDark && { backgroundColor: '#202C33' }]} resizeMode="cover" />
                           <Pressable
                             style={styles.photoDeleteBtn}
                             onPress={(e) => {
@@ -907,22 +944,27 @@ export default function NewJobScreen() {
                       disabled={isUploadingAccessoryPhoto}
                       onPress={handlePickAccessoryPhoto}
                     >
-                      <Ionicons name="camera-reverse-outline" size={16} color={Colors.primary} />
-                      <Text style={styles.rePickPhotoText}>Change Photo</Text>
+                      <Ionicons name="camera-reverse-outline" size={16} color={isDark ? '#60A5FA' : Colors.primary} />
+                      <Text style={[styles.rePickPhotoText, isDark && { color: '#60A5FA' }]}>Change Photo</Text>
                     </Pressable>
                   </View>
                 ) : (
                   <Pressable
-                    style={[styles.addPhotoBtn, { marginTop: 8 }, isUploadingAccessoryPhoto && styles.addPhotoBtnDisabled]}
+                    style={[
+                      styles.addPhotoBtn,
+                      { marginTop: 8 },
+                      isDark && { backgroundColor: '#202C33', borderColor: '#60A5FA' },
+                      isUploadingAccessoryPhoto && styles.addPhotoBtnDisabled,
+                    ]}
                     disabled={isUploadingAccessoryPhoto}
                     onPress={handlePickAccessoryPhoto}
                   >
                     {isUploadingAccessoryPhoto ? (
-                      <ActivityIndicator size="small" color={Colors.primary} />
+                      <ActivityIndicator size="small" color={isDark ? '#60A5FA' : Colors.primary} />
                     ) : (
                       <>
-                        <Ionicons name="camera" size={24} color={Colors.primary} />
-                        <Text style={styles.addPhotoText}>+ Add Photo</Text>
+                        <Ionicons name="camera" size={24} color={isDark ? '#60A5FA' : Colors.primary} />
+                        <Text style={[styles.addPhotoText, isDark && { color: '#60A5FA' }]}>+ Add Photo</Text>
                       </>
                     )}
                   </Pressable>
@@ -930,12 +972,21 @@ export default function NewJobScreen() {
               </View>
 
               <View style={{ marginTop: 14 }}>
-                <Text style={styles.fieldLabel}>Payment Mode *</Text>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Payment Mode *</Text>
                 <View style={styles.deviceTypeRow}>
-                  {['cash', 'upi', 'card'].map((m) => (<Pressable key={m} style={[styles.deviceTypeChip, paymentMode === m && styles.deviceTypeChipSelected]} onPress={() => setPaymentMode(m)}>
+                  {['cash', 'upi', 'card'].map((m) => (<Pressable
+                    key={m}
+                    style={[
+                      styles.deviceTypeChip,
+                      isDark && { backgroundColor: '#202C33', borderColor: '#2A3942' },
+                      paymentMode === m && [styles.deviceTypeChipSelected, isDark && { backgroundColor: 'rgba(96, 165, 250, 0.18)', borderColor: '#60A5FA' }],
+                    ]}
+                    onPress={() => setPaymentMode(m)}
+                  >
                       <Text style={[
                     styles.deviceTypeLabel,
-                    paymentMode === m && styles.deviceTypeLabelSelected,
+                    isDark && { color: '#8696A0' },
+                    paymentMode === m && [styles.deviceTypeLabelSelected, isDark && { color: '#60A5FA' }],
                 ]}>
                         {m.toUpperCase()}
                       </Text>

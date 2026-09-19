@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 import { DateFilterBar } from '../components/DateFilterBar';
 import { LineAreaChart } from '../components/charts/LineAreaChart';
@@ -20,25 +21,25 @@ const RANGE_LABELS = {
     year: 'This year',
 };
 
-const ChartCard = ({ title, icon, iconColor = Colors.primary, iconBg = '#EEF2FF', children }) => (
-    <View style={styles.card}>
+const ChartCard = ({ title, icon, iconColor = Colors.primary, iconBg = '#EEF2FF', isDark, colors, children }) => (
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.cardHeader}>
-            <View style={[styles.cardIcon, { backgroundColor: iconBg }]}>
-                <Ionicons name={icon} size={16} color={iconColor} />
+            <View style={[styles.cardIcon, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : iconBg }]}>
+                <Ionicons name={icon} size={16} color={isDark && iconColor === Colors.primary ? '#60A5FA' : iconColor} />
             </View>
-            <Text style={styles.cardTitle}>{title}</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>{title}</Text>
         </View>
         {children}
     </View>
 );
 
-const KpiCard = ({ label, value, valueColor, icon, iconColor, iconBg }) => (
-    <View style={styles.kpiCard}>
-        <View style={[styles.kpiIcon, { backgroundColor: iconBg }]}>
-            <Ionicons name={icon} size={16} color={iconColor} />
+const KpiCard = ({ label, value, valueColor, icon, iconColor, iconBg, isDark, colors }) => (
+    <View style={[styles.kpiCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.kpiIcon, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : iconBg }]}>
+            <Ionicons name={icon} size={16} color={isDark && iconColor === Colors.primary ? '#60A5FA' : iconColor} />
         </View>
-        <Text style={styles.kpiLabel}>{label}</Text>
-        <Text style={[styles.kpiValue, valueColor ? { color: valueColor } : null]} numberOfLines={1}>
+        <Text style={[styles.kpiLabel, { color: colors.textSecondary }]}>{label}</Text>
+        <Text style={[styles.kpiValue, { color: valueColor || colors.text }]} numberOfLines={1}>
             {value}
         </Text>
     </View>
@@ -46,6 +47,7 @@ const KpiCard = ({ label, value, valueColor, icon, iconColor, iconBg }) => (
 
 export default function InsightsScreen() {
     const insets = useSafeAreaInsets();
+    const { isDark, colors } = useTheme();
     const [insights, setInsights] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -96,8 +98,8 @@ export default function InsightsScreen() {
             : RANGE_LABELS[selectedRange] || 'This month';
 
     return (
-        <View style={styles.container}>
-            <AppHeader title="Analytics" subtitle="Shop performance insights" />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <AppHeader title="Analytics" subtitle="Revenue, devices, repair status & trends" />
             <DateFilterBar
                 selectedRange={selectedRange}
                 onRangeChange={onRangeChange}
@@ -115,11 +117,19 @@ export default function InsightsScreen() {
                     style={styles.scrollArea}
                     contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 16 }]}
                     showsVerticalScrollIndicator={false}
-                    refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isRefreshing}
+                            onRefresh={onRefresh}
+                            tintColor={isDark ? '#60A5FA' : Colors.primary}
+                            colors={[isDark ? '#60A5FA' : Colors.primary]}
+                            progressBackgroundColor={isDark ? '#202C33' : '#FFFFFF'}
+                        />
+                    }
                 >
-                    <View style={styles.periodPill}>
-                        <Ionicons name="time-outline" size={14} color={Colors.primary} />
-                        <Text style={styles.periodPillText}>Showing data for {periodLabel}</Text>
+                    <View style={[styles.periodPill, { backgroundColor: isDark ? '#202C33' : '#EEF2FF', borderColor: colors.border, borderWidth: isDark ? 1 : 0 }]}>
+                        <Ionicons name="time-outline" size={14} color={isDark ? '#60A5FA' : Colors.primary} />
+                        <Text style={[styles.periodPillText, { color: isDark ? '#60A5FA' : Colors.primary }]}>Showing data for {periodLabel}</Text>
                     </View>
 
                     <View style={styles.kpiRow}>
@@ -129,6 +139,8 @@ export default function InsightsScreen() {
                             icon="cash-outline"
                             iconColor={Colors.emerald}
                             iconBg={Colors.emeraldLight}
+                            isDark={isDark}
+                            colors={colors}
                         />
                         <KpiCard
                             label="Pending Dues"
@@ -137,45 +149,52 @@ export default function InsightsScreen() {
                             icon="alert-circle-outline"
                             iconColor={Colors.rose}
                             iconBg={Colors.roseLight}
+                            isDark={isDark}
+                            colors={colors}
                         />
                     </View>
                     <KpiCard
                         label="Jobs in this period"
                         value={String(kpis.totalJobs || 0)}
                         icon="clipboard-outline"
-                        iconColor={Colors.primary}
-                        iconBg="#EEF2FF"
+                        iconColor={isDark ? '#60A5FA' : Colors.primary}
+                        iconBg={isDark ? 'rgba(96, 165, 250, 0.15)' : '#EEF2FF'}
+                        isDark={isDark}
+                        colors={colors}
                     />
 
-                    <ChartCard title="Revenue Overview" icon="trending-up-outline" iconColor={Colors.primary} iconBg="#EEF2FF">
-                        <Text style={styles.kpiInline}>{formatInr(kpis.totalRevenue)}</Text>
-                        <LineAreaChart data={insights?.revenueOverview || []} gradientId="insightsRevenue" />
+                    <ChartCard title="Revenue Overview" icon="trending-up-outline" iconColor={isDark ? '#60A5FA' : Colors.primary} iconBg={isDark ? 'rgba(96, 165, 250, 0.15)' : '#EEF2FF'} isDark={isDark} colors={colors}>
+                        <Text style={[styles.kpiInline, { color: colors.text }]}>{formatInr(kpis.totalRevenue)}</Text>
+                        <LineAreaChart data={insights?.revenueOverview || []} gradientId="insightsRevenue" isDark={isDark} />
                     </ChartCard>
 
-                    <ChartCard title="Job Pipeline" icon="pie-chart-outline" iconColor={Colors.purple} iconBg={Colors.purpleLight}>
+                    <ChartCard title="Job Pipeline" icon="pie-chart-outline" iconColor={Colors.purple} iconBg={Colors.purpleLight} isDark={isDark} colors={colors}>
                         <DonutChart
                             items={statusItems.length ? statusItems : (insights?.statusDistribution || [])}
                             centerNumber={kpis.totalJobs}
                             centerLabel="Jobs"
+                            isDark={isDark}
                         />
                     </ChartCard>
 
-                    <ChartCard title="Types of Devices" icon="phone-portrait-outline" iconColor={Colors.primary} iconBg="#EEF2FF">
+                    <ChartCard title="Types of Devices" icon="phone-portrait-outline" iconColor={isDark ? '#60A5FA' : Colors.primary} iconBg={isDark ? 'rgba(96, 165, 250, 0.15)' : '#EEF2FF'} isDark={isDark} colors={colors}>
                         <HBarList
                             items={insights?.deviceTypes || []}
                             formatValue={(item) => `${item.count} · ${formatInr(item.revenue)}`}
+                            isDark={isDark}
                         />
                     </ChartCard>
 
-                    <ChartCard title="Accessories" icon="cube-outline" iconColor={Colors.amber} iconBg={Colors.amberLight}>
+                    <ChartCard title="Accessories" icon="cube-outline" iconColor={Colors.amber} iconBg={Colors.amberLight} isDark={isDark} colors={colors}>
                         <HBarList
                             items={insights?.accessories || []}
                             accentColor="#F59E0B"
                             formatValue={(item) => `${item.count} · ${formatInr(item.revenue)}`}
+                            isDark={isDark}
                         />
                     </ChartCard>
 
-                    <ChartCard title="Service Types" icon="construct-outline" iconColor={Colors.purple} iconBg={Colors.purpleLight}>
+                    <ChartCard title="Service Types" icon="construct-outline" iconColor={Colors.purple} iconBg={Colors.purpleLight} isDark={isDark} colors={colors}>
                         <DonutChart
                             items={(insights?.orderTypes || []).map((item) => ({
                                 ...item,
@@ -183,21 +202,23 @@ export default function InsightsScreen() {
                             }))}
                             centerNumber={(insights?.orderTypes || []).reduce((sum, item) => sum + (item.count || 0), 0)}
                             centerLabel="Orders"
+                            isDark={isDark}
                         />
                         <View style={{ height: 12 }} />
                         <HBarList
                             items={insights?.serviceTypes || []}
                             accentColor="#8B5CF6"
                             formatValue={(item) => `${item.count}`}
+                            isDark={isDark}
                         />
                     </ChartCard>
 
-                    <ChartCard title="Customers Per Day" icon="people-outline" iconColor={Colors.emerald} iconBg={Colors.emeraldLight}>
-                        <VerticalBarChart data={insights?.customersByDay || []} valueKey="count" color="#10B981" />
+                    <ChartCard title="Customers Per Day" icon="people-outline" iconColor={Colors.emerald} iconBg={Colors.emeraldLight} isDark={isDark} colors={colors}>
+                        <VerticalBarChart data={insights?.customersByDay || []} valueKey="count" color="#10B981" isDark={isDark} />
                     </ChartCard>
 
-                    <ChartCard title="Jobs Per Day" icon="briefcase-outline" iconColor={Colors.primary} iconBg="#EEF2FF">
-                        <VerticalBarChart data={insights?.jobsByDay || []} valueKey="count" color="#2563EB" />
+                    <ChartCard title="Jobs Per Day" icon="briefcase-outline" iconColor={isDark ? '#60A5FA' : Colors.primary} iconBg={isDark ? 'rgba(96, 165, 250, 0.15)' : '#EEF2FF'} isDark={isDark} colors={colors}>
+                        <VerticalBarChart data={insights?.jobsByDay || []} valueKey="count" color={isDark ? '#60A5FA' : '#2563EB'} isDark={isDark} />
                     </ChartCard>
                 </ScrollView>
             )}

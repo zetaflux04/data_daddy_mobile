@@ -9,6 +9,7 @@ export const DonutChart = ({
     emptyLabel = 'No data in this range',
     size = 124,
     strokeWidth = 14,
+    isDark = false,
 }) => {
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
@@ -22,11 +23,15 @@ export const DonutChart = ({
         return { ...item, percentage: Math.round(pct), strokeDasharray, strokeDashoffset };
     });
 
+    const trackRingStroke = isDark ? '#202C33' : '#F1F5F9';
+    const primaryTextColor = isDark ? '#E9EDEF' : '#0F172A';
+    const secondaryTextColor = isDark ? '#8696A0' : '#64748B';
+
     return (
         <View style={styles.donutContainer}>
             <View style={[styles.donutSvgWrapper, { width: size, height: size }]}>
                 <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={styles.donutSvg}>
-                    <Circle cx={size / 2} cy={size / 2} r={radius} stroke="#F1F5F9" strokeWidth={strokeWidth} fill="none"/>
+                    <Circle cx={size / 2} cy={size / 2} r={radius} stroke={trackRingStroke} strokeWidth={strokeWidth} fill="none"/>
                     {total > 0 &&
                         donutSlices.map((slice, i) =>
                             slice.count > 0 ? (
@@ -46,8 +51,8 @@ export const DonutChart = ({
                         )}
                 </Svg>
                 <View style={styles.donutCenterTextContainer}>
-                    <Text style={styles.donutTotalNumber}>{centerNumber}</Text>
-                    <Text style={styles.donutTotalLabel}>{centerLabel}</Text>
+                    <Text style={[styles.donutTotalNumber, { color: primaryTextColor }]}>{centerNumber}</Text>
+                    <Text style={[styles.donutTotalLabel, { color: secondaryTextColor }]}>{centerLabel}</Text>
                 </View>
             </View>
 
@@ -55,10 +60,10 @@ export const DonutChart = ({
                 {items.map((item) => (
                     <View key={item.key || item.label} style={styles.legendItemRow}>
                         <View style={[styles.legendDot, { backgroundColor: item.color }]}/>
-                        <Text style={styles.legendLabel} numberOfLines={1}>{item.label}</Text>
-                        <Text style={styles.legendCount}>
+                        <Text style={[styles.legendLabel, { color: primaryTextColor }]} numberOfLines={1}>{item.label}</Text>
+                        <Text style={[styles.legendCount, { color: primaryTextColor }]}>
                             {item.count}{' '}
-                            <Text style={styles.legendPct}>
+                            <Text style={[styles.legendPct, { color: secondaryTextColor }]}>
                                 ({total > 0 ? Math.round((item.count / total) * 100) : 0}%)
                             </Text>
                         </Text>

@@ -4,10 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 import { OutlinedTextInput } from '../components/OutlinedTextInput';
 export default function SettingsScreen() {
     const insets = useSafeAreaInsets();
+    const { isDark, colors } = useTheme();
     const { shop, updateShopProfile, refreshShopProfile } = useAuth();
     const getInitialAddress = (addr) => {
         if (!addr)
@@ -82,53 +84,68 @@ export default function SettingsScreen() {
             setIsSaving(false);
         }
     };
-    return (<View style={styles.container}>
-      <AppHeader title="Setting"/>
+    return (<View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppHeader title="Settings" subtitle="Shop profile, SMS notifications & invoices" />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flexOne}>
         <ScrollView style={styles.flexOne} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]} showsVerticalScrollIndicator={false}>
           {/* SMS Settings */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Automated Customer SMS Notifications</Text>
-            <Text style={styles.sectionSubtitle}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Automated Customer SMS Notifications</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
               Configure which customer events automatically trigger instant SMS alerts
             </Text>
 
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.switchRow}>
                 <View style={styles.switchInfo}>
-                  <Text style={styles.switchLabel}>Order Received SMS</Text>
-                  <Text style={styles.switchDesc}>Sent with Job ID & shop phone number upon job card intake</Text>
+                  <Text style={[styles.switchLabel, { color: colors.text }]}>Order Received SMS</Text>
+                  <Text style={[styles.switchDesc, { color: colors.textSecondary }]}>Sent with Job ID & shop phone number upon job card intake</Text>
                 </View>
-                <Switch value={smsOrderReceived} onValueChange={setSmsOrderReceived} trackColor={{ false: '#CBD5E1', true: Colors.primary }} thumbColor="#FFFFFF"/>
+                <Switch
+                  value={smsOrderReceived}
+                  onValueChange={setSmsOrderReceived}
+                  trackColor={{ false: isDark ? '#202C33' : '#CBD5E1', true: isDark ? '#60A5FA' : Colors.primary }}
+                  thumbColor="#FFFFFF"
+                />
               </View>
 
-              <View style={styles.divider}/>
+              <View style={[styles.divider, { backgroundColor: colors.border }]}/>
 
               <View style={styles.switchRow}>
                 <View style={styles.switchInfo}>
-                  <Text style={styles.switchLabel}>Device Repaired (Ready for Pickup)</Text>
-                  <Text style={styles.switchDesc}>Alerts customer their device is ready with outstanding balance</Text>
+                  <Text style={[styles.switchLabel, { color: colors.text }]}>Device Repaired (Ready for Pickup)</Text>
+                  <Text style={[styles.switchDesc, { color: colors.textSecondary }]}>Alerts customer their device is ready with outstanding balance</Text>
                 </View>
-                <Switch value={smsRepaired} onValueChange={setSmsRepaired} trackColor={{ false: '#CBD5E1', true: Colors.primary }} thumbColor="#FFFFFF"/>
+                <Switch
+                  value={smsRepaired}
+                  onValueChange={setSmsRepaired}
+                  trackColor={{ false: isDark ? '#202C33' : '#CBD5E1', true: isDark ? '#60A5FA' : Colors.primary }}
+                  thumbColor="#FFFFFF"
+                />
               </View>
 
-              <View style={styles.divider}/>
+              <View style={[styles.divider, { backgroundColor: colors.border }]}/>
 
               <View style={styles.switchRow}>
                 <View style={styles.switchInfo}>
-                  <Text style={styles.switchLabel}>Delivered Confirmation SMS</Text>
-                  <Text style={styles.switchDesc}>Sent upon final delivery and receipt payment collection</Text>
+                  <Text style={[styles.switchLabel, { color: colors.text }]}>Delivered Confirmation SMS</Text>
+                  <Text style={[styles.switchDesc, { color: colors.textSecondary }]}>Sent upon final delivery and receipt payment collection</Text>
                 </View>
-                <Switch value={smsDelivered} onValueChange={setSmsDelivered} trackColor={{ false: '#CBD5E1', true: Colors.primary }} thumbColor="#FFFFFF"/>
+                <Switch
+                  value={smsDelivered}
+                  onValueChange={setSmsDelivered}
+                  trackColor={{ false: isDark ? '#202C33' : '#CBD5E1', true: isDark ? '#60A5FA' : Colors.primary }}
+                  thumbColor="#FFFFFF"
+                />
               </View>
             </View>
           </View>
 
           {/* Shop Details */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Shop Profile Details</Text>
-            <View style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Shop Profile Details</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <OutlinedTextInput
                 label="Shop Business Name"
                 value={shopName}
@@ -157,7 +174,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* Save Button */}
-          <Pressable disabled={isSaving} style={({ pressed }) => [styles.saveBtn, { opacity: pressed || isSaving ? 0.88 : 1 }]} onPress={handleSave}>
+          <Pressable disabled={isSaving} style={({ pressed }) => [styles.saveBtn, { backgroundColor: isDark ? '#2563EB' : Colors.primary, opacity: pressed || isSaving ? 0.88 : 1 }]} onPress={handleSave}>
             {isSaving ? (<ActivityIndicator size="small" color="#FFFFFF"/>) : (<>
                 <Ionicons name="save-outline" size={18} color="#FFFFFF"/>
                 <Text style={styles.saveBtnText}>Save Preferences</Text>
@@ -182,14 +199,17 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     sectionTitle: {
-        fontSize: 14,
-        fontWeight: '800',
+        fontSize: 16,
+        fontWeight: '500',
+        letterSpacing: -0.2,
         color: '#0F172A',
         marginBottom: 4,
         marginLeft: 4,
     },
     sectionSubtitle: {
-        fontSize: 12,
+        fontSize: 13,
+        fontWeight: '400',
+        letterSpacing: -0.1,
         color: '#64748B',
         marginBottom: 10,
         marginLeft: 4,
@@ -212,15 +232,18 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     switchLabel: {
-        fontSize: 14,
-        fontWeight: '700',
+        fontSize: 16,
+        fontWeight: '500',
+        letterSpacing: -0.2,
         color: '#0F172A',
         marginBottom: 2,
     },
     switchDesc: {
-        fontSize: 12,
+        fontSize: 13,
+        fontWeight: '400',
+        letterSpacing: -0.1,
         color: '#94A3B8',
-        lineHeight: 16,
+        lineHeight: 18,
     },
     divider: {
         height: 1,

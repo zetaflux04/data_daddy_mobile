@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { FloatingCloseButton } from './FloatingCloseButton';
 import { CalendarDateRange } from './CalendarDateRange';
 import { formatShortRange, todayISO } from '../utils/date';
@@ -21,6 +22,7 @@ export const DateFilterBar = ({
   customStartDate,
   customEndDate,
 }) => {
+  const { isDark, colors } = useTheme();
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [tempStart, setTempStart] = useState(customStartDate || todayISO());
   const [tempEnd, setTempEnd] = useState(customEndDate || todayISO());
@@ -42,7 +44,15 @@ export const DateFilterBar = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: isDark ? '#0B141A' : '#FFFFFF',
+          borderBottomColor: isDark ? '#202C33' : '#F1F5F9',
+        },
+      ]}
+    >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -58,15 +68,25 @@ export const DateFilterBar = ({
             <Pressable
               key={tab.key}
               onPress={() => handleTabPress(tab.key)}
-              style={[styles.chip, isSelected && styles.chipSelected]}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: isSelected
+                    ? (isDark ? '#2563EB' : Colors.primary)
+                    : (isDark ? '#202C33' : '#F1F5F9'),
+                  borderColor: isSelected
+                    ? (isDark ? '#2563EB' : Colors.primary)
+                    : (isDark ? '#2A3942' : 'transparent'),
+                },
+              ]}
             >
               <Ionicons
                 name={tab.icon}
                 size={13}
-                color={isSelected ? '#FFFFFF' : '#64748B'}
+                color={isSelected ? '#FFFFFF' : (isDark ? '#8696A0' : '#64748B')}
                 style={{ marginRight: 4 }}
               />
-              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+              <Text style={[styles.chipText, { color: isSelected ? '#FFFFFF' : (isDark ? '#8696A0' : '#64748B') }, isSelected && styles.chipTextSelected]}>
                 {label}
               </Text>
             </Pressable>
@@ -83,13 +103,13 @@ export const DateFilterBar = ({
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setIsCustomModalOpen(false)} />
           <FloatingCloseButton onPress={() => setIsCustomModalOpen(false)} />
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#111B21' : '#FFFFFF', borderColor: colors.border, borderWidth: isDark ? 1 : 0 }]}>
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
-                <Ionicons name="calendar" size={20} color={Colors.primary} />
-                <Text style={styles.modalTitle}>Custom Date Range</Text>
+                <Ionicons name="calendar" size={20} color={isDark ? '#60A5FA' : Colors.primary} />
+                <Text style={[styles.modalTitle, { color: isDark ? '#E9EDEF' : '#0F172A' }]}>Custom Date Range</Text>
               </View>
-              <Text style={styles.modalSubtitle}>Pick start and end dates from the calendar</Text>
+              <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Pick start and end dates from the calendar</Text>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -102,10 +122,10 @@ export const DateFilterBar = ({
             </ScrollView>
 
             <View style={styles.modalActions}>
-              <Pressable style={styles.cancelBtn} onPress={() => setIsCustomModalOpen(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Pressable style={[styles.cancelBtn, { backgroundColor: isDark ? '#202C33' : '#F1F5F9' }]} onPress={() => setIsCustomModalOpen(false)}>
+                <Text style={[styles.cancelBtnText, { color: isDark ? '#E9EDEF' : '#64748B' }]}>Cancel</Text>
               </Pressable>
-              <Pressable style={styles.applyBtn} onPress={handleApplyCustom}>
+              <Pressable style={[styles.applyBtn, { backgroundColor: isDark ? '#2563EB' : Colors.primary }]} onPress={handleApplyCustom}>
                 <Text style={styles.applyBtnText}>Apply Filter</Text>
               </Pressable>
             </View>

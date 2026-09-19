@@ -3,51 +3,63 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader } from '../components/AppHeader';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
+
 export default function TermsScreen() {
     const insets = useSafeAreaInsets();
-    return (<View style={styles.container}>
-      <AppHeader title="Terms & Conditions"/>
+    const { isDark, colors } = useTheme();
 
-      <ScrollView style={styles.scrollArea} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.badgeRow}>
-          <View style={styles.dateBadge}>
-            <Text style={styles.dateBadgeText}>Last updated: August 2026</Text>
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <AppHeader title="Terms & Conditions" subtitle="Usage policy and service agreement" />
+
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.badgeRow}>
+            <View style={[styles.dateBadge, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.15)' : '#EEF2FF' }]}>
+              <Text style={[styles.dateBadgeText, { color: isDark ? '#60A5FA' : Colors.primary }]}>
+                Last updated: August 2026
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <Text style={styles.intro}>
-          By creating an account or using <Text style={styles.bold}>Metafy</Text>, you agree to the following terms and operating guidelines.
-        </Text>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.heading}>1. Software License & Free Tier</Text>
-          <Text style={styles.paragraph}>
-            Metafy provides a complimentary digital register tier for repair shops to record job cards, track customer dues, and compute profit/loss.
+          <Text style={[styles.intro, { color: colors.textSecondary }]}>
+            By creating an account or using <Text style={[styles.bold, { color: colors.text }]}>Metafy</Text>, you agree to the following terms and operating guidelines.
           </Text>
-        </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.heading}>2. SMS Gateway & Indian Telecom Compliance (DLT)</Text>
-          <Text style={styles.paragraph}>
-            Automated customer notifications are routed via certified telecom transactional gateways. Shop owners are responsible for ensuring customer contact details provided for job card intake are accurate and intended for transactional repair updates.
-          </Text>
-        </View>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.heading, { color: colors.text }]}>1. Software License & Free Tier</Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              Metafy provides a complimentary digital register tier for repair shops to record job cards, track customer dues, and compute profit/loss.
+            </Text>
+          </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.heading}>3. Paid Technician Knowledge Base</Text>
-          <Text style={styles.paragraph}>
-            Pro subscriptions unlock step-by-step disassembly guides, boardviews, and video tutorials. Subscriptions are billed per month or year via Razorpay. Pre-signed schematic links are strictly non-transferable outside the registered shop account.
-          </Text>
-        </View>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.heading, { color: colors.text }]}>2. SMS Gateway & Indian Telecom Compliance (DLT)</Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              Automated customer notifications are routed via certified telecom transactional gateways. Shop owners are responsible for ensuring customer contact details provided for job card intake are accurate and intended for transactional repair updates.
+            </Text>
+          </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.heading}>4. Limitation of Liability</Text>
-          <Text style={styles.paragraph}>
-            Repair guides and schematics are intended as reference technical materials for skilled electronics technicians. Metafy is not liable for device hardware damage caused during improper physical repairs or disassembly.
-          </Text>
-        </View>
-      </ScrollView>
-    </View>);
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.heading, { color: colors.text }]}>3. Paid Technician Knowledge Base</Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              Pro subscriptions unlock step-by-step disassembly guides, boardviews, and video tutorials. Subscriptions are billed per month or year via Razorpay. Pre-signed schematic links are strictly non-transferable outside the registered shop account.
+            </Text>
+          </View>
+
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.heading, { color: colors.text }]}>4. Limitation of Liability</Text>
+            <Text style={[styles.paragraph, { color: colors.textSecondary }]}>
+              Repair guides and schematics are intended as reference technical materials for skilled electronics technicians. Metafy is not liable for device hardware damage caused during improper physical repairs or disassembly.
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
+    );
 }
 const styles = StyleSheet.create({
     container: {

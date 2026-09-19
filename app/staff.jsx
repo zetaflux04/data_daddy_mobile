@@ -4,11 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 import { FloatingCloseButton } from '../components/FloatingCloseButton';
 import { OutlinedTextInput } from '../components/OutlinedTextInput';
 export default function StaffScreen() {
     const insets = useSafeAreaInsets();
+    const { isDark, colors } = useTheme();
     const [staff, setStaff] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -102,59 +104,80 @@ export default function StaffScreen() {
         );
     };
 
-    return (<View style={styles.container}>
-      <AppHeader title="Technicians"/>
+    return (<View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppHeader title="Technicians" subtitle="Technician logins & team permissions" />
 
-      <View style={styles.topNotice}>
-        <Ionicons name="information-circle-outline" size={18} color={Colors.primary}/>
-        <Text style={styles.noticeText}>
+      <View style={[styles.topNotice, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.12)' : Colors.primaryGlow, borderBottomColor: colors.border }]}>
+        <Ionicons name="information-circle-outline" size={18} color={isDark ? '#60A5FA' : Colors.primary}/>
+        <Text style={[styles.noticeText, { color: isDark ? '#E9EDEF' : '#1E40AF' }]}>
           Technicians have access to job cards and repair guides. Financials are reserved for Owners.
         </Text>
       </View>
 
-      <FlatList data={staff} keyExtractor={(item) => item._id || item.id || `${item.phone}_${Math.random()}`} contentContainerStyle={styles.listContent} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary}/>} ListEmptyComponent={isLoading ? (<View style={styles.emptyState}>
-              <ActivityIndicator size="large" color={Colors.primary}/>
-              <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>Loading technicians directory...</Text>
-            </View>) : (<View style={styles.emptyState}>
-              <View style={styles.emptyIconBox}>
-                <Ionicons name="people-outline" size={32} color="#94A3B8"/>
-              </View>
-              <Text style={styles.emptyTitle}>No Technicians Found</Text>
-              <Text style={styles.emptySubtitle}>
-                Tap the button below to add your technicians.
+      <FlatList
+        data={staff}
+        keyExtractor={(item) => item._id || item.id || `${item.phone}_${Math.random()}`}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[isDark ? '#60A5FA' : Colors.primary]}
+            progressBackgroundColor={isDark ? '#202C33' : '#FFFFFF'}
+            tintColor={isDark ? '#60A5FA' : Colors.primary}
+          />
+        }
+        ListEmptyComponent={isLoading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color={isDark ? '#60A5FA' : Colors.primary}/>
+            <Text style={[styles.emptySubtitle, { marginTop: 12, color: colors.textSecondary }]}>Loading technicians directory...</Text>
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <View style={[styles.emptyIconBox, { backgroundColor: isDark ? '#202C33' : '#F1F5F9' }]}>
+              <Ionicons name="people-outline" size={32} color={colors.textMuted}/>
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Technicians Found</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+              Tap the button below to add your technicians.
+            </Text>
+          </View>
+        )}
+        renderItem={({ item }) => (
+          <View style={[styles.staffCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.avatar, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.2)' : Colors.primaryGlow }]}>
+              <Text style={[styles.avatarText, { color: isDark ? '#60A5FA' : Colors.primary }]}>
+                {item.name ? item.name.charAt(0).toUpperCase() : 'T'}
               </Text>
-            </View>)} renderItem={({ item }) => (<View style={styles.staffCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{item.name ? item.name.charAt(0).toUpperCase() : 'T'}</Text>
             </View>
 
             <View style={styles.info}>
               <View style={styles.nameRow}>
-                <Text style={styles.name} numberOfLines={1}>
+                <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
                   {item.name}
                 </Text>
                 <View style={[
-                styles.roleBadge,
-                item.role === 'owner'
-                    ? { backgroundColor: '#FEF3C7' }
+                  styles.roleBadge,
+                  item.role === 'owner'
+                    ? { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7' }
                     : item.role === 'technician'
-                        ? { backgroundColor: '#EEF2FF' }
-                        : { backgroundColor: '#F1F5F9' },
-            ]}>
+                      ? { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.2)' : '#EEF2FF' }
+                      : { backgroundColor: isDark ? '#202C33' : '#F1F5F9' },
+                ]}>
                   <Text style={[
-                styles.roleText,
-                item.role === 'owner'
-                    ? { color: '#B45309' }
-                    : item.role === 'technician'
-                        ? { color: Colors.primary }
-                        : { color: '#475569' },
-            ]}>
+                    styles.roleText,
+                    item.role === 'owner'
+                      ? { color: isDark ? '#F59E0B' : '#B45309' }
+                      : item.role === 'technician'
+                        ? { color: isDark ? '#60A5FA' : Colors.primary }
+                        : { color: isDark ? '#8696A0' : '#475569' },
+                  ]}>
                     {(item.role || 'technician').toUpperCase()}
                   </Text>
                 </View>
               </View>
 
-              <Text style={styles.phone}>+91 {item.phone}</Text>
+              <Text style={[styles.phone, { color: colors.textSecondary }]}>+91 {item.phone}</Text>
             </View>
 
             <View style={styles.cardActions}>
@@ -162,18 +185,24 @@ export default function StaffScreen() {
               {item.role !== 'owner' && (
                 <Pressable
                   hitSlop={10}
-                  style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.6 }]}
+                  style={({ pressed }) => [
+                    styles.deleteBtn,
+                    { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2' },
+                    pressed && { opacity: 0.6 }
+                  ]}
                   onPress={() => handleDeleteStaff(item)}
                 >
-                  <Ionicons name="trash-outline" size={19} color="#EF4444"/>
+                  <Ionicons name="trash-outline" size={19} color={Colors.rose}/>
                 </Pressable>
               )}
             </View>
-          </View>)}/>
+          </View>
+        )}
+      />
 
       {/* Add Technician Button */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <Pressable style={({ pressed }) => [styles.addStaffBtn, { opacity: pressed ? 0.88 : 1 }]} onPress={() => setIsModalOpen(true)}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable style={({ pressed }) => [styles.addStaffBtn, { backgroundColor: isDark ? '#2563EB' : Colors.primary, opacity: pressed ? 0.88 : 1 }]} onPress={() => setIsModalOpen(true)}>
           <Ionicons name="person-add" size={18} color="#FFFFFF"/>
           <Text style={styles.addStaffBtnText}>Add Technician</Text>
         </Pressable>
@@ -184,9 +213,9 @@ export default function StaffScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setIsModalOpen(false)}/>
           <FloatingCloseButton onPress={() => setIsModalOpen(false)}/>
-          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
+          <View style={[styles.modalCard, { backgroundColor: isDark ? '#111B21' : '#FFFFFF', borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Technician</Text>
+              <Text style={[styles.modalTitle, { color: isDark ? '#E9EDEF' : '#0F172A' }]}>Add Technician</Text>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -208,30 +237,46 @@ export default function StaffScreen() {
                 onChangeText={setPhone}
               />
 
-              <Text style={styles.inputLabel}>Role *</Text>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Role *</Text>
               <View style={styles.roleSelectionRow}>
-                <Pressable style={[styles.roleSelectBtn, role === 'technician' && styles.roleSelectBtnActive]} onPress={() => setRole('technician')}>
-                  <Ionicons name="build-outline" size={16} color={role === 'technician' ? Colors.primary : '#64748B'}/>
+                <Pressable
+                  style={[
+                    styles.roleSelectBtn,
+                    { backgroundColor: isDark ? '#202C33' : '#F8FAFC', borderColor: colors.border },
+                    role === 'technician' && [styles.roleSelectBtnActive, { borderColor: isDark ? '#60A5FA' : Colors.primary, backgroundColor: isDark ? 'rgba(96, 165, 250, 0.15)' : Colors.primaryGlow }],
+                  ]}
+                  onPress={() => setRole('technician')}
+                >
+                  <Ionicons name="build-outline" size={16} color={role === 'technician' ? (isDark ? '#60A5FA' : Colors.primary) : colors.textSecondary}/>
                   <Text style={[
-            styles.roleSelectText,
-            role === 'technician' && styles.roleSelectTextActive,
-        ]}>
+                    styles.roleSelectText,
+                    { color: colors.textSecondary },
+                    role === 'technician' && [styles.roleSelectTextActive, { color: isDark ? '#60A5FA' : Colors.primary }],
+                  ]}>
                     Technician
                   </Text>
                 </Pressable>
 
-                <Pressable style={[styles.roleSelectBtn, role === 'staff' && styles.roleSelectBtnActive]} onPress={() => setRole('staff')}>
-                  <Ionicons name="person-outline" size={16} color={role === 'staff' ? Colors.primary : '#64748B'}/>
+                <Pressable
+                  style={[
+                    styles.roleSelectBtn,
+                    { backgroundColor: isDark ? '#202C33' : '#F8FAFC', borderColor: colors.border },
+                    role === 'staff' && [styles.roleSelectBtnActive, { borderColor: isDark ? '#60A5FA' : Colors.primary, backgroundColor: isDark ? 'rgba(96, 165, 250, 0.15)' : Colors.primaryGlow }],
+                  ]}
+                  onPress={() => setRole('staff')}
+                >
+                  <Ionicons name="person-outline" size={16} color={role === 'staff' ? (isDark ? '#60A5FA' : Colors.primary) : colors.textSecondary}/>
                   <Text style={[
-            styles.roleSelectText,
-            role === 'staff' && styles.roleSelectTextActive,
-        ]}>
+                    styles.roleSelectText,
+                    { color: colors.textSecondary },
+                    role === 'staff' && [styles.roleSelectTextActive, { color: isDark ? '#60A5FA' : Colors.primary }],
+                  ]}>
                     Front Desk / Staff
                   </Text>
                 </Pressable>
               </View>
 
-              <Pressable disabled={isSaving} style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isSaving ? 0.88 : 1 }]} onPress={handleAddStaff}>
+              <Pressable disabled={isSaving} style={({ pressed }) => [styles.submitBtn, { backgroundColor: isDark ? '#2563EB' : Colors.primary, opacity: pressed || isSaving ? 0.88 : 1 }]} onPress={handleAddStaff}>
                 {isSaving ? (<ActivityIndicator size="small" color="#FFFFFF"/>) : (<Text style={styles.submitBtnText}>Add Technician</Text>)}
               </Pressable>
             </ScrollView>

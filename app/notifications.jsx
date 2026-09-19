@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 const filterTabs = [
     { key: 'all', label: 'All' },
@@ -39,6 +40,7 @@ function formatTimeAgo(dateStr) {
 export default function NotificationsScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { isDark, colors } = useTheme();
     const [notifications, setNotifications] = useState([]);
     const [selectedFilter, setSelectedFilter] = useState('all');
     const [isLoading, setIsLoading] = useState(true);
@@ -94,94 +96,163 @@ export default function NotificationsScreen() {
         }
         return { name: 'notifications', color: '#6366F1', bg: '#EEF2FF' };
     };
-    return (<View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-      <AppHeader title="Notifications & Alerts" rightAction={unreadCount > 0 ? (<Pressable style={({ pressed }) => [styles.headerMarkBtn, { opacity: pressed ? 0.7 : 1 }]} onPress={markAllAsRead}>
-              <Ionicons name="checkmark-done" size={16} color={Colors.primary}/>
-              <Text style={styles.headerMarkText}>Read all</Text>
-            </Pressable>) : undefined}/>
+    return (<View style={[styles.container, { backgroundColor: colors.background, paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <AppHeader
+        title="Notifications"
+        subtitle="Admin announcements & repair alerts"
+        rightAction={unreadCount > 0 ? (
+          <Pressable
+            style={({ pressed }) => [styles.headerMarkBtn, { backgroundColor: isDark ? '#202C33' : '#EEF2FF', opacity: pressed ? 0.7 : 1 }]}
+            onPress={markAllAsRead}
+          >
+            <Ionicons name="checkmark-done" size={16} color={isDark ? '#60A5FA' : Colors.primary}/>
+            <Text style={[styles.headerMarkText, { color: isDark ? '#60A5FA' : Colors.primary }]}>Read all</Text>
+          </Pressable>
+        ) : undefined}
+      />
 
       {/* Top Controls: Unread Counter */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <View style={styles.unreadStatus}>
-          <View style={styles.unreadBadge}>
+          <View style={[styles.unreadBadge, { backgroundColor: isDark ? '#2563EB' : Colors.primary }]}>
             <Text style={styles.unreadBadgeText}>{unreadCount} NEW</Text>
           </View>
-          <Text style={styles.unreadSub}>Real-time updates & alerts</Text>
+          <Text style={[styles.unreadSub, { color: colors.textSecondary }]}>Real-time updates & alerts</Text>
         </View>
       </View>
 
       {/* Horizontal Filter Chips */}
-      <View style={styles.filterScrollWrapper}>
+      <View style={[styles.filterScrollWrapper, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
           {filterTabs.map((tab) => {
             const isSelected = selectedFilter === tab.key;
-            return (<Pressable key={tab.key} onPress={() => setSelectedFilter(tab.key)} style={[styles.filterChip, isSelected && styles.filterChipSelected]}>
+            return (
+              <Pressable
+                key={tab.key}
+                onPress={() => setSelectedFilter(tab.key)}
+                style={[
+                  styles.filterChip,
+                  {
+                    backgroundColor: isSelected
+                      ? (isDark ? 'rgba(96, 165, 250, 0.2)' : Colors.primaryGlow)
+                      : (isDark ? '#202C33' : '#F1F5F9'),
+                    borderColor: isSelected
+                      ? (isDark ? '#60A5FA' : Colors.primaryLight)
+                      : (isDark ? '#2A3942' : 'transparent'),
+                  },
+                ]}
+              >
                 <Text style={[
-                    styles.filterChipText,
-                    isSelected && styles.filterChipTextSelected,
+                  styles.filterChipText,
+                  { color: isSelected ? (isDark ? '#60A5FA' : Colors.primary) : colors.textSecondary },
+                  isSelected && styles.filterChipTextSelected,
                 ]}>
                   {tab.label}
                 </Text>
-              </Pressable>);
-        })}
+              </Pressable>
+            );
+          })}
         </ScrollView>
       </View>
 
       {/* Loading state indicator */}
-      {isLoading && !isRefreshing ? (<View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary}/>
-          <Text style={styles.loadingText}>Fetching latest notifications...</Text>
-        </View>) : (
+      {isLoading && !isRefreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={isDark ? '#60A5FA' : Colors.primary}/>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Fetching latest notifications...</Text>
+        </View>
+      ) : (
         /* Notification List */
-        <FlatList data={filteredNotifications} keyExtractor={(item) => item._id} contentContainerStyle={styles.listContent} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary} colors={[Colors.primary]}/>} renderItem={({ item }) => {
-                const icon = getIconConfig(item);
-                return (<Pressable style={({ pressed }) => [
-                        styles.notifCard,
-                        !item.read && styles.notifCardUnread,
-                        { opacity: pressed ? 0.92 : 1 },
-                    ]} onPress={() => {
-                        setNotifications((prev) => prev.map((n) => (n._id === item._id ? { ...n, read: true } : n)));
-                    }}>
+        <FlatList
+          data={filteredNotifications}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={isDark ? '#60A5FA' : Colors.primary}
+              colors={[isDark ? '#60A5FA' : Colors.primary]}
+              progressBackgroundColor={isDark ? '#202C33' : '#FFFFFF'}
+            />
+          }
+          renderItem={({ item }) => {
+            const icon = getIconConfig(item);
+            const cardBg = !item.read
+              ? (isDark ? '#182229' : '#FBFDFF')
+              : colors.card;
+            const cardBorder = !item.read
+              ? (isDark ? '#2A3942' : '#93C5FD')
+              : colors.border;
+
+            return (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.notifCard,
+                  { backgroundColor: cardBg, borderColor: cardBorder },
+                  !item.read && [styles.notifCardUnread, { borderLeftColor: isDark ? '#60A5FA' : Colors.primary }],
+                  { opacity: pressed ? 0.92 : 1 },
+                ]}
+                onPress={() => {
+                  setNotifications((prev) => prev.map((n) => (n._id === item._id ? { ...n, read: true } : n)));
+                }}
+              >
                 <View style={styles.cardHeader}>
-                  <View style={[styles.iconBox, { backgroundColor: icon.bg }]}>
-                    <Ionicons name={icon.name} size={18} color={icon.color}/>
+                  <View style={[styles.iconBox, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : icon.bg }]}>
+                    <Ionicons name={icon.name} size={18} color={isDark && icon.color === '#2563EB' ? '#60A5FA' : icon.color}/>
                   </View>
                   <View style={styles.cardHeaderInfo}>
                     <View style={styles.titleRow}>
-                      <Text style={styles.cardTitle} numberOfLines={2}>
+                      <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>
                         {item.title}
                       </Text>
-                      {!item.read && <View style={styles.unreadDot}/>}
+                      {!item.read && <View style={[styles.unreadDot, { backgroundColor: isDark ? '#60A5FA' : Colors.primary }]}/>}
                     </View>
-                    <Text style={styles.timestamp}>{item.createdAt}</Text>
+                    <Text style={[styles.timestamp, { color: colors.textMuted }]}>{item.createdAt}</Text>
                   </View>
                 </View>
 
-                <Text style={styles.cardMessage}>{item.message}</Text>
+                <Text style={[styles.cardMessage, { color: colors.textSecondary }]}>{item.message}</Text>
 
-                {item.type === 'job' && (<View style={styles.actionChipRow}>
-                    <Pressable style={styles.actionChip} onPress={() => router.push('/(tabs)/jobs')}>
-                      <Text style={styles.actionChipText}>View Job Cards →</Text>
+                {item.type === 'job' && (
+                  <View style={styles.actionChipRow}>
+                    <Pressable
+                      style={[styles.actionChip, { backgroundColor: isDark ? '#202C33' : '#F1F5F9' }]}
+                      onPress={() => router.push('/(tabs)/jobs')}
+                    >
+                      <Text style={[styles.actionChipText, { color: isDark ? '#60A5FA' : '#334155' }]}>View Job Cards →</Text>
                     </Pressable>
-                  </View>)}
+                  </View>
+                )}
 
-                {item.type === 'broadcast' && (<View style={styles.actionChipRow}>
-                    <Pressable style={[styles.actionChip, { backgroundColor: '#EFF6FF' }]} onPress={() => router.push('/analytics')}>
-                      <Text style={[styles.actionChipText, { color: Colors.primary }]}>
+                {item.type === 'broadcast' && (
+                  <View style={styles.actionChipRow}>
+                    <Pressable
+                      style={[styles.actionChip, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.18)' : '#EFF6FF' }]}
+                      onPress={() => router.push('/analytics')}
+                    >
+                      <Text style={[styles.actionChipText, { color: isDark ? '#60A5FA' : Colors.primary }]}>
                         View Details →
                       </Text>
                     </Pressable>
-                  </View>)}
-              </Pressable>);
-            }} ListEmptyComponent={<View style={styles.emptyState}>
-              <View style={styles.emptyIconBox}>
-                <Ionicons name="notifications-off-outline" size={36} color="#94A3B8"/>
+                  </View>
+                )}
+              </Pressable>
+            );
+          }}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <View style={[styles.emptyIconBox, { backgroundColor: isDark ? '#202C33' : '#F1F5F9' }]}>
+                <Ionicons name="notifications-off-outline" size={36} color={colors.textMuted}/>
               </View>
-              <Text style={styles.emptyTitle}>No notifications found</Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No notifications found</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                 You're all caught up! Admin broadcasts, repair updates, and alerts will appear here.
               </Text>
-            </View>}/>)}
+            </View>
+          }
+        />
+      )}
     </View>);
 }
 const styles = StyleSheet.create({

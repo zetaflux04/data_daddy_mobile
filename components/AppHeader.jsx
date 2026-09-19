@@ -3,12 +3,13 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
 const TITLE_STYLE = {
     fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    color: '#0F172A',
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    color: '#111B21',
 };
 
 export const AppHeader = ({
@@ -18,12 +19,26 @@ export const AppHeader = ({
     showBack = true,
     onBack,
     rightAction,
-    backgroundColor = '#FFFFFF',
-    titleColor = TITLE_STYLE.color,
+    backgroundColor,
+    titleColor,
     hasBorder = false,
 }) => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    let theme = null;
+    try {
+        theme = useTheme();
+    } catch {
+        theme = null;
+    }
+    const themeColors = theme?.colors;
+    const isDark = theme?.isDark ?? false;
+
+    const headerBg = backgroundColor ?? (themeColors ? (isDark ? themeColors.background : themeColors.card) : '#FFFFFF');
+    const headerTitleColor = titleColor ?? themeColors?.text ?? TITLE_STYLE.color;
+    const headerSubtitleColor = themeColors?.textSecondary ?? '#64748B';
+    const borderColor = themeColors?.border ?? '#202C33';
+
     const handleBack = () => {
         if (onBack) {
             onBack();
@@ -38,10 +53,10 @@ export const AppHeader = ({
         <View style={[
             styles.headerWrapper,
             {
-                backgroundColor,
+                backgroundColor: headerBg,
                 paddingTop: Math.max(insets.top, 8) + 2,
                 borderBottomWidth: hasBorder ? 1 : 0,
-                borderBottomColor: hasBorder ? '#E2E8F0' : 'transparent',
+                borderBottomColor: hasBorder ? borderColor : 'transparent',
             }
         ]}>
             <View style={styles.headerContent}>
@@ -52,18 +67,18 @@ export const AppHeader = ({
                             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
                             style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.55 : 1 }]}
                         >
-                            <Ionicons name="chevron-back" size={24} color={titleColor} />
+                            <Ionicons name="chevron-back" size={24} color={headerTitleColor} />
                         </Pressable>
                     ) : null}
                     {titleComponent ? (
                         titleComponent
                     ) : (
                         <View style={styles.titleTextWrap}>
-                            <Text style={[styles.title, { color: titleColor }]} numberOfLines={1}>
+                            <Text style={[styles.title, { color: headerTitleColor }]} numberOfLines={1}>
                                 {title}
                             </Text>
                             {subtitle ? (
-                                <Text style={styles.subtitle} numberOfLines={1}>
+                                <Text style={[styles.subtitle, { color: headerSubtitleColor }]} numberOfLines={1}>
                                     {subtitle}
                                 </Text>
                             ) : null}
@@ -119,10 +134,11 @@ const styles = StyleSheet.create({
         letterSpacing: TITLE_STYLE.letterSpacing,
     },
     subtitle: {
-        fontSize: 11,
-        fontWeight: '600',
+        fontSize: 13,
+        fontWeight: '400',
+        letterSpacing: -0.1,
         color: '#64748B',
-        marginTop: 1,
+        marginTop: 2,
     },
     rightContainer: {
         minWidth: 44,

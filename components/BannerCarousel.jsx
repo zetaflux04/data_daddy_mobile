@@ -93,7 +93,7 @@ export const BannerCarousel = ({ banners, autoPlayInterval = 4500, }) => {
 
     // Auto-scrolling carousel timer
     useEffect(() => {
-        if (bannerList.length <= 1)
+        if (!bannerList || bannerList.length <= 1)
             return;
         const timer = setInterval(() => {
             if (isInteracting.current)
@@ -106,35 +106,45 @@ export const BannerCarousel = ({ banners, autoPlayInterval = 4500, }) => {
             setCurrentIndex(nextIndex);
         }, autoPlayInterval);
         return () => clearInterval(timer);
-    }, [currentIndex, bannerList.length, autoPlayInterval]);
+    }, [currentIndex, bannerList?.length, autoPlayInterval]);
     const onScroll = (event) => {
         const slideIndex = Math.round(event.nativeEvent.contentOffset.x / BANNER_WIDTH);
-        if (slideIndex !== currentIndex && slideIndex >= 0 && slideIndex < bannerList.length) {
+        if (slideIndex !== currentIndex && slideIndex >= 0 && slideIndex < (bannerList?.length || 0)) {
             setCurrentIndex(slideIndex);
         }
     };
+
+    if (!bannerList || bannerList.length === 0) {
+        return null;
+    }
+
     return (<View style={styles.container}>
-      <FlatList ref={flatListRef} data={bannerList} keyExtractor={(item) => item._id} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={16} onTouchStart={() => {
+      <FlatList ref={flatListRef} data={bannerList} keyExtractor={(item) => item._id || String(Math.random())} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={16} onTouchStart={() => {
             isInteracting.current = true;
         }} onTouchEnd={() => {
             setTimeout(() => {
                 isInteracting.current = false;
             }, 3000);
-        }} renderItem={({ item }) => (<Pressable style={({ pressed }) => [
+        }} renderItem={({ item }) => {
+            const colors = item.gradientColors && item.gradientColors.length >= 2
+                ? item.gradientColors
+                : ['#1E3A8A', '#1E40AF', '#172554'];
+
+            return (<Pressable style={({ pressed }) => [
                 styles.bannerCard,
                 { opacity: pressed ? 0.94 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] },
-            ]} onPress={() => router.push(item.ctaRoute)}>
-            <LinearGradient colors={item.gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
+            ]} onPress={() => item.ctaRoute && router.push(item.ctaRoute)}>
+            <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
               {/* Top Row: Tag Pill & Badge Icon */}
               <View style={styles.topRow}>
-                <View style={[styles.tagPill, { backgroundColor: item.tagBg }]}>
-                  <Text style={[styles.tagText, { color: item.tagColor }]}>
-                    {item.tag}
+                <View style={[styles.tagPill, { backgroundColor: item.tagBg || 'rgba(245, 158, 11, 0.25)' }]}>
+                  <Text style={[styles.tagText, { color: item.tagColor || '#FDE68A' }]}>
+                    {item.tag || 'PROMOTION'}
                   </Text>
                 </View>
 
-                <View style={[styles.badgeIconCircle, { backgroundColor: item.badgeBg }]}>
-                  <Ionicons name={item.badgeIcon} size={15} color="#FFFFFF"/>
+                <View style={[styles.badgeIconCircle, { backgroundColor: item.badgeBg || '#F59E0B' }]}>
+                  <Ionicons name={item.badgeIcon || 'gift'} size={15} color="#FFFFFF"/>
                 </View>
               </View>
 
@@ -151,25 +161,28 @@ export const BannerCarousel = ({ banners, autoPlayInterval = 4500, }) => {
               {/* Bottom CTA Row */}
               <View style={styles.bottomRow}>
                 <View style={styles.ctaButton}>
-                  <Text style={styles.ctaButtonText}>{item.ctaText}</Text>
+                  <Text style={styles.ctaButtonText}>{item.ctaText || 'Explore Now'}</Text>
                   <Ionicons name="arrow-forward" size={13} color="#FFFFFF"/>
                 </View>
 
                 <Text style={styles.swipeHintText}>Swipe for more offers</Text>
               </View>
             </LinearGradient>
-          </Pressable>)}/>
+          </Pressable>);
+        }}/>
 
       {/* Pagination Dot Indicators */}
-      <View style={styles.paginationContainer}>
-        {banners.map((_, index) => {
-            const isActive = currentIndex === index;
-            return (<View key={index} style={[
-                    styles.dot,
-                    isActive ? styles.dotActive : styles.dotInactive,
-                ]}/>);
-        })}
-      </View>
+      {bannerList.length > 1 && (
+        <View style={styles.paginationContainer}>
+          {bannerList.map((_, index) => {
+              const isActive = currentIndex === index;
+              return (<View key={index} style={[
+                      styles.dot,
+                      isActive ? styles.dotActive : styles.dotInactive,
+                  ]}/>);
+          })}
+        </View>
+      )}
     </View>);
 };
 const styles = StyleSheet.create({

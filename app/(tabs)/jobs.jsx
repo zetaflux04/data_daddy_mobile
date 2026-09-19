@@ -8,12 +8,14 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { JobCardItem } from '../../components/JobCardItem';
 import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../context/ThemeContext';
 import { MaterialMultiSelect } from '../../components/MaterialMultiSelect';
 import { TextInput as PaperTextInput } from 'react-native-paper';
 import { FilterModal } from '../../components/FilterModal';
@@ -31,6 +33,7 @@ const statusOptions = [
 
 export default function JobsScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [jobs, setJobs] = useState([]);
   const [activeTab, setActiveTab] = useState('repair'); // 'repair' | 'accessory'
   const [selectedStatuses, setSelectedStatuses] = useState([]);
@@ -230,33 +233,33 @@ export default function JobsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBox}>
+      <View style={[styles.searchContainer, { backgroundColor: colors.card, borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
+        <View style={[styles.searchBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
           <Ionicons
             name="search"
             size={18}
-            color="#94A3B8"
+            color={colors.textMuted}
             style={{ marginRight: 8 }}
           />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Search Job ID, customer, phone, model..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color="#94A3B8" />
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
             </Pressable>
           )}
         </View>
       </View>
 
       {/* Segmented Tab Bar: Repairs vs Accessories */}
-      <View style={styles.tabBarContainer}>
+      <View style={[styles.tabBarContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <Pressable
           style={[styles.tabButton, activeTab === 'repair' && styles.tabButtonActive]}
           onPress={() => setActiveTab('repair')}
@@ -264,18 +267,19 @@ export default function JobsScreen() {
           <Ionicons
             name="construct-outline"
             size={17}
-            color={activeTab === 'repair' ? Colors.primary : '#64748B'}
+            color={activeTab === 'repair' ? (isDark ? '#60A5FA' : Colors.primary) : colors.textSecondary}
             style={{ marginRight: 6 }}
           />
           <Text
             style={[
               styles.tabButtonText,
+              { color: activeTab === 'repair' ? (isDark ? '#60A5FA' : Colors.primary) : colors.textSecondary },
               activeTab === 'repair' && styles.tabButtonTextActive,
             ]}
           >
             Repairs
           </Text>
-          {activeTab === 'repair' && <View style={styles.tabActiveIndicator} />}
+          {activeTab === 'repair' && <View style={[styles.tabActiveIndicator, { backgroundColor: isDark ? '#60A5FA' : Colors.primary }]} />}
         </Pressable>
 
         <Pressable
@@ -285,25 +289,26 @@ export default function JobsScreen() {
           <Ionicons
             name="cube-outline"
             size={17}
-            color={activeTab === 'accessory' ? Colors.primary : '#64748B'}
+            color={activeTab === 'accessory' ? (isDark ? '#60A5FA' : Colors.primary) : colors.textSecondary}
             style={{ marginRight: 6 }}
           />
           <Text
             style={[
               styles.tabButtonText,
+              { color: activeTab === 'accessory' ? (isDark ? '#60A5FA' : Colors.primary) : colors.textSecondary },
               activeTab === 'accessory' && styles.tabButtonTextActive,
             ]}
           >
             Accessories
           </Text>
-          {activeTab === 'accessory' && <View style={styles.tabActiveIndicator} />}
+          {activeTab === 'accessory' && <View style={[styles.tabActiveIndicator, { backgroundColor: isDark ? '#60A5FA' : Colors.primary }]} />}
         </Pressable>
       </View>
 
-      <View style={styles.filterRowContainer}>
+      <View style={[styles.filterRowContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <MaterialMultiSelect
           style={styles.statusSelect}
-          inputStyle={styles.statusInput}
+          inputStyle={[styles.statusInput, { backgroundColor: isDark ? '#202C33' : '#FFFFFF' }]}
           label="Status"
           placeholder="All Status"
           value={selectedStatuses}
@@ -320,11 +325,18 @@ export default function JobsScreen() {
               label="Filter"
               value={activeFilterCount > 0 ? String(activeFilterCount) : ''}
               editable={false}
-              outlineColor={hasActiveFilters ? Colors.primary : undefined}
-              activeOutlineColor={Colors.primary}
-              right={<PaperTextInput.Icon icon="filter-variant" />}
-              style={styles.filterInput}
+              textColor={colors.text}
+              outlineColor={hasActiveFilters ? (isDark ? '#60A5FA' : Colors.primary) : colors.border}
+              activeOutlineColor={isDark ? '#60A5FA' : Colors.primary}
+              right={<PaperTextInput.Icon icon="filter-variant" iconColor={hasActiveFilters ? (isDark ? '#60A5FA' : Colors.primary) : colors.textSecondary} />}
+              style={[styles.filterInput, { backgroundColor: isDark ? '#202C33' : '#FFFFFF' }]}
               outlineStyle={styles.filterOutline}
+              theme={{
+                colors: {
+                  onSurfaceVariant: colors.textSecondary,
+                  text: colors.text,
+                },
+              }}
             />
           </View>
         </Pressable>
@@ -335,8 +347,15 @@ export default function JobsScreen() {
         data={processedJobs}
         keyExtractor={(item) => item._id || item.id || item.jobId}
         contentContainerStyle={styles.listContent}
-        refreshing={isLoading}
-        onRefresh={fetchJobs}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={fetchJobs}
+            colors={[isDark ? '#60A5FA' : Colors.primary]}
+            progressBackgroundColor={isDark ? '#202C33' : '#FFFFFF'}
+            tintColor={isDark ? '#60A5FA' : Colors.primary}
+          />
+        }
         renderItem={({ item }) => (
           <JobCardItem
             job={item}
@@ -348,12 +367,12 @@ export default function JobsScreen() {
             <Ionicons
               name={activeTab === 'accessory' ? 'bag-handle-outline' : 'search-outline'}
               size={48}
-              color="#CBD5E1"
+              color={colors.textMuted}
             />
-            <Text style={styles.emptyTitle}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
               {activeTab === 'accessory' ? 'No accessory sales found' : 'No matching jobs found'}
             </Text>
-            <Text style={styles.emptySubtitle}>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
               {searchQuery
                 ? `No results match "${searchQuery}"`
                 : selectedStatuses.length > 0
@@ -362,8 +381,14 @@ export default function JobsScreen() {
                 ? 'Record an accessory sale using the + button above'
                 : 'Create a repair job card using the + button above'}
             </Text>
-            <Pressable style={styles.resetBtn} onPress={handleClearAll}>
-              <Text style={styles.resetBtnText}>Clear All Filters</Text>
+            <Pressable
+              style={[
+                styles.resetBtn,
+                isDark && { backgroundColor: '#202C33', borderColor: '#2A3942' },
+              ]}
+              onPress={handleClearAll}
+            >
+              <Text style={[styles.resetBtnText, isDark && { color: '#60A5FA' }]}>Clear All Filters</Text>
             </Pressable>
           </View>
         }
@@ -518,12 +543,15 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
+    letterSpacing: -0.2,
     color: '#334155',
     marginTop: 12,
   },
   emptySubtitle: {
     fontSize: 13,
+    fontWeight: '400',
+    letterSpacing: -0.1,
     color: '#94A3B8',
     textAlign: 'center',
     marginTop: 4,

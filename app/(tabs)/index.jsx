@@ -10,9 +10,12 @@ import { DashboardChartsSection } from '../../components/DashboardChartsSection'
 import { JobCardItem } from '../../components/JobCardItem';
 import { BannerCarousel } from '../../components/BannerCarousel';
 import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../context/ThemeContext';
+
 export default function DashboardScreen() {
     const router = useRouter();
     const { refreshShopProfile } = useAuth();
+    const { colors, isDark } = useTheme();
     const [summary, setSummary] = useState(null);
     const [recentJobs, setRecentJobs] = useState([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -38,7 +41,7 @@ export default function DashboardScreen() {
         await loadData();
         setIsRefreshing(false);
     };
-    const totalRecentJobsCount = summary?.jobs.total ??
+    const totalRecentJobsCount = summary?.jobs?.total ??
         (summary?.jobs
             ? summary.jobs.pending +
                 summary.jobs.inProgress +
@@ -46,7 +49,7 @@ export default function DashboardScreen() {
                 summary.jobs.readyForPickup +
                 summary.jobs.delivered
             : recentJobs.length);
-    return (<ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary}/>}>
+    return (<ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary}/>}>
       {/* Promotional Banner Carousel (Diwali Bulk Parts Discount) */}
       <BannerCarousel />
 
@@ -70,20 +73,20 @@ export default function DashboardScreen() {
 
       {/* Recent Jobs Section */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Recent Jobs</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Jobs</Text>
         <Pressable onPress={() => router.push('/(tabs)/jobs')}>
-          <Text style={styles.viewAllText}>
+          <Text style={[styles.viewAllText, { color: isDark ? '#60A5FA' : Colors.primary }]}>
             View All ({totalRecentJobsCount > 0 ? totalRecentJobsCount : 5})
           </Text>
         </Pressable>
       </View>
 
       {recentJobs.length === 0 ? (<View style={styles.emptyState}>
-          <View style={styles.emptyIconBox}>
-            <Ionicons name="clipboard-outline" size={36} color="#94A3B8"/>
+          <View style={[styles.emptyIconBox, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+            <Ionicons name="clipboard-outline" size={36} color={colors.textMuted}/>
           </View>
-          <Text style={styles.emptyStateTitle}>No job cards created yet</Text>
-          <Text style={styles.emptyStateText}>
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>No job cards created yet</Text>
+          <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
             Start creating digital job cards for incoming devices
           </Text>
           <Pressable style={styles.emptyButton} onPress={() => router.push('/job/new')}>
@@ -120,15 +123,16 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     sectionTitle: {
-        fontSize: 17,
-        fontWeight: '900',
+        fontSize: 16,
+        fontWeight: '700',
         color: '#0F172A',
-        letterSpacing: -0.3,
+        letterSpacing: -0.2,
     },
     viewAllText: {
         fontSize: 13,
-        fontWeight: '700',
+        fontWeight: '500',
         color: Colors.primary,
+        letterSpacing: -0.1,
     },
     emptyState: {
         alignItems: 'center',
@@ -150,13 +154,16 @@ const styles = StyleSheet.create({
     },
     emptyStateTitle: {
         fontSize: 16,
-        fontWeight: '800',
+        fontWeight: '500',
         color: '#1E293B',
+        letterSpacing: -0.2,
         marginBottom: 4,
     },
     emptyStateText: {
         fontSize: 13,
+        fontWeight: '400',
         color: '#64748B',
+        letterSpacing: -0.1,
         textAlign: 'center',
         marginBottom: 16,
     },

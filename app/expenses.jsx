@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../services/api';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 import { FloatingCloseButton } from '../components/FloatingCloseButton';
 import { OutlinedTextInput } from '../components/OutlinedTextInput';
@@ -36,6 +37,7 @@ const categoryMap = categories.reduce((acc, cur) => {
 
 export default function ExpensesScreen() {
   const insets = useSafeAreaInsets();
+  const { isDark, colors } = useTheme();
   const [expenses, setExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -140,9 +142,10 @@ export default function ExpensesScreen() {
     .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title="Shop Expenses"
+        subtitle="Parts purchases, rent, salaries & bills"
         rightAction={
           <Pressable
             style={({ pressed }) => [styles.headerAddBtn, { opacity: pressed ? 0.75 : 1 }]}
@@ -161,32 +164,40 @@ export default function ExpensesScreen() {
           { paddingBottom: Math.max(insets.bottom, 24) + 20 },
         ]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[isDark ? '#60A5FA' : Colors.primary]}
+            progressBackgroundColor={isDark ? '#202C33' : '#FFFFFF'}
+            tintColor={isDark ? '#60A5FA' : Colors.primary}
+          />
+        }
       >
         {/* KPI Summary Cards */}
         <View style={styles.kpiRow}>
-          <View style={[styles.kpiCard, styles.kpiPrimary]}>
+          <View style={[styles.kpiCard, { backgroundColor: colors.card, borderColor: isDark ? '#2A3942' : '#FECDD3' }]}>
             <View style={styles.kpiTop}>
-              <Text style={styles.kpiLabel}>Total Expenses</Text>
-              <View style={[styles.kpiIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}>
+              <Text style={[styles.kpiLabel, { color: colors.textSecondary }]}>Total Expenses</Text>
+              <View style={[styles.kpiIconBox, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.12)' }]}>
                 <Ionicons name="wallet" size={16} color={Colors.rose} />
               </View>
             </View>
-            <Text style={styles.kpiValue}>₹{totalAmount.toLocaleString('en-IN')}</Text>
-            <Text style={styles.kpiSub}>{expenses.length} total entries recorded</Text>
+            <Text style={[styles.kpiValue, { color: colors.text }]}>₹{totalAmount.toLocaleString('en-IN')}</Text>
+            <Text style={[styles.kpiSub, { color: colors.textSecondary }]}>{expenses.length} total entries recorded</Text>
           </View>
 
-          <View style={styles.kpiCard}>
+          <View style={[styles.kpiCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.kpiTop}>
-              <Text style={styles.kpiLabel}>Spare Parts</Text>
-              <View style={[styles.kpiIconBox, { backgroundColor: 'rgba(37, 99, 235, 0.12)' }]}>
-                <Ionicons name="hardware-chip" size={16} color={Colors.primary} />
+              <Text style={[styles.kpiLabel, { color: colors.textSecondary }]}>Spare Parts</Text>
+              <View style={[styles.kpiIconBox, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.2)' : 'rgba(37, 99, 235, 0.12)' }]}>
+                <Ionicons name="hardware-chip" size={16} color={isDark ? '#60A5FA' : Colors.primary} />
               </View>
             </View>
-            <Text style={[styles.kpiValue, { color: Colors.primary }]}>
+            <Text style={[styles.kpiValue, { color: isDark ? '#60A5FA' : Colors.primary }]}>
               ₹{partsAmount.toLocaleString('en-IN')}
             </Text>
-            <Text style={styles.kpiSub}>Parts & hardware costs</Text>
+            <Text style={[styles.kpiSub, { color: colors.textSecondary }]}>Parts & hardware costs</Text>
           </View>
         </View>
 
@@ -194,10 +205,16 @@ export default function ExpensesScreen() {
         <View style={styles.filterSection}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterPills}>
             <Pressable
-              style={[styles.filterChip, selectedCategory === 'all' && styles.filterChipActive]}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: selectedCategory === 'all' ? (isDark ? '#2563EB' : Colors.primary) : (isDark ? '#202C33' : '#FFFFFF'),
+                  borderColor: selectedCategory === 'all' ? (isDark ? '#2563EB' : Colors.primary) : (isDark ? '#2A3942' : '#E2E8F0'),
+                },
+              ]}
               onPress={() => setSelectedCategory('all')}
             >
-              <Text style={[styles.filterChipText, selectedCategory === 'all' && styles.filterChipTextActive]}>
+              <Text style={[styles.filterChipText, { color: selectedCategory === 'all' ? '#FFFFFF' : (isDark ? '#8696A0' : '#475569') }, selectedCategory === 'all' && styles.filterChipTextActive]}>
                 All ({expenses.length})
               </Text>
             </Pressable>
@@ -205,19 +222,26 @@ export default function ExpensesScreen() {
             {categories.map((cat) => {
               const count = expenses.filter((e) => e.category === cat.key).length;
               const isActive = selectedCategory === cat.key;
+              const catColor = isDark && cat.key === 'spare_part' ? '#60A5FA' : cat.color;
               return (
                 <Pressable
                   key={cat.key}
-                  style={[styles.filterChip, isActive && styles.filterChipActive]}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor: isActive ? catColor : (isDark ? '#202C33' : '#FFFFFF'),
+                      borderColor: isActive ? catColor : (isDark ? '#2A3942' : '#E2E8F0'),
+                    },
+                  ]}
                   onPress={() => setSelectedCategory(cat.key)}
                 >
                   <Ionicons
                     name={cat.icon}
                     size={14}
-                    color={isActive ? '#FFFFFF' : '#64748B'}
+                    color={isActive ? '#FFFFFF' : (isDark ? '#8696A0' : '#64748B')}
                     style={{ marginRight: 5 }}
                   />
-                  <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                  <Text style={[styles.filterChipText, { color: isActive ? '#FFFFFF' : (isDark ? '#8696A0' : '#475569') }, isActive && styles.filterChipTextActive]}>
                     {cat.label} {count > 0 ? `(${count})` : ''}
                   </Text>
                 </Pressable>
@@ -228,24 +252,24 @@ export default function ExpensesScreen() {
 
         {/* Expenses List */}
         <View style={styles.listHeaderRow}>
-          <Text style={styles.listTitle}>
+          <Text style={[styles.listTitle, { color: colors.text }]}>
             {selectedCategory === 'all' ? 'All Expense Records' : `${categoryMap[selectedCategory]?.label || 'Category'} Records`}
           </Text>
-          <Text style={styles.listCount}>{filteredExpenses.length} items</Text>
+          <Text style={[styles.listCount, { color: colors.textSecondary }]}>{filteredExpenses.length} items</Text>
         </View>
 
         {isLoading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={Colors.primary} />
-            <Text style={styles.loadingText}>Loading expenses...</Text>
+            <ActivityIndicator size="small" color={isDark ? '#60A5FA' : Colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading expenses...</Text>
           </View>
         ) : filteredExpenses.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="receipt-outline" size={32} color="#94A3B8" />
+          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.emptyIconCircle, isDark && { backgroundColor: '#202C33' }]}>
+              <Ionicons name="receipt-outline" size={32} color={colors.textMuted} />
             </View>
-            <Text style={styles.emptyTitle}>No Expenses Found</Text>
-            <Text style={styles.emptySubtitle}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Expenses Found</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
               {selectedCategory === 'all'
                 ? 'No shop expenses have been recorded yet.'
                 : `No expenses found under ${categoryMap[selectedCategory]?.label || 'this category'}.`}
@@ -272,16 +296,18 @@ export default function ExpensesScreen() {
               month: 'short',
               year: 'numeric',
             });
+            const catColor = isDark && cat.key === 'spare_part' ? '#60A5FA' : cat.color;
+            const catBg = isDark ? 'rgba(255, 255, 255, 0.08)' : cat.bg;
 
             return (
-              <View key={exp._id} style={styles.expenseCard}>
-                <View style={[styles.expenseIconBox, { backgroundColor: cat.bg }]}>
-                  <Ionicons name={cat.icon} size={20} color={cat.color} />
+              <View key={exp._id} style={[styles.expenseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={[styles.expenseIconBox, { backgroundColor: catBg }]}>
+                  <Ionicons name={cat.icon} size={20} color={catColor} />
                 </View>
 
                 <View style={styles.expenseMain}>
                   <View style={styles.expenseTopLine}>
-                    <Text style={styles.expenseTitle} numberOfLines={1}>
+                    <Text style={[styles.expenseTitle, { color: colors.text }]} numberOfLines={1}>
                       {exp.title}
                     </Text>
                     <Text style={styles.expenseAmount}>
@@ -290,16 +316,16 @@ export default function ExpensesScreen() {
                   </View>
 
                   <View style={styles.expenseMetaRow}>
-                    <View style={[styles.categoryBadge, { backgroundColor: cat.bg }]}>
-                      <Text style={[styles.categoryBadgeText, { color: cat.color }]}>
+                    <View style={[styles.categoryBadge, { backgroundColor: catBg }]}>
+                      <Text style={[styles.categoryBadgeText, { color: catColor }]}>
                         {cat.label}
                       </Text>
                     </View>
-                    <Text style={styles.expenseDate}>{formattedDate}</Text>
+                    <Text style={[styles.expenseDate, { color: colors.textSecondary }]}>{formattedDate}</Text>
                   </View>
 
                   {exp.note ? (
-                    <Text style={styles.expenseNote} numberOfLines={2}>
+                    <Text style={[styles.expenseNote, { color: colors.textSecondary }]} numberOfLines={2}>
                       💬 {exp.note}
                     </Text>
                   ) : null}
@@ -310,7 +336,7 @@ export default function ExpensesScreen() {
                   onPress={() => handleDeleteExpense(exp)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="trash-outline" size={16} color="#94A3B8" />
+                  <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
                 </Pressable>
               </View>
             );
@@ -332,14 +358,14 @@ export default function ExpensesScreen() {
         >
           <Pressable style={styles.modalBackdrop} onPress={() => setIsAddOpen(false)} />
           <FloatingCloseButton onPress={() => setIsAddOpen(false)} />
-          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
+          <View style={[styles.modalCard, { backgroundColor: isDark ? '#111B21' : '#FFFFFF', paddingBottom: Math.max(insets.bottom, 20) + 12 }]}>
             <View style={styles.modalHeader}>
-              <View style={[styles.modalHeaderIcon, { backgroundColor: 'rgba(37, 99, 235, 0.12)' }]}>
-                <Ionicons name="receipt" size={20} color={Colors.primary} />
+              <View style={[styles.modalHeaderIcon, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.18)' : 'rgba(37, 99, 235, 0.12)' }]}>
+                <Ionicons name="receipt" size={20} color={isDark ? '#60A5FA' : Colors.primary} />
               </View>
               <View>
-                <Text style={styles.modalTitle}>Record Shop Expense</Text>
-                <Text style={styles.modalSub}>Track parts purchases, rent, salary and utilities</Text>
+                <Text style={[styles.modalTitle, { color: isDark ? '#E9EDEF' : '#0F172A' }]}>Record Shop Expense</Text>
+                <Text style={[styles.modalSub, { color: isDark ? '#8696A0' : '#64748B' }]}>Track parts purchases, rent, salary and utilities</Text>
               </View>
             </View>
 
@@ -362,28 +388,33 @@ export default function ExpensesScreen() {
                 onChangeText={setExpAmount}
               />
 
-              <Text style={styles.catLabel}>Category *</Text>
+              <Text style={[styles.catLabel, { color: colors.textSecondary }]}>Category *</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catPickerScroll}>
                 {categories.map((c) => {
                   const isSelected = expCategory === c.key;
+                  const catColor = isDark && c.key === 'spare_part' ? '#60A5FA' : c.color;
                   return (
                     <Pressable
                       key={c.key}
                       style={[
                         styles.catPickerChip,
-                        isSelected && { backgroundColor: c.color, borderColor: c.color },
+                        {
+                          backgroundColor: isSelected ? catColor : (isDark ? '#202C33' : '#FFFFFF'),
+                          borderColor: isSelected ? catColor : (isDark ? '#2A3942' : '#E2E8F0'),
+                        },
                       ]}
                       onPress={() => setExpCategory(c.key)}
                     >
                       <Ionicons
                         name={c.icon}
                         size={15}
-                        color={isSelected ? '#FFFFFF' : '#475569'}
+                        color={isSelected ? '#FFFFFF' : (isDark ? '#8696A0' : '#475569')}
                         style={{ marginRight: 6 }}
                       />
                       <Text
                         style={[
                           styles.catPickerChipText,
+                          { color: isSelected ? '#FFFFFF' : (isDark ? '#E9EDEF' : '#475569') },
                           isSelected && styles.catPickerChipTextActive,
                         ]}
                       >
@@ -403,11 +434,11 @@ export default function ExpensesScreen() {
 
               <View style={styles.modalActions}>
                 <Pressable
-                  style={styles.cancelBtn}
+                  style={[styles.cancelBtn, isDark && { backgroundColor: '#202C33' }]}
                   onPress={() => setIsAddOpen(false)}
                   disabled={isSaving}
                 >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                  <Text style={[styles.cancelBtnText, isDark && { color: '#E9EDEF' }]}>Cancel</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.saveBtn, isSaving && { opacity: 0.7 }]}
